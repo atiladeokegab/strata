@@ -15,6 +15,8 @@ export const useStore = create((set) => ({
   selected: null, // part id or null
   select: (id) => set({ selected: id }),
   view: 'orbit', // orbit | top | walk
+  cameraTo: null, // [x,y,z] fly request; CameraRig flies there, looking at the bridge, then clears it
+  flyTo: (pos) => set({ cameraTo: pos, view: 'orbit' }),
   setView: (view) => set({ view }),
   year: THIS_YEAR, // FIRST_YEAR..THIS_YEAR
   setYear: (year) => set({ year }),

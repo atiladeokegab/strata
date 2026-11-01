@@ -26,6 +26,17 @@ export function CameraRig() {
     fly.current = { t: reduce ? 1 : 0, from: camera.position.clone(), to: new Vector3(...p.pos), fromTarget, toTarget: new Vector3(...p.target) }
   }, [view, camera])
 
+  const cameraTo = useStore((s) => s.cameraTo)
+  useEffect(() => {
+    if (!cameraTo) return
+    const to = new Vector3(...cameraTo)
+    // look at the bridge, but low enough that orbit's polar limit does not lift the camera
+    const toTarget = new Vector3(0, to.y - 0.1 * Math.hypot(to.x, to.z), 0)
+    const fromTarget = controls.current?.target.clone() ?? new Vector3(0, 18, 0)
+    fly.current = { t: matchMedia('(prefers-reduced-motion: reduce)').matches ? 1 : 0, from: camera.position.clone(), to, fromTarget, toTarget }
+    useStore.setState({ cameraTo: null })
+  }, [cameraTo, camera])
+
   useFrame((_, dt) => {
     const f = fly.current
     if (!f) return

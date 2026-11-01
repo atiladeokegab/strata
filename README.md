@@ -36,7 +36,7 @@
 ### Built with Codex
 
 - **Atlas:** the sourced history graph and a validator that rejects unsourced numbers (`c0b7ed8`).
-- **Prometheus:** the cited docent, after benchmarking 8 models. `gpt-5.4-nano` cited 3 of 3 answers correctly, with a 0.42 s first token.
+- **Prometheus:** the cited docent, after a benchmark of 8 candidate models (one was unavailable). `gpt-5.4-nano` cited 3 of 3 answers correctly, with a 0.42 s first token.
 - The full log, with session ids: [docs/codex.md](docs/codex.md).
 
 <p align="center">

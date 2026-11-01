@@ -100,8 +100,6 @@ a.chip.source:hover { border-color: var(--gold); }
 .timeline { position: relative; flex: 1; min-width: 180px; }
 .timeline .year { color: var(--ink); font-size: 15px; }
 .timeline .event { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ticks { position: absolute; left: 8px; right: 8px; bottom: -2px; height: 4px; pointer-events: none; }
-.ticks i { position: absolute; width: 2px; height: 4px; background: var(--gold); opacity: .7; }
 .bascule { width: 150px; flex: none; }
 .bascule .num { color: var(--ink); }
 .toggles { display: flex; gap: 4px; padding: 4px; border-radius: 999px; flex: none; }

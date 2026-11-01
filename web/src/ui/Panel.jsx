@@ -4,6 +4,7 @@ import { useStore } from '../store'
 import { bridgeHydraulics } from '../scene/bridge/TowerBridge.jsx'
 import { useTour, startTour, stopTour } from '../tour/tour.js'
 import Voice from './Voice'
+import { StoryCard } from './TimelineMarks'
 import { readDocentStream } from '../lib/docentStream'
 
 const STATUS = { 'text-attested': 'Text-attested', measured: 'Measured', inferred: 'Inferred' }
@@ -228,6 +229,7 @@ export function Panel() {
       <Search />
       <div className="scroll">
         <PlaceCard />
+        <StoryCard />
         <Inspector />
         <Docent />
       </div>

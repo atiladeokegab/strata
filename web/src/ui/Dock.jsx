@@ -1,6 +1,7 @@
 // Map controls (top right: view, exploded, LiDAR and the photo tools) and the slim time bar (bottom: timeline, bascules).
 import { useStore, FIRST_YEAR, THIS_YEAR } from '../store'
 import { STAGES } from '../scene/bridge/stages.js'
+import { TimelineMarks } from './TimelineMarks'
 
 const VIEWS = [['orbit', 'Orbit'], ['top', 'Top'], ['walk', 'Walk']]
 
@@ -36,9 +37,7 @@ export function Dock() {
       <label className="timeline">
         <span className="row"><span className="year num">{year === THIS_YEAR ? 'Today' : year}</span><span className="event">{now || 'Before construction'}</span></span>
         <input type="range" min={FIRST_YEAR} max={THIS_YEAR} step={1} value={year} onChange={(e) => setYear(Number(e.target.value))} aria-label="Year" />
-        <span className="ticks" aria-hidden="true">
-          {(place?.events || []).map((e) => <i key={e.year + e.title} style={{ left: `${((e.year - FIRST_YEAR) / (THIS_YEAR - FIRST_YEAR)) * 100}%` }} />)}
-        </span>
+        <TimelineMarks />
       </label>
       <label className="bascule">
         <span className="row"><span>Bascules</span><span className="num">{Math.round(bascule * maxAngle)}°</span></span>

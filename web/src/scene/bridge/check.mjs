@@ -6,6 +6,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { containersOf, clickThrough } from './xray.js'
 import * as THREE from 'three'
 import { PART_IDS } from './parts.js'
+import { KERB_X, FOOTWAY_OUT } from './roadway.js'
 import { createShip, stepShip, WAIT_X, HOLD_X, CRUISE } from './shipSim.js'
 import { leverAfter, leverForKey, leverLabel, KEY_STEP } from './drive.js'
 import { vesselForYear, needsLift, leafInput, CLEARANCE } from './vessels.js'
@@ -97,6 +98,12 @@ assert.ok(real.stages[0].status === 'sourced' && real.stages[5].status === 'sour
 real.stages.forEach((s, i) => assert.ok(s.from === STAGES[i].from && s.to === STAGES[i].to, `data moves stage ${i} to ${s.from}`))
 for (const [k, e] of Object.entries(real.eras)) assert.equal(e.year, ERAS[k], `data moves ${k} to ${e.year}`)
 assert.deepEqual(resolveYears(null).eras.glassFloor, { year: ERAS.glassFloor, status: 'inferred' })
+// kerbs: road lanes (with a 2.5 m vehicle) stay inside the kerbs, pedestrians walk the footways
+for (const l of createTraffic(1900, 7).lanes) {
+  const x = Math.abs(l.x)
+  if (l.kinds.includes('ped')) assert.ok(x > KERB_X + 0.5 && x < FOOTWAY_OUT - 0.3, `ped lane ${l.x} on the footway`)
+  else assert.ok(x + 1.25 < KERB_X, `road lane ${l.x} inside the kerbs`)
+}
 // traffic: gates hold the queue, spacing holds, the bascules clear, the queue moves on green
 for (const year of [1900, 2026]) {
   const t = createTraffic(year, 7)

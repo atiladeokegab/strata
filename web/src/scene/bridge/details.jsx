@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import * as THREE from 'three'
 import { beam, box, merge, M } from './geom.js'
 import { L } from './structures.jsx'
+import { KERB_X, KERB_W, FOOTWAY_H, FOOTWAY_OUT } from './roadway.js'
 
 // Renders { materialKey: [geometries] } as one merged mesh per material.
 export function Meshes({ build, deps = [] }) {
@@ -108,10 +109,19 @@ function lamp(out, x, y, z) {
 
 const dashes = (out, z0, z1) => {
   for (let z = z0; z + 3 <= z1; z += 6) out.white.push(box(0.18, 0.03, 3, 0, 0.02, z + 1.5))
-  for (const x of [-7.6, 7.6]) out.white.push(box(0.15, 0.03, z1 - z0, x, 0.02, (z0 + z1) / 2))
+  for (const x of [-KERB_X + 0.5, KERB_X - 0.5]) out.white.push(box(0.15, 0.03, z1 - z0, x, 0.02, (z0 + z1) / 2))
 }
 
-const kit = () => ({ iron: [], glass: [], gold: [], white: [] })
+// granite kerb and paved footway on both sides, flat, from z0 to z1 (z0 < z1)
+export const footways = (out, z0, z1) => {
+  const len = z1 - z0, zc = (z0 + z1) / 2, w = FOOTWAY_OUT - KERB_X - KERB_W
+  for (const sx of [-1, 1]) {
+    out.granite.push(box(KERB_W, FOOTWAY_H, len, sx * (KERB_X + KERB_W / 2), FOOTWAY_H / 2, zc))
+    out.stone.push(box(w, FOOTWAY_H, len, sx * (KERB_X + KERB_W + w / 2), FOOTWAY_H / 2, zc))
+  }
+}
+
+export const kit = () => ({ iron: [], glass: [], gold: [], white: [], stone: [], granite: [] })
 
 export function ApproachDetails() {
   return (
@@ -120,6 +130,7 @@ export function ApproachDetails() {
         const o = kit()
         for (let z = L.spanEnd + 6; z < L.pierZ - L.towerHalfZ - 3; z += 12) for (const x of [-9.4, 9.4]) lamp(o, x, 0.3, z)
         dashes(o, L.spanEnd + 1, L.pierZ - L.towerHalfZ - 1)
+        footways(o, L.spanEnd, L.pierZ - L.towerHalfZ)
         return o
       }}
     />
@@ -128,7 +139,7 @@ export function ApproachDetails() {
 
 // Fixed deck through the tower arch.
 export function DeckMarkings() {
-  return <Meshes build={() => { const o = kit(); dashes(o, L.pierZ - 9.5, L.pierZ + 9.5); return o }} />
+  return <Meshes build={() => { const o = kit(); dashes(o, L.pierZ - 9.5, L.pierZ + 9.5); footways(o, L.pierZ - L.towerHalfZ, L.pierZ + L.towerHalfZ); return o }} />
 }
 
 // Built in north-local coordinates, then moved into the leaf frame so it rides on <PivotFrame>.
@@ -139,6 +150,7 @@ export function BasculeDetails() {
         const o = kit()
         for (const z of [-31, -21, -11]) for (const x of [-9, 9]) lamp(o, x, 0.05, z)
         dashes(o, L.pivotZ + 0.5, -0.5)
+        footways(o, L.pierZ + L.towerHalfZ, 0)
         for (const gs of Object.values(o)) gs.forEach((g) => g.translate(0, -L.pivotY, -L.pivotZ))
         return o
       }}

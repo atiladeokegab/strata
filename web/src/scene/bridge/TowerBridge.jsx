@@ -15,6 +15,7 @@ import { containersOf } from './xray.js'
 import * as H from './history.jsx'
 import * as S from './structures.jsx'
 import * as D from './details.jsx'
+import * as A from './approach.jsx'
 import { BasculeLeafDetail } from './basculeDetail.jsx'
 import { Cabin } from './cabin.jsx'
 import { ConstructionSite } from './construction.jsx'
@@ -54,6 +55,7 @@ function Half({ side, rt, st, towerTop, era, maxAngle }) {
       {shown('abutment', st.stage) && (
         <Part id={id('abutment')} rt={rt} explode={[0, 0, -28]} clipY={rising(st, 0, S.L.hw - 1, towerTop)}>
           <S.Abutment side={side} />
+          <A.RampDetails side={side} />
         </Part>
       )}
       {shown('frame', st.stage) && (

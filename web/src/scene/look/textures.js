@@ -11,12 +11,12 @@ const SURFACE_SIZE = 256
 
 // low/high: sRGB colour range; roughness: [smooth, rough]; course: masonry block size in px (0 = none)
 const PALETTES = {
-  'stone:portland': { low: [176, 166, 146], high: [222, 214, 196], metalness: 0, normalScale: 0.55, roughness: [0.62, 0.92], course: [64, 28], seed: 1201 },
-  'granite:cornish': { low: [118, 116, 112], high: [176, 172, 166], metalness: 0, normalScale: 0.45, roughness: [0.5, 0.85], course: [80, 40], seed: 1693, speckle: true },
-  'steel:blue': { low: [72, 108, 140], high: [112, 150, 182], metalness: 0.45, normalScale: 0.18, roughness: [0.32, 0.55], course: 0, seed: 2311 },
-  'steel:white': { low: [196, 200, 202], high: [232, 234, 234], metalness: 0.3, normalScale: 0.15, roughness: [0.35, 0.55], course: 0, seed: 2477 },
+  'stone:portland': { low: [176, 166, 146], high: [222, 214, 196], metalness: 0, normalScale: 0.55, roughness: [0.62, 0.92], course: [64, 32], seed: 1201 },
+  'granite:cornish': { low: [118, 116, 112], high: [176, 172, 166], metalness: 0, normalScale: 0.45, roughness: [0.5, 0.85], course: [64, 32], seed: 1693, speckle: true },
+  'steel:blue': { low: [72, 108, 140], high: [112, 150, 182], metalness: 0.02, normalScale: 0.18, roughness: [0.32, 0.55], course: 0, seed: 2311 },
+  'steel:white': { low: [196, 200, 202], high: [232, 234, 234], metalness: 0.02, normalScale: 0.15, roughness: [0.35, 0.55], course: 0, seed: 2477 },
   'iron:cast': { low: [42, 46, 49], high: [78, 84, 88], metalness: 0.8, normalScale: 0.28, roughness: [0.48, 0.68], course: 0, seed: 5003 },
-  'slate:roof': { low: [52, 58, 64], high: [86, 94, 102], metalness: 0.05, normalScale: 0.6, roughness: [0.45, 0.75], course: [24, 14], seed: 3371 },
+  'slate:roof': { low: [52, 58, 64], high: [86, 94, 102], metalness: 0.05, normalScale: 0.6, roughness: [0.45, 0.75], course: [32, 16], seed: 3371 },
   'wood:dark': { low: [42, 25, 17], high: [90, 57, 37], metalness: 0.08, normalScale: 0.42, roughness: [0.58, 0.86], course: 0, seed: 1103, grain: true },
   'asphalt': { low: [48, 48, 50], high: [78, 77, 76], metalness: 0, normalScale: 0.35, roughness: [0.78, 0.96], course: 0, seed: 4129, speckle: true },
 }
@@ -30,15 +30,18 @@ function hashNoise(x, y, seed) {
   return ((v ^ (v >>> 16)) >>> 0) / 0xffffffff
 }
 
+// Value noise that wraps every SURFACE_SIZE px, so the textures tile without seams (cell must divide it).
 function smoothNoise(x, y, seed, cell) {
+  const P = SURFACE_SIZE / cell
   const gx = Math.floor(x / cell)
   const gy = Math.floor(y / cell)
   const lx = (x - gx * cell) / cell
   const ly = (y - gy * cell) / cell
   const ex = lx * lx * (3 - 2 * lx)
   const ey = ly * ly * (3 - 2 * ly)
-  const top = THREE.MathUtils.lerp(hashNoise(gx, gy, seed), hashNoise(gx + 1, gy, seed), ex)
-  const bottom = THREE.MathUtils.lerp(hashNoise(gx, gy + 1, seed), hashNoise(gx + 1, gy + 1, seed), ex)
+  const h = (i, j) => hashNoise(((i % P) + P) % P, ((j % P) + P) % P, seed)
+  const top = THREE.MathUtils.lerp(h(gx, gy), h(gx + 1, gy), ex)
+  const bottom = THREE.MathUtils.lerp(h(gx, gy + 1), h(gx + 1, gy + 1), ex)
   return THREE.MathUtils.lerp(top, bottom, ey)
 }
 
@@ -46,7 +49,7 @@ function smoothNoise(x, y, seed, cell) {
 // each block its own tone so the wall does not read as one flat sheet.
 function surface(p, x, y) {
   const broad = smoothNoise(x, y, p.seed, 32)
-  const fine = smoothNoise(x, y, p.seed + 97, 6)
+  const fine = smoothNoise(x, y, p.seed + 97, 8)
   let h = broad * 0.5 + fine * 0.5
   let tone = broad * 0.7 + fine * 0.3
   if (p.grain) {
@@ -59,7 +62,7 @@ function surface(p, x, y) {
     const [bw, bh] = p.course
     const row = Math.floor(y / bh)
     const bx = x + (row % 2) * (bw / 2)
-    const col = Math.floor(bx / bw)
+    const col = Math.floor(bx / bw) % (SURFACE_SIZE / bw)
     const jx = Math.min(bx % bw, bw - (bx % bw))
     const jy = Math.min(y % bh, bh - (y % bh))
     const joint = THREE.MathUtils.smoothstep(Math.min(jx, jy), 0.5, 2.5)
@@ -92,13 +95,18 @@ function generate(variant) {
   for (let y = 0; y < N; y++)
     for (let x = 0; x < N; x++) [height[y * N + x], tone[y * N + x]] = surface(p, x, y)
 
+  // colour map, plus a grey "detail" map (tone only) that multiplies a material's own colour
+  const lum = (c) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+  const floor = Math.max(lum(p.low) / lum(p.high), 0.62)
   const color = new Uint8ClampedArray(MAP_SIZE * MAP_SIZE * 4)
+  const detail = new Uint8ClampedArray(MAP_SIZE * MAP_SIZE * 4)
   for (let y = 0; y < MAP_SIZE; y++)
     for (let x = 0; x < MAP_SIZE; x++) {
       const a = tone[(y >> 1) * N + (x >> 1)]
       const i = (y * MAP_SIZE + x) * 4
       for (let c = 0; c < 3; c++) color[i + c] = Math.round(THREE.MathUtils.lerp(p.low[c], p.high[c], a))
-      color[i + 3] = 255
+      detail[i] = detail[i + 1] = detail[i + 2] = Math.round(255 * THREE.MathUtils.lerp(floor, 1, a))
+      color[i + 3] = detail[i + 3] = 255
     }
 
   const normal = new Uint8ClampedArray(N * N * 4)
@@ -124,6 +132,7 @@ function generate(variant) {
   return {
     variant,
     map: canvasTexture(MAP_SIZE, color, true),
+    detail: canvasTexture(MAP_SIZE, detail, true),
     normalMap: canvasTexture(N, normal, false),
     roughnessMap: canvasTexture(N, rough, false),
     metalness: p.metalness,
@@ -140,11 +149,12 @@ export function getMaterialTextureSet(variant) {
 // Material props for <meshStandardMaterial {...pbr(variant, repeat)} />. Each repeat gets texture clones,
 // which share the one uploaded image (three's Source), so this costs no extra GPU memory.
 const repeated = new Map()
-export function pbr(variant, repeat = 1) {
-  const key = `${variant}@${repeat}`
+// detail = true gives a grey map, so the material keeps its own colour (and any recolour by year).
+export function pbr(variant, repeat = 1, detail = false) {
+  const key = `${variant}@${repeat}${detail ? 'd' : ''}`
   if (!repeated.has(key)) {
     const s = getMaterialTextureSet(variant)
-    const [map, normalMap, roughnessMap] = [s.map, s.normalMap, s.roughnessMap].map((t) => {
+    const [map, normalMap, roughnessMap] = [detail ? s.detail : s.map, s.normalMap, s.roughnessMap].map((t) => {
       const c = t.clone()
       c.repeat.set(repeat, repeat)
       return c
@@ -173,7 +183,7 @@ export function warmMaterialTextures() {
 }
 
 export function disposeMaterialTextureCache() {
-  for (const s of [...cache.values(), ...repeated.values()]) [s.map, s.normalMap, s.roughnessMap].forEach((t) => t.dispose())
+  for (const s of [...cache.values(), ...repeated.values()]) [s.map, s.detail, s.normalMap, s.roughnessMap].forEach((t) => t?.dispose())
   cache.clear()
   repeated.clear()
 }

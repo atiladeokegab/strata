@@ -9,6 +9,7 @@ import { pbr } from './textures'
 
 const q = new URLSearchParams(location.search)
 const cam = (q.get('cam') || '-180,60,160').split(',').map(Number)
+const target = (q.get('target') || '0,20,0').split(',').map(Number)
 if (q.get('year')) useStore.setState({ year: +q.get('year') })
 
 function City() {
@@ -47,7 +48,7 @@ function City() {
 createRoot(document.getElementById('root')).render(
   <Canvas camera={{ position: cam, fov: 45, near: 0.5, far: 20000 }} gl={{ antialias: false }}>
     <City />
-    <OrbitControls target={[0, 20, 0]} />
+    <OrbitControls target={target} />
     <Look />
   </Canvas>,
 )

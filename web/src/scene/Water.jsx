@@ -3,11 +3,11 @@ import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { Water as WaterSurface } from 'three/examples/jsm/objects/Water.js'
 import { useStore } from '../store'
-import { useGoogleShown, useTerrain } from './Terrain.jsx'
+import { useGoogleShown, useTerrainMeta } from './Terrain.jsx'
 import { SUN_COLOR, SUN_DIR } from './look/sun.js'
 
 function Surface({ sun }) {
-  const { meta } = useTerrain()
+  const meta = useTerrainMeta()
   const fog = useThree((s) => s.scene.fog)
   const water = useMemo(() => {
     const [minE, minN, maxE, maxN] = meta.bbox_osgb

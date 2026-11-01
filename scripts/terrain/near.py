@@ -7,8 +7,8 @@
     uv run scripts/terrain/build.py   # first: the outer 1.5 km tile and meta.json
     uv run scripts/terrain/near.py
 
-Writes web/public/terrain/tower-bridge/near/{height.png, color.jpg, color-1890s.jpg} and adds a `near`
-section and a per-file `files` map (source + licence) to meta.json. Same encoding and min_h/max_h as
+Writes web/public/terrain/tower-bridge/near/{height.png, color.jpg, color-1890s.jpg}, the first-load tile
+lo/{height.png, color.jpg, color-1890s.jpg} (under 500 KB, shown first on every device), and adds `near`, `lite` and a per-file `files` map (source + licence) to meta.json. Same encoding and min_h/max_h as
 height.png, 0.5 m pixels. Phones and ?lite=1 never load these.
 
 Height: EA's finest data here is the 2012 0.5 m time-stamped DSM (the composites stop at 1 m). It is
@@ -40,6 +40,7 @@ ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapSe
 ESRI_Z = 19  # London's deepest Esri level (z20 is "Map data not yet available"); the export API stops at ~0.3 m/px
 NLS = "https://mapseries-tilesets.s3.amazonaws.com/london_1890s/{z}/{x}/{y}.png"
 NLS_Z = 20  # z21 exists but is upsampled from the same scans (checked by eye); z20 is the sheet's native detail
+LO = 4  # m per pixel of the first-load tile
 CHANGED = 3.0  # m: a 1 m cell where 2012 and 2022 differ more than this is a changed building
 
 
@@ -120,6 +121,35 @@ def xyz(url, z, name, px, bbox=NEAR):
     return Image.fromarray(out), len(xys)
 
 
+def encode(h, meta):
+    """RGB 16-bit height.png pixels (build.py's encoding), self-checked to 1 cm."""
+    h = np.clip(h, meta["min_h"], meta["max_h"])
+    v = np.round((h - meta["min_h"]) / (meta["max_h"] - meta["min_h"]) * 65535).astype(np.uint16)
+    rgb = np.dstack([v >> 8, v & 255, np.zeros_like(v)]).astype(np.uint8)
+    decoded = meta["min_h"] + ((rgb[..., 0].astype(int) << 8) + rgb[..., 1]) / 65535 * (meta["max_h"] - meta["min_h"])
+    assert np.abs(decoded - h).max() < 0.01  # self-check of the encoding
+    return rgb
+
+
+def lite(meta):
+    """The first-load tile every device shows while the full one streams: 4 m height, 768 px colour, 512 px 1890s.
+    Made from the committed full-res files, so it carries build.py's carving, bridge cut and abutment fill."""
+    out = OUT / "lo"
+    out.mkdir(exist_ok=True)
+    h = decode(OUT / "height.png", meta)
+    n = h.shape[0] // LO
+    small = h[:n * LO, :n * LO].reshape(n, LO, n, LO).mean(axis=(1, 3))
+    small = np.round(small / 0.05) * 0.05  # 5 cm steps: invisible at 4 m, and the PNG halves
+    Image.fromarray(encode(small, meta)).save(out / "height.png", optimize=True)
+    for name, px, q in (("color.jpg", 768, 65), ("color-1890s.jpg", 512, 70)):
+        Image.open(OUT / name).convert("RGB").resize((px, px), Image.LANCZOS).save(out / name, quality=q, optimize=True, progressive=True)
+    meta["lite"] = {"size_px": [n, n], "res_m": LO, "note": "Shown first on every device, then replaced by the full tile."}
+    total = sum(f.stat().st_size for f in out.iterdir())
+    assert total < 500_000, f"first-load tile is {total} bytes"
+    return {f"lo/{f}": {"source": f"Downsampled from {f} ({'block mean' if f == 'height.png' else 'Lanczos'})", "licence": meta["files"][f]["licence"]}
+            for f in ("height.png", "color.jpg", "color-1890s.jpg")}
+
+
 def save_jpg(im, path, quality):
     """Progressive JPEG under 8 MB (the tier's per-file budget), stepping quality down if needed."""
     while True:
@@ -160,11 +190,8 @@ def main():
     open_ground = ndimage.maximum_filter(fine, 3) - ndimage.minimum_filter(fine, 3) < 0.3
     h = np.where(keep, up_built, np.where(open_ground, calm, fine) - bias)
 
-    v = np.round((np.clip(h, meta["min_h"], meta["max_h"]) - meta["min_h"]) / (meta["max_h"] - meta["min_h"]) * 65535).astype(np.uint16)
-    rgb = np.dstack([v >> 8, v & 255, np.zeros_like(v)]).astype(np.uint8)
-    decoded = meta["min_h"] + ((rgb[..., 0].astype(int) << 8) + rgb[..., 1]) / 65535 * (meta["max_h"] - meta["min_h"])
-    assert np.abs(decoded - np.clip(h, meta["min_h"], meta["max_h"])).max() < 0.01  # self-check of the encoding
-    assert np.abs(decoded[0] - up_built[0]).max() < 0.01  # self-check of the seam
+    rgb = encode(h, meta)
+    assert np.abs(h[0] - up_built[0]).max() < 0.01  # self-check of the seam
 
     near = OUT / "near"
     near.mkdir(exist_ok=True)
@@ -207,10 +234,11 @@ def main():
         },
         "../waternormals.jpg": {"source": "Procedural: 40 summed sine waves (scripts/terrain/build.py)", "licence": "Project's own"},
     })
+    meta["files"].update(lite(meta))
     (OUT / "meta.json").write_text(json.dumps(meta, indent=2) + "\n")
     print(json.dumps(meta["near"], indent=1))
-    for p in sorted(near.iterdir()):
-        print(f"{p.relative_to(OUT)}  {p.stat().st_size / 1e6:.2f} MB")
+    for p in sorted([*near.iterdir(), *(OUT / "lo").iterdir()]):
+        print(f"{p.relative_to(OUT)}  {p.stat().st_size / 1e3:.0f} KB")
 
 
 if __name__ == "__main__":

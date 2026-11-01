@@ -58,9 +58,9 @@
       4096,
       4096
     ],
-    "dsm_2012_share": 0.431,
+    "dsm_2012_share": 0.425,
     "dsm_2012_bias_m": 0.029,
-    "note": "Desktop tier only. Height is the EA 2012 0.5 m DSM on 43% of the tile; where 2012 and the 2022 1 m composite differ by over 3.0 m (changed buildings), and on the carved river, banks and bridge cut, it is the 2022 tile resampled."
+    "note": "Desktop tier only. Height is the EA 2012 0.5 m DSM on 42% of the tile; where 2012 and the 2022 1 m composite differ by over 3.0 m (changed buildings), and on the carved river, banks and bridge cut, it is the 2022 tile resampled."
   },
   "files": {
     "height.png": {
@@ -90,6 +90,26 @@
     "../waternormals.jpg": {
       "source": "Procedural: 40 summed sine waves (scripts/terrain/build.py)",
       "licence": "Project's own"
+    },
+    "lo/height.png": {
+      "source": "Downsampled from height.png (block mean)",
+      "licence": "Open Government Licence v3.0. Contains Environment Agency information \u00a9 Environment Agency copyright and/or database right 2022."
+    },
+    "lo/color.jpg": {
+      "source": "Downsampled from color.jpg (Lanczos)",
+      "licence": "Esri World Imagery terms of use. Imagery \u00a9 Esri, Maxar, Earthstar Geographics, and the GIS User Community."
+    },
+    "lo/color-1890s.jpg": {
+      "source": "Downsampled from color-1890s.jpg (Lanczos)",
+      "licence": "CC-BY. Reproduced with the permission of the National Library of Scotland, https://maps.nls.uk/copyright.html"
     }
+  },
+  "lite": {
+    "size_px": [
+      375,
+      375
+    ],
+    "res_m": 4,
+    "note": "Shown first on every device, then replaced by the full tile."
   }
 }

@@ -4,13 +4,17 @@ import * as THREE from 'three'
 import { useStore } from '../store'
 import { bareEarth, keepApproaches } from './bareEarth.js'
 import { LITE } from './look/tier'
+import { GroundStandIn } from '../ui/StandIns'
 
 // Google Photorealistic 3D Tiles own the ground when they are streaming and LiDAR is off; optional, like Buildings.jsx.
 const google = Object.values(import.meta.glob('./google/state.js', { eager: true }))[0]
 export const useGoogleShown = google?.useGoogleShown ?? (() => false)
 
 const BASE = '/terrain/tower-bridge/'
-let cache
+const MAPS = ['color.jpg', 'color-1890s.jpg'] // today's aerial, the OS 1893-96 sheet
+const texture = (url) => new THREE.TextureLoader().loadAsync(url)
+let metaCache, lowCache, cache, fullCache, nearCache
+const loadMeta = () => (metaCache ??= fetch(BASE + 'meta.json').then((r) => r.json()))
 
 // Decodes a height.png (RGB 16-bit, see scripts/terrain/build.py) to metres OD.
 async function decodeHeights(url, meta) {
@@ -25,27 +29,43 @@ async function decodeHeights(url, meta) {
   return { heights, w: bmp.width, h: bmp.height }
 }
 
-// Loads meta.json and the outer 1 m tile once per page.
-export function loadTerrain() {
-  cache ??= (async () => {
-    const meta = await (await fetch(BASE + 'meta.json')).json()
-    const { heights, w, h } = await decodeHeights(BASE + 'height.png', meta)
-    // before 1950: the DSM without its modern buildings (see bareEarth.js)
-    return { meta, heights, old: keepApproaches(bareEarth(heights, w, h), heights, w, meta), w, h, base: BASE }
+// Load order, so a phone on slow 4G sees textured ground first (scripts/terrain/near.py builds lo/ and near/):
+// 1. lo/: the whole 1.5 km at 4 m with small drapes, ~0.4 MB, every device;
+// 2. the full 1 m tile and its 4096 px drapes, fetched only after lo/ is in;
+// 3. desktop only: the 600 m near field at 0.5 m. Each stage resolves with its drapes in, so it never shows grey.
+// Before 1950 the ground is bare earth (see bareEarth.js), opened with a 30 m window at any pixel size.
+const withOld = (meta, { heights, w, h }) =>
+  ({ meta, heights, w, h, old: keepApproaches(bareEarth(heights, w, h, Math.round((30 * w) / (meta.bbox_osgb[2] - meta.bbox_osgb[0]))), heights, w, meta) })
+
+export function loadLow() {
+  lowCache ??= (async () => {
+    const meta = await loadMeta()
+    const base = meta.lite ? BASE + 'lo/' : BASE
+    const [px, ...maps] = await Promise.all([decodeHeights(base + 'height.png', meta), ...MAPS.map((f) => texture(base + f))])
+    return { ...withOld(meta, px), maps }
   })()
+  return lowCache
+}
+
+/** The full 1 m outer tile's heights (no drapes), once per page; queued behind the first-load tile. */
+export function loadTerrain() {
+  cache ??= loadLow().then(async ({ meta }) => withOld(meta, await decodeHeights(BASE + 'height.png', meta)))
   return cache
 }
 
-// Desktop tier: the 600 m near field at 0.5 m with 4096 px drapes (scripts/terrain/near.py). Resolves only
-// once its height and both drapes are in, so it never shows a blank square over the outer tile.
-let nearCache
+function loadFull() {
+  fullCache ??= loadLow().then(() => Promise.all([loadTerrain(), ...MAPS.map((f) => texture(BASE + f))]))
+    .then(([t, ...maps]) => ({ ...t, maps }))
+  return fullCache
+}
+
 function loadNear() {
   nearCache ??= (async () => {
     const t = await loadTerrain()
     const meta = { ...t.meta, bbox_osgb: t.meta.near.bbox_osgb }
     const [{ heights, w, h }, ...maps] = await Promise.all([
       decodeHeights(BASE + 'near/height.png', meta),
-      ...['color.jpg', 'color-1890s.jpg'].map((f) => new THREE.TextureLoader().loadAsync(BASE + 'near/' + f)),
+      ...MAPS.map((f) => texture(BASE + 'near/' + f)),
     ])
     // bare earth sampled from the outer tile's, so both meshes sink to the same 1890s ground
     const res = (meta.bbox_osgb[2] - meta.bbox_osgb[0]) / w, [minE, , , maxN] = meta.bbox_osgb, [oE, oN] = meta.origin_osgb
@@ -53,24 +73,25 @@ function loadNear() {
     for (let i = 0; i < h; i++) for (let j = 0; j < w; j++) {
       old[i * w + j] = Math.min(heights[i * w + j], heightAt(outerOld, minE + (j + 0.5) * res - oE, oN - (maxN - (i + 0.5) * res)) + meta.origin_h)
     }
-    return { meta, heights, old, w, h, base: BASE + 'near/', maps }
+    return { meta, heights, old, w, h, maps }
   })()
   return nearCache
 }
 
-// The near tile, or null: phones and ?lite=1 never fetch it; desktop starts it after the outer tile is up.
-function useNear() {
-  const [near, setNear] = useState(null)
+// A later stage once it has loaded, else null (a failed stage just leaves the one before it showing).
+function useLoaded(load, when = true) {
+  const [value, setValue] = useState(null)
   useEffect(() => {
-    if (LITE) return
+    if (!when) return
     let live = true
-    const id = setTimeout(() => loadNear().then((n) => live && n.meta.near && setNear(n)).catch(() => {}), 1500)
-    return () => { live = false; clearTimeout(id) }
-  }, [])
-  return near
+    load().then((v) => live && setValue(v)).catch(() => {})
+    return () => { live = false }
+  }, [load, when])
+  return value
 }
 
-export const useTerrain = () => use(loadTerrain())
+/** meta.json (bbox, origin, water level), as soon as the first-load tile is in. */
+export const useTerrainMeta = () => use(loadLow()).meta
 
 // Scene frame: metres, origin at the deck centre (meta.origin_osgb, meta.origin_h), x east, y up, z south.
 function grid({ meta, heights, old, w, h }, step) {
@@ -140,7 +161,7 @@ function heightfieldRaycast(t) {
 
 // Invisible stand-in that answers raycasts for both looks (a Points cloud is not a mesh to walk on).
 function Ground() {
-  const t = useTerrain()
+  const t = useLoaded(loadTerrain) ?? use(loadLow())
   const old = useStore((s) => s.year < 1950)
   const raycast = useMemo(() => heightfieldRaycast(old ? { ...t, heights: t.old } : t), [t, old])
   return <mesh name="terrain-ground" raycast={raycast} frustumCulled={false}><bufferGeometry /></mesh>
@@ -228,7 +249,7 @@ function TerrainMesh({ t, step, hole, name = 'terrain' }) {
     return () => geometry.setIndex(full)
   }, [geometry, hole, t])
   const old = useStore((s) => s.year < 1950) // before 1950 the ground is the OS 1893-96 London Town Plan (NLS)
-  const maps = useMemo(() => (t.maps ?? ['color.jpg', 'color-1890s.jpg'].map((f) => new THREE.TextureLoader().load(t.base + f))).map((tex) => {
+  const maps = useMemo(() => t.maps.map((tex) => {
     // both up front, so the year scrub swaps without a blank frame
     tex.colorSpace = THREE.SRGBColorSpace
     tex.anisotropy = gl.capabilities.getMaxAnisotropy()
@@ -274,15 +295,15 @@ function LidarPoints({ t, step, hole, name = 'terrain-lidar' }) {
   )
 }
 
-// The outer 1.5 km tile, plus on desktop the 0.5 m near field around the bridge once it has loaded.
+// The outer 1.5 km tile (first-load, then full), plus on desktop the 0.5 m near field once it has loaded.
 function Tiles({ lidar, step }) {
-  const t = useTerrain()
-  const near = useNear()
-  const hole = near?.meta.bbox_osgb
+  const low = use(loadLow())
+  const full = useLoaded(loadFull)
+  const near = useLoaded(loadNear, !LITE && !!full)
   const Look = lidar ? LidarPoints : TerrainMesh
   return (
     <>
-      <Look t={t} step={step} hole={hole} />
+      <Look t={full ?? low} step={full ? step : 1} hole={near?.meta.bbox_osgb} />
       {near && <Look t={near} step={1} name={lidar ? 'terrain-lidar-near' : 'terrain-near'} />}
     </>
   )
@@ -292,7 +313,7 @@ function Tiles({ lidar, step }) {
 export default function Terrain({ lidar = false, step = LITE ? 2 : 1 }) {
   const google = useGoogleShown(lidar)
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<GroundStandIn />}>
       {(lidar || !google) && <Tiles lidar={lidar} step={step} />}{/* Ground stays: walk mode stands on it */}
       <Ground />
     </Suspense>

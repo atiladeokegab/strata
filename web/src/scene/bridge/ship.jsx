@@ -400,7 +400,7 @@ export function Ship({ rt, year, maxAngle }) {
     wake.current.scale.x = 0.4 + 0.6 * k
     // funnel smoke: puffs rise, swell and fade, streaming aft with the ship's way
     smoke.current?.children.forEach((p, i) => {
-      const age = (t * 0.35 + i / PUFFS) % 1
+      const age = (t * 0.35 + i / smoke.current.children.length) % 1
       p.position.set(3 + age * (4 + s.v * 2.2), 10 + age * 9, Math.sin(i * 2.1) * age * 2)
       p.scale.setScalar(0.8 + age * 3.2)
       p.material.opacity = 0.55 * (1 - age)
@@ -421,7 +421,7 @@ export function Ship({ rt, year, maxAngle }) {
         </Part>
         {vessel.kind === 'tug' && (
           <group ref={smoke}>
-            {mats.smoke.map((m, i) => (
+            {mats.smoke.slice(0, LITE ? 3 : PUFFS).map((m, i) => ( // lite: three puffs still read as a stream
               <mesh key={i} material={m} geometry={PUFF} />
             ))}
           </group>

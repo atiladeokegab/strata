@@ -254,7 +254,7 @@ export function BasculeDetails({ era }) {
   return (
     <Meshes
       deps={[era?.blackout, era?.woodBlocks, era?.gasLamps]}
-      materials={{ ...lanternFor(era), soffit: M.white }}
+      materials={lanternFor(era)}
       build={() => {
         const o = kit()
         for (const z of [-31, -21, -11]) for (const x of [-9, 9]) lamp(o, x, 0.05, z, era)
@@ -262,9 +262,7 @@ export function BasculeDetails({ era }) {
         footways(o, L.pierZ + L.towerHalfZ, 0, era)
         for (const gs of Object.values(o)) gs.forEach((g) => g.translate(0, -L.pivotY, -L.pivotZ))
         if (!LITE) return o
-        const leaf = leafKit() // lite: the leaf's static structure joins these meshes (basculeDetail.jsx)
-        if (era?.blackout) (leaf.soffit = leaf.white), delete leaf.white // blackout 'white' is the band paint
-        return join(o, leaf)
+        return join(o, leafKit()) // lite: the leaf's static structure joins these meshes; in 1940 its white rides the near-white band paint
       }}
     />
   )

@@ -83,5 +83,10 @@
       "counterweight-north": [1, 24],
       "counterweight-south": [1, 24]
     }
+  },
+  "_why1890": "1890 (stage 2, full tier): per half, a derrick (mast, slewing jib, rope, hook: 4 calls, split only where a piece animates) and the timber centring (1). check.mjs fails if a works-* part draws more calls than this.",
+  "baseline1890": {
+    "works-north": [5, 4916],
+    "works-south": [5, 4916]
   }
 }

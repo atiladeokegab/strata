@@ -638,6 +638,17 @@ console.log('geom materials untextured, all kinded ok')
     console.log(`render budget ${tier} ok (${years.map((y, i) => `${y}: ${totals[i][0]}/${B.maxDrawCalls} calls, ${Math.round(totals[i][1])}/${B.maxTriangles} tris`).join('; ')})`)
   }
   setLite(false)
+  // 1890 (centring under the leaves, derricks on the frames): phones render the build years too, so the
+  // construction works (works-*) may not draw more calls than budget.json's baseline1890 records
+  {
+    useStore.getState().setYear(1890)
+    const p = {}
+    tally({ type: TowerBridge, props: {} }, null, p)
+    const t = [sum(0, p), sum(1, p)], works = Object.entries(p).filter(([id]) => id.startsWith('works-'))
+    assert.ok(t[0] <= BUDGET.full.maxDrawCalls && t[1] <= BUDGET.full.maxTriangles, `1890 draws ${t[0]} calls, ${Math.round(t[1])} triangles`)
+    for (const [id, [c]] of works) assert.ok(c <= (BUDGET.baseline1890[id]?.[0] ?? 0), `1890 ${id} draws ${c} calls, over budget.json baseline1890; merge per material`)
+    console.log(`render budget 1890 ok (${t[0]} draw calls, ${Math.round(t[1])} triangles; ${works.map(([id, [c, n]]) => `${id} ${c}/${Math.round(n)}`).join(', ')})`)
+  }
   // period streets (horse era, interwar with the tram) may spend at most 8 traffic draw calls (2026's 6 when this was set, + 2)
   for (const y of [1894, 1940]) {
     useStore.getState().setYear(y)

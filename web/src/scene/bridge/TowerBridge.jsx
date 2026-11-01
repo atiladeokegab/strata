@@ -48,18 +48,18 @@ function Half({ side, rt, st, towerTop, era, maxAngle }) {
           <S.Cofferdam />
         </Part>
       )}
-      <Part id={id('pier')} rt={rt} explode={[0, 6, 0]} xray clipY={rising(st, 0, S.L.hw - 3, S.L.pierTop)}>
+      <Part id={id('pier')} rt={rt} merge explode={[0, 6, 0]} xray clipY={rising(st, 0, S.L.hw - 3, S.L.pierTop)}>
         <S.Pier />
       </Part>
       {st.stage >= 5 && <Cabin side={side} rt={rt} />}
       {shown('abutment', st.stage) && (
-        <Part id={id('abutment')} rt={rt} explode={[0, 0, -28]} clipY={rising(st, 0, S.L.hw - 1, towerTop)}>
+        <Part id={id('abutment')} rt={rt} merge explode={[0, 0, -28]} clipY={rising(st, 0, S.L.hw - 1, towerTop)}>
           <S.Abutment side={side} {...approachWorks(st)} />
           {approachWorks(st).road && <A.RampDetails side={side} era={era} />}
         </Part>
       )}
       {shown('frame', st.stage) && (
-        <Part id={towerId} rt={rt} explode={[0, 4, -14]} clipY={rising(st, 1, S.L.pierTop, towerTop)}>
+        <Part id={towerId} rt={rt} merge explode={[0, 4, -14]} clipY={rising(st, 1, S.L.pierTop, towerTop)}>
           <S.TowerFrame />
           <S.FixedDeck />
           <D.DeckMarkings era={era} />
@@ -68,7 +68,7 @@ function Half({ side, rt, st, towerTop, era, maxAngle }) {
       {/* interiors ride with the frame; separate Parts so they are clickable through the x-rayed shell */}
       {shown('frame', st.stage) && (
         <>
-          <Part id={id('stairs')} rt={rt} explode={[0, 4, -14]} clipY={rising(st, 1, S.L.pierTop, towerTop)}>
+          <Part id={id('stairs')} rt={rt} merge explode={[0, 4, -14]} clipY={rising(st, 1, S.L.pierTop, towerTop)}>
             <Stairs />
           </Part>
           <Part id={id('lift')} rt={rt} explode={[0, 4, -14]} clipY={rising(st, 1, S.L.pierTop, towerTop)}>
@@ -80,7 +80,7 @@ function Half({ side, rt, st, towerTop, era, maxAngle }) {
           the frame is always drawn so it shows through the x-rayed shell */}
       {/* cladding rises over the finished frame without clipping the steel */}
       {shown('cladding', st.stage) && (
-        <Part id={towerId} rt={rt} explode={[0, 30, -14]} xray clipY={rising(st, 4, S.L.pierTop, towerTop + 2)}>
+        <Part id={towerId} rt={rt} merge explode={[0, 30, -14]} xray clipY={rising(st, 4, S.L.pierTop, towerTop + 2)}>
           <S.TowerCladding topY={towerTop} />
           <D.TowerDetails />
           {era.nightLighting && <H.TowerLights />}
@@ -121,11 +121,11 @@ function Half({ side, rt, st, towerTop, era, maxAngle }) {
       )}
       {shown('span', st.stage) && (
         <>
-          <Part id={id('approach')} rt={rt} explode={[0, -8, -14]}>
+          <Part id={id('approach')} rt={rt} merge explode={[0, -8, -14]}>
             <S.Approach />
             <D.ApproachDetails era={era} />
           </Part>
-          <Part id={id('suspension')} rt={rt} explode={[0, 12, -10]}>
+          <Part id={id('suspension')} rt={rt} merge explode={[0, 12, -10]}>
             <S.Suspension />
             <D.SuspensionDetails />
           </Part>
@@ -193,6 +193,7 @@ export function TowerBridge(props) {
             key={side}
             id={`walkway-${side}`}
             rt={rt}
+            merge
             explode={[side === 'east' ? 14 : -14, 20, 0]}
             clipY={rising(st, 3, S.L.walkY - 0.5, S.L.walkY + S.L.walkH + 0.5)}
             dim={st.stage >= 5 && !era.walkwayOpen ? 0.7 : 0}

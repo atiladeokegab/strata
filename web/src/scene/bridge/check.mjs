@@ -485,11 +485,11 @@ console.log('geom materials untextured, all kinded ok')
   const out = join(tmpdir(), `bridge-corridor-${process.pid}.mjs`)
   const resolveDir = fileURLToPath(new URL('.', import.meta.url))
   // three is bundled too, so the scene and the components share one copy
-  await bundle({ stdin: { contents: `export { TowerBridge } from './TowerBridge.jsx'; export { BODIES } from './traffic.jsx'; export { useStore } from '../../store.js'; export { Fragment } from 'react/jsx-runtime'; export { setLite } from '../look/tier.js'; export * as T from 'three'`, resolveDir, loader: 'js' }, bundle: true, format: 'esm', platform: 'node', jsx: 'automatic', plugins: [stubs], outfile: out, logLevel: 'error' })
+  await bundle({ stdin: { contents: `export { TowerBridge } from './TowerBridge.jsx'; export { BODIES } from './traffic.jsx'; export { useStore } from '../../store.js'; export { Fragment } from 'react/jsx-runtime'; export { setLite } from '../look/tier.js'; export { mergeStatic } from './Part.jsx'; export * as T from 'three'`, resolveDir, loader: 'js' }, bundle: true, format: 'esm', platform: 'node', jsx: 'automatic', plugins: [stubs], outfile: out, logLevel: 'error' })
   const noop = new Proxy(() => noop, { get: () => noop }) // canvas textures draw into a no-op 2D context
   globalThis.document ??= { createElement: () => ({ getContext: () => noop }) }
   globalThis.location ??= { search: '' } // store.js reads ?embed= at import
-  const { TowerBridge, BODIES, useStore, Fragment, T, setLite } = await import(out)
+  const { TowerBridge, BODIES, useStore, Fragment, T, setLite, mergeStatic } = await import(out)
   unlinkSync(out)
 
   // Vehicle and people bodies (regression: the bus's rear face rendered black): every part is a convex
@@ -581,34 +581,73 @@ console.log('geom materials untextured, all kinded ok')
 
   // Render budget, 2026 (the busiest year): draw calls and triangles per part id, ship and traffic
   // included. Lines and instanced meshes are one call each; instanced triangles count every instance.
-  const tally = (el, part, t) => {
+  // A <Part merge> on LITE draws one call per material (Part.jsx mergeStatic).
+  let lite = false
+  const tally = (el, part, t, merged = null) => {
     if (el == null || typeof el !== 'object') return
-    if (Array.isArray(el)) return el.forEach((e) => tally(e, part, t))
+    if (Array.isArray(el)) return el.forEach((e) => tally(e, part, t, merged))
     const { type, props = {} } = el
     if (typeof type === 'function')
-      return tally(type(props), type.name === 'Part' ? props.id : (part ?? (['TowerBridge', 'Half'].includes(type.name) ? null : type.name)), t)
+      return type.name === 'Part'
+        ? tally(type(props), props.id, t, lite && props.merge ? new Set() : null)
+        : tally(type(props), part ?? (['TowerBridge', 'Half'].includes(type.name) ? null : type.name), t, merged)
     if (props.visible === false) return
-    const add = (geo, n = 1) => {
+    const add = (geo, n = 1, mat = null) => {
       const row = (t[part ?? '(loose)'] ??= [0, 0])
-      row[0]++
+      const mk = merged && mat && geo && `${mat.uuid}${mat.vertexColors ? (geo.attributes.color ? '+c' : `+${geo.uuid}`) : ''}`
+      if (!mk || !merged.has(mk)) row[0]++
+      if (mk) merged.add(mk)
       if (geo) row[1] += ((geo.index ?? geo.attributes.position).count / 3) * n
     }
     const kids = [props.children].flat(Infinity)
     const g = kids.find((k) => typeof k?.type === 'string' && k.type.endsWith('Geometry'))
     const geoOf = () => props.geometry ?? kids.find((k) => k?.type === 'primitive' && k.props.attach === 'geometry')?.props.object ?? (g && new T[g.type[0].toUpperCase() + g.type.slice(1)](...(g.props.args ?? [])))
-    if (type === 'mesh') add(geoOf())
+    const matOf = (m) => (m?.isMaterial ? m : null) // a JSX material child is its own material: never merges
+    if (type === 'mesh') add(geoOf(), 1, matOf(props.material))
     else if (type === 'instancedMesh') add(props.args[0], props.args[2])
     else if (type === 'lineSegments' || type === 'line' || type === 'points') add(null)
-    else if (type === 'primitive' && !props.attach) props.object.traverse((o) => o.visible && (o.isMesh ? add(o.geometry, o.count ?? 1) : (o.isLine || o.isPoints) && add(null)))
-    tally(props.children, part, t)
+    else if (type === 'primitive' && !props.attach) props.object.traverse((o) => o.visible && (o.isMesh ? add(o.geometry, o.count ?? 1, o.isInstancedMesh ? null : matOf(o.material)) : (o.isLine || o.isPoints) && add(null)))
+    tally(props.children, part, t, merged)
   }
+  // the runtime half of <Part merge>: one mesh per material, same bounds, sources hidden and unclickable
+  {
+    const a = new T.MeshStandardMaterial(), b = new T.MeshStandardMaterial(), box = new T.BoxGeometry(1, 1, 1)
+    const g = new T.Group(), sub = new T.Group()
+    sub.position.set(5, 0, 0)
+    sub.rotation.y = 0.7
+    g.position.set(100, 0, 0) // the part's own offset stays out of the baked geometry
+    const ms = [[a, 0], [a, 2], [b, 4]].map(([m, x]) => ((o) => (o.position.x = x, o))(new T.Mesh(box, m)))
+    g.add(ms[0], ms[2], sub.add(ms[1]), new T.InstancedMesh(box, a, 3))
+    const st = { key: '', meshes: [] }
+    const before = new T.Box3().setFromObject(g)
+    mergeStatic(g, st)
+    const drawn = []
+    g.traverseVisible((o) => o.isMesh && drawn.push(o))
+    assert.equal(st.meshes.length, 1, 'two meshes sharing a material merge into one')
+    assert.equal(drawn.length, 3, 'merged a + single b + instanced')
+    const after = new T.Box3()
+    st.meshes.concat(ms[2]).forEach((o) => after.union(new T.Box3().setFromObject(o, true)))
+    assert.ok(after.min.distanceTo(before.min) < 1e-4 && after.max.distanceTo(before.max) < 1e-4, 'merge keeps the bounds')
+    assert.ok(!ms[0].visible && !ms[1].visible && ms[2].visible, 'sources hidden, the lone mesh kept')
+    const hits = []
+    ms[0].raycast(new T.Raycaster(new T.Vector3(100, 5, 0), new T.Vector3(0, -1, 0)), hits)
+    assert.equal(hits.length, 0, 'a hidden source does not catch clicks')
+    const first = st.meshes[0]
+    mergeStatic(g, st)
+    assert.equal(st.meshes[0], first, 'an unchanged part does not re-merge')
+    ms[1].position.y = 3
+    mergeStatic(g, st)
+    assert.ok(st.meshes[0] !== first && !first.parent, 'a moved source re-merges and the old mesh goes')
+  }
+  console.log('LITE static merge ok (one mesh per material, bounds kept, sources hidden and unclickable)')
+
   useStore.getState().setYear(2026)
   const BUDGET = JSON.parse(readFileSync(new URL('./budget.json', import.meta.url)))
   const sum = (i, o) => Object.values(o).reduce((s, r) => s + r[i], 0)
   const d = (v, b) => (v === b ? '' : (v > b ? '+' : '') + (v - b))
   for (const tier of ['full', 'lite']) {
     const B = BUDGET[tier]
-    setLite(tier === 'lite')
+    setLite((lite = tier === 'lite'))
     // 2026 against the baseline, then the period years, whose eras swap and add meshes (1940: sandbags, lamps)
     const years = [2026, 1894, 1940]
     const spent = years.map((y) => {

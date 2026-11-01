@@ -4,6 +4,9 @@ import * as THREE from 'three'
 import { clickThrough } from './xray.js'
 import { roadSurface } from './roadway.js'
 import { pbr } from '../look/textures.js'
+import { boxProjectUvs } from './geom.js'
+import { LITE } from '../look/tier.js'
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 
 const HIGHLIGHT = new THREE.Color('#ffb547')
 const tmp = new THREE.Vector3()
@@ -13,7 +16,8 @@ const DOWN = new THREE.Vector3(0, -1, 0)
 // material clones so highlight and x-ray never leak to other parts, and eases towards its
 // exploded offset. `rt` holds the per-frame refs owned by TowerBridge.
 // clipY (scene-local y) cuts the part off above that height, for parts rising during construction.
-export function Part({ id, rt, home = [0, 0, 0], explode = [0, 0, 0], xray = false, clipY = null, dim = 0, children }) {
+// merge: the part has no moving meshes, so on LITE its meshes merge into one draw per material.
+export function Part({ id, rt, home = [0, 0, 0], explode = [0, 0, 0], xray = false, clipY = null, dim = 0, merge = false, children }) {
   const ref = useRef()
   const mats = useRef([])
   const meshes = useRef([])
@@ -22,13 +26,15 @@ export function Part({ id, rt, home = [0, 0, 0], explode = [0, 0, 0], xray = fal
   const clipList = useRef([plane.current])
   const last = useRef(null) // what the materials were last written with; null forces a write
   const roadWait = useRef(0) // frames since a road material was found without Look's maps yet
+  const merged = useRef({ key: '', meshes: [] })
 
   useLayoutEffect(() => {
+    if (merge && LITE) mergeStatic(ref.current, merged.current)
     const list = [], ms = []
     ref.current.traverse((o) => {
       o.name = id
       o.userData.partId = id
-      if (!o.isMesh || o.userData.affordance) return // drive gizmos keep their own materials
+      if (!o.isMesh || o.userData.affordance || o.userData.mergedAway) return // drive gizmos keep their own materials
       if (!o.userData.ownMat) {
         o.material = o.material.clone()
         o.userData.ownMat = true
@@ -40,6 +46,8 @@ export function Part({ id, rt, home = [0, 0, 0], explode = [0, 0, 0], xray = fal
     meshes.current = ms
     last.current = null
   })
+
+  useLayoutEffect(() => () => merged.current.meshes.forEach((m) => m.geometry.dispose()), [])
 
   useFrame((_, dt) => {
     // road surface waits for Look's maps: retry only the road materials, twice a second, not the whole pass
@@ -99,4 +107,67 @@ export function Part({ id, rt, home = [0, 0, 0], explode = [0, 0, 0], xray = fal
       {children}
     </group>
   )
+}
+
+// LITE: bake every plain visible mesh of a static part into one mesh per source material, in the
+// part group's frame. The originals stay in React's tree, hidden. Rebuilt only when the set changes.
+// shortcut: a source's material or visible prop changed in place by React after the merge is not
+// seen (Meshes remounts on a material change); add it to the key if a static part starts doing that.
+const mergeable = (o) => o.isMesh && !o.isInstancedMesh && !o.isSkinnedMesh && !Array.isArray(o.material) && !o.userData.affordance
+const noRay = () => {}
+// one layout for every source: non-indexed, position + normal + metre-scale UVs (as Look's worldUVs),
+// plus colour for a vertex-coloured material; a source that cannot match keeps its own draw
+const KEEP = ['position', 'normal', 'uv', 'color']
+const sigOf = (g, m) => (m.vertexColors ? (g.attributes.color ? '+c' : `+${g.uuid}`) : '')
+function layout(geo, rel, colours) {
+  const g = boxProjectUvs(geo.index ? geo : geo.clone())
+  for (const k of Object.keys(g.attributes)) if (!KEEP.includes(k) || (k === 'color' && !colours)) g.deleteAttribute(k)
+  for (const k of Object.keys(g.morphAttributes)) delete g.morphAttributes[k]
+  if (!g.attributes.normal) g.computeVertexNormals()
+  g.clearGroups()
+  return g.applyMatrix4(rel)
+}
+export function mergeStatic(group, state) {
+  group.updateMatrixWorld(true)
+  const inv = new THREE.Matrix4().copy(group.matrixWorld).invert()
+  const found = []
+  const walk = (o) => {
+    if (o.userData.merged) return
+    if (o !== group && !o.visible && !o.userData.hiddenByMerge) return
+    if (mergeable(o)) {
+      const src = (o.userData.srcMat ??= o.material)
+      const rel = new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld)
+      found.push({ o, rel, mk: `${src.uuid}${sigOf(o.geometry, src)}` })
+    }
+    o.children.forEach(walk)
+  }
+  walk(group)
+  const key = found.map((f) => `${f.o.uuid}:${f.o.geometry.uuid}:${f.mk}:${f.rel.elements.map((v) => v.toFixed(3)).join()}`).join(';')
+  if (key !== state.key) {
+    for (const m of state.meshes) {
+      group.remove(m)
+      m.geometry.dispose()
+      for (const o of m.userData.sources) (o.visible = true), delete o.raycast, (o.userData.hiddenByMerge = o.userData.mergedAway = false)
+    }
+    state.meshes = []
+    const by = new Map()
+    for (const f of found) by.set(f.mk, [...(by.get(f.mk) ?? []), f])
+    for (const fs of by.values()) {
+      if (fs.length < 2) continue
+      const geo = mergeGeometries(fs.map((f) => layout(f.o.geometry, f.rel, f.o.userData.srcMat.vertexColors)))
+      if (!geo) continue
+      const m = new THREE.Mesh(geo, fs[0].o.userData.srcMat)
+      m.castShadow = fs.some((f) => f.o.castShadow)
+      m.receiveShadow = fs.some((f) => f.o.receiveShadow)
+      m.userData.merged = true
+      m.userData.sources = fs.map((f) => f.o)
+      state.meshes.push(m)
+    }
+    state.key = key
+  }
+  for (const m of state.meshes) {
+    if (m.parent !== group) group.add(m)
+    // hidden meshes still raycast in three, so the stand-ins must not catch clicks
+    for (const o of m.userData.sources) (o.visible = false), (o.raycast = noRay), (o.userData.hiddenByMerge = o.userData.mergedAway = true)
+  }
 }

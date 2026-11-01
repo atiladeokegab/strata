@@ -167,6 +167,41 @@ def test_place_name_filter_keeps_the_requested_part_topic(place):
     assert any(fact["fact_id"] == "north-tower" for fact in evidence)
 
 
+def test_verified_height_survives_rich_pipe_context(place, monkeypatch):
+    from server.docent import ask
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    place["facts"] = [
+        {"id": f"pipe-{i}", "title": "North tower hydraulic mains height",
+         "text": "The north tower pipes travel high into the tower, supplying the north tower machinery.",
+         "source": "bridge-guide", "status": "text-attested"}
+        for i in range(6)
+    ]
+    evidence = retrieve(place, "How tall is the north tower?")
+    assert len(evidence) <= 4 and evidence[0]["fact_id"] == "north-tower"
+    result = asyncio.run(ask(place, "How tall is the north tower?"))
+    assert not result["refused"] and "65" in result["answer"]
+    assert result["citations"] == ["bridge-guide"]
+
+
+def test_access_question_is_not_a_lift_time_measurement(place, monkeypatch):
+    from server.docent import ask
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    place["parts"].append({"id": "engine-room", "name": "Engine room", "summary": "The engine room powers the lifts.", "sources": ["bridge-guide"], "dims": {"lift_time": {"value": 60, "unit": "s", "status": "text-attested", "source": "bridge-guide"}}})
+    place["facts"] = [{"id": "access", "text": "Stairs and lifts carried pedestrians to the walkways.", "source": "bridge-guide", "status": "text-attested"}]
+    result = asyncio.run(ask(place, "What were the stairs and lifts for?"))
+    assert not result["refused"] and "pedestrians" in result["answer"]
+
+
+def test_high_walkway_purpose_is_distinct_from_height(place, monkeypatch):
+    from server.docent import ask
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    place["parts"] = [{"id": "walkway", "name": "High walkways", "summary": "The high walkways carry pedestrians above the road.", "sources": ["bridge-guide"], "dims": {"height": {"value": 42, "unit": "m", "status": "text-attested", "source": "bridge-guide"}}}]
+    purpose = asyncio.run(ask(place, "What were the high walkways for?"))
+    assert "pedestrians" in purpose["answer"] and "42" not in purpose["answer"]
+    height = asyncio.run(ask(place, "How high are the walkways?"))
+    assert "42" in height["answer"] and height["citations"]
+
+
 def test_how_question_prefers_operation_over_opening_width(place, monkeypatch):
     from server.docent import ask
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)

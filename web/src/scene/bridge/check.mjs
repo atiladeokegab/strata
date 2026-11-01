@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict'
 import { createHydraulics, stepHydraulics, OPEN_TIME_S } from './hydraulics.js'
 import { stageForYear, shown } from './stages.js'
+import { containersOf } from './xray.js'
 import { createShip, stepShip, WAIT_X, HOLD_X } from './shipSim.js'
 import { createTraffic, stepTraffic, TYPES, STOP_U, BASCULE_U } from './trafficSim.js'
 import { vesselForYear, needsLift, leafInput, CLEARANCE } from './vessels.js'
@@ -59,6 +60,14 @@ for (const year of [1900, 2026]) {
 }
 assert.ok(createTraffic(1900).lanes[0].list.every((v) => v.type === 'cart' || v.type === 'hansom'), 'horse era')
 assert.ok(createTraffic(2026).lanes[0].list.every((v) => ['car', 'taxi', 'bus'].includes(v.type)), 'motor era')
+assert.deepEqual(containersOf('lift-north'), ['north-tower'])
+assert.deepEqual(containersOf('stairs-south'), ['south-tower'])
+assert.deepEqual(containersOf('hydraulic-engine-south'), ['pier-south'])
+assert.deepEqual(containersOf('pivot-north'), ['pier-north'])
+assert.deepEqual(containersOf('engine-room'), ['engine-room'])
+assert.deepEqual(containersOf('north-tower'), ['north-tower'])
+assert.deepEqual(containersOf('bascule-north'), [])
+assert.deepEqual(containersOf(null), [])
 console.log('bridge checks ok')
 
 // Ship: waits for the leaves, holds short of the bridge if they drop, but a committed ship keeps going.

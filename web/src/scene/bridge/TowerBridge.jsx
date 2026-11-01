@@ -10,6 +10,7 @@ import { Part } from './Part.jsx'
 import { steelColour } from './geom.js'
 import { createHydraulics, stepHydraulics, SIM_SPEED } from './hydraulics.js'
 import { stageForYear, shown } from './stages.js'
+import { containersOf } from './xray.js'
 import * as S from './structures.jsx'
 import * as D from './details.jsx'
 import { BasculeLeafDetail } from './basculeDetail.jsx'
@@ -22,7 +23,6 @@ import { Traffic } from './traffic.jsx'
 // The live sim state, for any panel that wants to show pressure or stored volume. Read-only.
 export const bridgeHydraulics = createHydraulics()
 
-const INTERNAL = /^(counterweight|pivot|hydraulic-engine|accumulator|engine-room|stairs|lift|north-tower|south-tower)/
 
 const dim = (place, id, key, fallback) => place?.parts?.find((p) => p.id === id)?.dims?.[key]?.value ?? fallback
 
@@ -139,7 +139,7 @@ export function TowerBridge(props) {
       root,
       sim: bridgeHydraulics,
       explode: { current: 0 },
-      xray: { current: 0 },
+      fades: { current: [] }, // shell part ids x-rayed for the current selection
       selected: { current: useStore.getState().selected },
       hovered: { current: null },
       steel: { current: steelColour(year) },
@@ -159,8 +159,7 @@ export function TowerBridge(props) {
   useFrame((_, dt) => {
     const k = 1 - Math.exp(-Math.min(dt, 0.1) * 3)
     rt.explode.current += ((exploded ? 1 : 0) - rt.explode.current) * k
-    const inside = INTERNAL.test(rt.selected.current ?? '') ? 1 : 0
-    rt.xray.current += (Math.max(exploded ? 1 : 0, inside) - rt.xray.current) * k
+    rt.fades.current = containersOf(rt.selected.current)
     // Bascules can only be worked once the bridge is open (stage 5); before that they sit closed.
     const lever = st.stage >= 5 ? useStore.getState().bascule : 0
     stepHydraulics(rt.sim, lever, Math.min(dt, 0.1) * SIM_SPEED, maxAngle)

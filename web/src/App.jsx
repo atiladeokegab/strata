@@ -112,8 +112,8 @@ export default function App() {
   const view = useStore((s) => s.view)
   const loadPlace = useStore((s) => s.loadPlace)
   const [error, setError] = useState(false)
-  // the museum landing first; ?tour=1 (film takes) goes straight in. Only one canvas lives at a time, so Reimagine captures the bridge.
-  const [entered, setEntered] = useState(() => new URLSearchParams(location.search).get('tour') === '1')
+  // the museum landing first; ?tour=1, ?capture=1 and ?film=1 (shot scripts) go straight into the full scene. Only one canvas lives at a time, so Reimagine captures the bridge.
+  const [entered, setEntered] = useState(() => /[?&](tour|capture|film)=1/.test(location.search))
   const load = () => { setError(false); loadPlace(PLACE).catch(() => setError(true)) }
   useEffect(load, []) // eslint-disable-line react-hooks/exhaustive-deps
   const sheet = useStore((s) => s.sheet)

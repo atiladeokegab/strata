@@ -12,7 +12,7 @@ from pathlib import Path
 import urllib.request
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
 from pyproj import Transformer
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -55,7 +55,8 @@ def main():
     iy = np.clip((py - y0 * 256).astype(int), 0, mosaic.shape[0] - 1)
     out = mosaic[iy, ix]
     assert out.shape == (h, w, 3) and out.std() > 10, "mosaic is blank: tiles did not load"
-    Image.fromarray(out).save(OUT / "color-1890s.jpg", quality=85)
+    # ink lines are ~1 px; a 3 px min filter thickens them so they survive the mipmaps seen from orbit
+    Image.fromarray(out).filter(ImageFilter.MinFilter(3)).save(OUT / "color-1890s.jpg", quality=85)
     print(f"{(x1 - x0 + 1) * (y1 - y0 + 1)} tiles -> {OUT / 'color-1890s.jpg'}")
 
 

@@ -106,15 +106,20 @@ function Ground() {
 
 // Aerial imagery only sees roofs, so draped walls smear into streaks. On steep faces, swap to a
 // blurred sample of the imagery (a far mip) toned toward London stone, which reads as a clean facade.
-// The 1890s OS sheet in its own colours with a light sepia. It is pale paper: at full albedo the sun and HDRI
-// wash it to white, so it is drawn at about a third. The grade runs on gamma-encoded colour because the map
-// sample is linear here. ERA is 1 while the old map is draped; then the ground is bare earth (aOld), flat-lit.
+// The 1890s OS sheet as an old map: its paper renders as warm #d9c49a stock in full light (the albedo is
+// warmer still to offset the blue sky fill, measured on a still) and its ink as dark brown, with a
+// little of the sheet's own hue kept (blue water, tinted blocks). The tone runs on gamma-encoded colour
+// because the map sample is linear here; ERA_GAIN sets how bright the paper sits under the scene light.
+// ERA is 1 while the old map is draped; then the ground is bare earth (aOld), flat-lit.
 const ERA = { value: 0 }
+const ERA_GAIN = '1.0'
 const ERA_GRADE = `
   vec3 eraGrade(vec3 c) {
     vec3 s = pow(max(c, 0.0), vec3(1.0 / 2.2));
-    vec3 t = mix(s, s * vec3(1.0, 0.9, 0.74), 0.55);
-    return mix(c, pow(t, vec3(2.2)) * 0.32, uEra);
+    float l = dot(s, vec3(0.3, 0.59, 0.11));
+    vec3 tone = mix(vec3(0.30, 0.21, 0.13), vec3(0.957, 0.816, 0.58), smoothstep(0.30, 0.88, l));
+    vec3 t = mix(tone, tone * s / max(l, 0.05), 0.35);
+    return mix(c, pow(clamp(t, 0.0, 1.0), vec3(2.2)) * ${ERA_GAIN}, uEra);
   }`
 
 function facades(shader) {

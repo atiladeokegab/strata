@@ -201,7 +201,12 @@ export function TowerBridge(props) {
         ))}
       {shown('engine', st.stage) && <EngineRoom rt={rt} steam={era.steam} explode={[14, 6, 20]} />}
       <TopView st={st} year={year} maxAngle={maxAngle} sim={bridgeHydraulics} />
-      {st.stage >= 5 && <Traffic rt={rt} year={year} sim={bridgeHydraulics} maxAngle={maxAngle} />}
+      {/* traffic rides no part, so it would float over the exploded decks; hide it but keep its sim */}
+      {st.stage >= 5 && (
+        <group visible={!exploded}>
+          <Traffic rt={rt} year={year} sim={bridgeHydraulics} maxAngle={maxAngle} />
+        </group>
+      )}
       {st.stage >= 5 && <LiftControls year={year} towerTop={towerTop} style={LABEL} />}
       {/* the top view draws its own build caption */}
       {st.stage < 5 && view !== 'top' && (

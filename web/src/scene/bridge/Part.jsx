@@ -21,6 +21,7 @@ export function Part({ id, rt, home = [0, 0, 0], explode = [0, 0, 0], xray = fal
   const plane = useRef(new THREE.Plane(new THREE.Vector3(0, -1, 0), 0))
   const clipList = useRef([plane.current])
   const last = useRef(null) // what the materials were last written with; null forces a write
+  const roadWait = useRef(0) // frames since a road material was found without Look's maps yet
 
   useLayoutEffect(() => {
     const list = [], ms = []
@@ -41,6 +42,9 @@ export function Part({ id, rt, home = [0, 0, 0], explode = [0, 0, 0], xray = fal
   })
 
   useFrame((_, dt) => {
+    // road surface waits for Look's maps: retry only the road materials, twice a second, not the whole pass
+    if (roadWait.current && ++roadWait.current % 30 === 0)
+      roadWait.current = mats.current.filter((m) => m.userData.kind === 'road' && !roadSurface(m, rt.road.current, pbr)).length ? 1 : 0
     const g = ref.current
     const e = rt.explode.current
     tmp.set(home[0] + explode[0] * e, home[1] + explode[1] * e, home[2] + explode[2] * e)
@@ -63,7 +67,7 @@ export function Part({ id, rt, home = [0, 0, 0], explode = [0, 0, 0], xray = fal
       m.emissive.copy(HIGHLIGHT)
       m.emissiveIntensity = glow
       if (m.userData.kind === 'steel') m.color.set(rt.steel.current)
-      if (m.userData.kind === 'road' && rt.road && !roadSurface(m, rt.road.current, pbr)) last.current = null // not textured yet: retry
+      if (m.userData.kind === 'road' && rt.road && !roadSurface(m, rt.road.current, pbr)) roadWait.current ||= 1
       const own = m.userData.opacity ?? 1 // clear glass keeps its own opacity under the fade
       const t = fade > 0.01 || own < 1
       // three bakes `transparent` into the shader (OPAQUE define), so a flip needs a recompile.

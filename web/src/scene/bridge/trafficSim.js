@@ -86,6 +86,6 @@ export function stepTraffic(t, dt, closed, hurry = 1) {
   return t
 }
 
-// Vehicles and pedestrians with any part of them on a bascule leaf.
+// Vehicles and pedestrians on a bascule leaf or past the stop line and committed to one.
 export const onLeaves = (t) =>
-  t.lanes.reduce((n, L) => n + L.list.filter((v) => v.u > -BASCULE_U && v.u - TYPES[v.type].len < BASCULE_U).length, 0)
+  t.lanes.reduce((n, L) => n + L.list.filter((v) => v.u > STOP_U && v.u - TYPES[v.type].len < BASCULE_U).length, 0)

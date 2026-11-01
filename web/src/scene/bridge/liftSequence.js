@@ -30,7 +30,7 @@ export const CAPTIONS = {
   resume: 'Traffic resumes',
 }
 
-export const createLift = () => ({ phase: 'idle', caption: '', red: false, t: 0, seenEast: false, fast: false, warpShip: false })
+export const createLift = () => ({ phase: 'idle', caption: '', red: false, t: 0, seenEast: false, fast: false, warpShip: false, clear: false })
 export const lift = createLift()
 
 const go = (s, phase) => Object.assign(s, { phase, caption: CAPTIONS[phase], red: phase === 'red', t: 0 })
@@ -47,6 +47,10 @@ export function liftForShip({ fast = FILM_URL } = {}, s = lift) {
 // The one rule for the road gates (road barriers, signals and the top view all read it): shut while
 // the lift holds the signals red, the lever is up, a leaf is off its seat, or the bolts are not home.
 export const gatesClosed = (sim, lever, s = lift) => s.red || lever > 0 || sim.angle > 0.001 || !sim.locked
+
+// The interlock on the lever, however it is moved (liftForShip, Dock slider, ?bascule=1): leaves at
+// rest stay down until the traffic driver reports the gates shut and every leaf empty (s.clear).
+export const heldLever = (lever, sim, s = lift) => (lever > 0 && sim.angle <= 0.001 && !s.clear ? 0 : lever)
 
 // The driver calls this with the live ship state each frame before stepping it.
 export function applyShipWarp(s, ship, cruise) {

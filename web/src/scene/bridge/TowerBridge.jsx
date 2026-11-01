@@ -23,7 +23,7 @@ import { Ship } from './ship.jsx'
 import { Stairs, Lifts } from './interiors.jsx'
 import { Traffic } from './traffic.jsx'
 import { TopView } from './topview.jsx'
-import { liftSpeed } from './liftSequence.js'
+import { liftSpeed, heldLever } from './liftSequence.js'
 import { LiftControls } from './liftControls.jsx'
 
 // The live sim state, for any panel that wants to show pressure or stored volume. Read-only.
@@ -175,7 +175,7 @@ export function TowerBridge(props) {
     rt.fades.current = containersOf(rt.selected.current)
     // Bascules can only be worked once the bridge is open (stage 5); before that they sit closed.
     const lever = st.stage >= 5 ? useStore.getState().bascule : 0
-    stepHydraulics(rt.sim, lever, Math.min(dt, 0.1) * SIM_SPEED * liftSpeed(), maxAngle)
+    stepHydraulics(rt.sim, heldLever(lever, rt.sim), Math.min(dt, 0.1) * SIM_SPEED * liftSpeed(), maxAngle)
   })
 
   return (

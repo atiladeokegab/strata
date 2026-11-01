@@ -10,7 +10,7 @@ import { createShip, stepShip, WAIT_X, HOLD_X, CRUISE } from './shipSim.js'
 import { vesselForYear, needsLift, leafInput, CLEARANCE } from './vessels.js'
 import { createRiver, stepRiver, gap, CRAFT, CLEAR } from './riverSim.js'
 import { createTraffic, stepTraffic, onLeaves, TYPES, STOP_U, BASCULE_U } from './trafficSim.js'
-import { createLift, liftForShip, stepLift, liftSpeed, setLiftTimeScale, applyShipWarp, gatesClosed, PASSED_X, FILM_SCALE } from './liftSequence.js'
+import { createLift, liftForShip, stepLift, liftSpeed, setLiftTimeScale, applyShipWarp, gatesClosed, heldLever, PASSED_X, FILM_SCALE } from './liftSequence.js'
 
 const MAX = (86 * Math.PI) / 180
 const run = (s, target, seconds) => {
@@ -293,8 +293,9 @@ const liftCycle = (scale, fast = false) => {
     assert.equal(closed, s.red || lever > 0 || h.angle > 0.001 || !h.locked, 'one gate rule for road and top view')
     if (!closed) assert.ok(h.locked, 'gates never open on an unbolted leaf')
     stepTraffic(t, dt, closed, k)
+    s.clear = closed && onLeaves(t) === 0
     if (h.angle > 0.001) assert.equal(onLeaves(t), 0, 'no road user on a moving leaf')
-    stepHydraulics(h, lever, dt * SIM_SPEED * k, MAX)
+    stepHydraulics(h, heldLever(lever, h, s), dt * SIM_SPEED * k, MAX)
     applyShipWarp(s, ship, CRUISE)
     stepShip(ship, h.angle / MAX, dt * k)
     if (['raising', 'passing'].includes(s.phase) && ship.x > PASSED_X && ship.v < 0.5) still += dt
@@ -314,3 +315,29 @@ console.log(`lift checks ok (cycle ${slow.secs.toFixed(0)} s at scale 1, ${film.
 // top view and road read the same gate rule: no file draws gates from its own condition
 for (const f of ['traffic.jsx', 'topview.jsx'])
   assert.ok(readFileSync(new URL(f, import.meta.url), 'utf8').includes('gatesClosed(sim, '), `${f} gates follow gatesClosed`)
+// A lever moved directly (Dock slider, ?bascule=1) with traffic on the leaves: signals go red, the
+// leaves stay down until the road is clear, and nobody is ever on a leaf that has moved.
+let worstHold = 0
+for (const year of [1900, 2026])
+  for (let seed = 1; seed <= 20; seed++) {
+    const h = createHydraulics(), t = createTraffic(year, seed), s = createLift(), dt = 0.05
+    for (let j = 0; j < 400 && onLeaves(t) === 0; j++) stepTraffic(t, dt, false) // get someone on a leaf
+    assert.ok(onLeaves(t) > 0, 'traffic on the leaves before the lever moves')
+    let i = 0
+    for (; i < 60 / dt && h.angle <= 0.001; i++) {
+      const closed = gatesClosed(h, 1, s)
+      assert.ok(closed, 'a raised lever drives the gates shut')
+      stepHydraulics(h, heldLever(1, h, s), dt * SIM_SPEED, MAX)
+      if (h.angle > 0.001) assert.ok(s.clear && onLeaves(t) === 0, 'leaves only move once clear')
+      stepTraffic(t, dt, closed)
+      s.clear = closed && onLeaves(t) === 0
+    }
+    assert.ok(h.angle > 0.001, `manual lever raises the leaves once clear (${year}, seed ${seed})`)
+    worstHold = Math.max(worstHold, i * dt)
+    for (let j = 0; j < 30 / dt; j++) {
+      stepTraffic(t, dt, gatesClosed(h, 1, s))
+      stepHydraulics(h, heldLever(1, h, s), dt * SIM_SPEED, MAX)
+      assert.equal(onLeaves(t), 0, 'nobody on a raised leaf')
+    }
+  }
+console.log(`manual lever interlock ok (leaves held at most ${worstHold.toFixed(1)} s)`)

@@ -95,6 +95,7 @@ export function Traffic({ rt, year, sim, maxAngle }) {
     g.closed = gatesClosed(sim, store.bascule)
     g.swing += ((g.closed ? 1 : 0) - g.swing) * (1 - Math.exp(-Math.min(dt, 0.1) * 1.5))
     stepTraffic(t, Math.min(dt, 0.1), g.closed, liftSpeed())
+    lift.clear = g.closed && onLeaves(t) === 0 // measured after a step taken with the gates shut
     for (const k in n) n[k] = 0
     for (const L of t.lanes)
       for (const v of L.list) {

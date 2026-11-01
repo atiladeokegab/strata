@@ -136,10 +136,6 @@ input[type=range]::-moz-range-track { height: 2px; border-radius: 1px; backgroun
 input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; margin-top: -6px; border-radius: 50%; background: var(--accent); border: 0; }
 input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--accent); border: 0; }
 
-/* The tour's handoff and end cards (scene/Tour.jsx) sit on their own dark scrim, so their text keeps light ink.
-   shortcut: matches the inline scrim style; drop when Tour.jsx gets its own class. */
-.stage div[style*="radial-gradient"] { --ink: #fff; --muted: rgba(255, 255, 255, .78); --gold: #fff; }
-
 /* data credit, top: the LiDAR source stays named on screen */
 .credit { position: absolute; top: var(--gap); left: calc(var(--panel-w) + var(--gap) * 2); margin: 0; display: flex; align-items: center; gap: var(--s2); padding: 6px var(--s3) 6px 6px;
   border-radius: var(--pill); background: var(--surface); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); border: 1px solid var(--line); font-size: var(--t1); color: var(--muted); max-width: calc(100% - var(--panel-w) - 360px); }

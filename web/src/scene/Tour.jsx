@@ -127,7 +127,7 @@ const captionWrap = {
 const captionBox = { maxWidth: 560, padding: '12px 18px 14px', borderRadius: 14, fontSize: 15, lineHeight: 1.45 }
 const cardStyle = {
   position: 'absolute', inset: 0, left: 'calc(var(--panel-w, 0px) + var(--gap, 0px) * 2)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 24px',
-  textAlign: 'center', opacity: 0, background: 'radial-gradient(ellipse at center, rgba(11,11,9,.72) 0%, rgba(11,11,9,.35) 55%, rgba(11,11,9,0) 80%)',
+  textAlign: 'center', opacity: 0, background: 'rgba(245,245,247,.72)', backdropFilter: 'var(--blur)', WebkitBackdropFilter: 'var(--blur)',
 }
 
 // Aim at the mesh named partId and fit the distance to its bounding sphere (Mechanica's focus fit: radius * 2.4 /

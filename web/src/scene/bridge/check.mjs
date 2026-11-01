@@ -1,7 +1,7 @@
 // Self-check for the pure bridge logic: `node web/src/scene/bridge/check.mjs`
 import assert from 'node:assert/strict'
 import { createHydraulics, stepHydraulics, OPEN_TIME_S, SIM_SPEED, BOLT_SETTLE_S, BOLT_TRAVEL_S, DRAW_UP, LIFT_DRAW, createCars, stepCars, carHeight, gaugePsi, PRESSURE_PSI } from './hydraulics.js'
-import { stageForYear, shown, ERAS, eraFor, resolveYears } from './stages.js'
+import { stageForYear, shown, STAGES, ERAS, eraFor, resolveYears } from './stages.js'
 import { readFileSync } from 'node:fs'
 import { containersOf } from './xray.js'
 import { createShip, stepShip, WAIT_X, HOLD_X } from './shipSim.js'
@@ -89,6 +89,9 @@ const tb = JSON.parse(readFileSync(new URL('../../../../data/places/tower-bridge
 const real = resolveYears(tb.events)
 for (const k of ['walkwaysClosed', 'electricDrive', 'walkwaysReopened']) assert.equal(real.eras[k].status, 'sourced', k)
 assert.ok(real.stages[0].status === 'sourced' && real.stages[5].status === 'sourced')
+// film freeze: the data may confirm years but must not move any; a mismatch goes to the lead as a note
+real.stages.forEach((s, i) => assert.ok(s.from === STAGES[i].from && s.to === STAGES[i].to, `data moves stage ${i} to ${s.from}`))
+for (const [k, e] of Object.entries(real.eras)) assert.equal(e.year, ERAS[k], `data moves ${k} to ${e.year}`)
 assert.deepEqual(resolveYears(null).eras.glassFloor, { year: ERAS.glassFloor, status: 'inferred' })
 // traffic: gates hold the queue, spacing holds, the bascules clear, the queue moves on green
 for (const year of [1900, 2026]) {

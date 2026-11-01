@@ -14,7 +14,7 @@
 
 **Codex did:** Built JSON and SSE answers with a four-fact retrieval limit, exact source citation chips, refusal paths, and numeric checks before streaming a clause. The first live benchmark exposed two real bugs: models confused part IDs with source IDs, and “open” missed the “Opened” event. Codex fixed both, separated fact IDs from citations, and handled citations placed after sentence punctuation. Two parallel builders implemented the docent grounding and a startup-cached OpenAI embedding index while the main session integrated the graph and existing routers. The prompt contract adapts Mechanica's MIT-licensed docent. API, graph and existing router tests passed together.
 
-**Commits:** `1910db8` (docent and semantic search), `93fb244` (graph retrieval and streaming safeguards).
+**Commits:** `a986ee5` (docent and semantic search), `f1a1e2f` (graph retrieval and streaming safeguards), `e69f682` (sourced people and engineering facts within the four-fact budget). Atlas connected the browser chat to the stream in `bc3a19b`, with tests for split Unicode, final refusals, and interrupted streams.
 
 **Model timing:** Listed models with the provided key and timed the same three questions about tower height, opening date and bascule motion on the original sourced scaffold. No Flash model was listed. Final validation checked the saved outputs for source IDs and numeric provenance.
 

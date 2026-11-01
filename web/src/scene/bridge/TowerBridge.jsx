@@ -12,6 +12,7 @@ import { createHydraulics, stepHydraulics, SIM_SPEED } from './hydraulics.js'
 import { stageForYear, shown } from './stages.js'
 import * as S from './structures.jsx'
 import * as D from './details.jsx'
+import { BasculeLeafDetail } from './basculeDetail.jsx'
 import { ConstructionSite } from './construction.jsx'
 import { EngineRoom } from './engineRoom.jsx'
 import { Ship } from './ship.jsx'
@@ -81,6 +82,7 @@ function Half({ side, rt, st, towerTop }) {
             <S.PivotFrame sim={sim}>
               <S.BasculeLeaf />
               <D.BasculeDetails />
+              <BasculeLeafDetail />
             </S.PivotFrame>
           </Part>
           <Part id={id('counterweight')} rt={rt} explode={[0, -10, -4]}>

@@ -1,9 +1,8 @@
 // The glass side panel: search, the place card, the part inspector and the docent.
-import { useEffect, useRef, useState } from 'react'
+import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { useStore } from '../store'
-import { bridgeHydraulics } from '../scene/bridge/TowerBridge.jsx'
 import { useTour, startTour, stopTour } from '../tour/tour.js'
-import Voice from './Voice'
+const Voice = lazy(() => import('./Voice'))
 import { StoryCard } from './TimelineMarks'
 import { readDocentStream } from '../lib/docentStream'
 
@@ -120,8 +119,14 @@ function Inspector() {
 
 // live readout of the simulated hydraulics the bridge runs; refreshed ten times a second
 function Hydraulics() {
-  const [h, setH] = useState(() => ({ ...bridgeHydraulics }))
-  useEffect(() => { const t = setInterval(() => setH({ ...bridgeHydraulics }), 100); return () => clearInterval(t) }, [])
+  const [h, setH] = useState(null)
+  useEffect(() => {
+    let t
+    // same chunk the bridge slot already loads, so the bridge stays out of the first paint
+    import('../scene/bridge/TowerBridge.jsx').then(({ bridgeHydraulics: sim }) => { t = setInterval(() => setH({ ...sim }), 100) })
+    return () => clearInterval(t)
+  }, [])
+  if (!h) return null
   const deg = (h.angle * 180) / Math.PI
   const rows = [
     ['Leaf angle', `${deg.toFixed(1)}°`],
@@ -208,7 +213,7 @@ function Docent() {
         </button>
         <button type="submit" disabled={busy || !q.trim()}>Ask</button>
       </form>
-      {talk && <div className="voice"><Voice /></div>}
+      {talk && <div className="voice"><Suspense fallback={null}><Voice /></Suspense></div>}
     </section>
   )
 }

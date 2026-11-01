@@ -1,10 +1,13 @@
-import { useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import { useStore } from './store'
 import { Stage } from './ui/Stage'
 import { Panel } from './ui/Panel'
 import { Controls, Dock } from './ui/Dock'
-import Reimagine from './ui/Reimagine'
-import Identify from './ui/Identify'
+// photo tools load after first paint
+const Reimagine = lazy(() => import('./ui/Reimagine'))
+const Identify = lazy(() => import('./ui/Identify'))
+const archive = Object.values(import.meta.glob(['./ui/Archive.jsx', './ui/reimagine/Archive.jsx']))[0]
+const Archive = archive && lazy(archive)
 import Home from './ui/home/Home'
 import { makeSlot } from './ui/slots'
 import './App.css'
@@ -68,8 +71,11 @@ export default function App() {
       <Panel />
       <Dock />
       <Controls>
-        <Reimagine />
-        <Identify />
+        <Suspense fallback={null}>
+          <Reimagine />
+          <Identify />
+          {Archive && <Archive />}
+        </Suspense>
       </Controls>
       <Credit />
       {view === 'walk' && <p className="walk-hint glass">W A S D to walk · drag to look · Shift to run</p>}

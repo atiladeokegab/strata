@@ -12,6 +12,7 @@ const TowerBridge = makeSlot('TowerBridge', ['../scene/bridge/TowerBridge.jsx', 
 const Look = makeSlot('Look', ['../scene/Look.jsx'], DefaultLook)
 const Tour = makeSlot('Tour', ['../scene/Tour.jsx'])
 const GoogleTiles = makeSlot('GoogleTiles', ['../scene/GoogleTiles.jsx'])
+const Buildings = makeSlot('Buildings', ['../scene/Buildings.jsx'])
 const SUN = [-320, 260, 420] // late-afternoon light from the south-west
 
 function partOf(object, ids) {
@@ -35,7 +36,8 @@ export function Stage() {
       <Look />
       <Tour />
       <CameraRig />
-      <GoogleTiles />{/* outside the click group: Google meshes are never parts */}
+      <GoogleTiles />{/* outside the click group: Google meshes and OSM buildings are never parts */}
+      <Buildings />
       <group
         name="world"
         onClick={(e) => { const id = hit(e); if (id) { e.stopPropagation(); select(id) } }}

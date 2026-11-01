@@ -62,8 +62,9 @@ def prompt(year: int) -> str:
         "painted steel and water, with realistic light, reflections and weather. "
         f"Render it as {era(year)} "
         "Add period-correct river traffic, street life and people's dress at a believable scale. "
-        "Do not add any building, tower or bridge that is not in the render. No text, captions, borders "
-        "or watermarks."
+        "Do not add any landmark, tower, bridge or building that is not in the render; only the low "
+        "riverside wharves of that period may show faintly along the distant banks, in the haze. "
+        "No text, captions, borders or watermarks."
     )
 
 

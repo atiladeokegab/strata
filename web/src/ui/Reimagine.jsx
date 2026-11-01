@@ -9,6 +9,7 @@ const MODEL_FALLBACK = 'gpt-image-2.5-flare'
 function capture() {
   const canvas = document.querySelector('canvas[data-engine]') || document.querySelector('canvas')
   if (!canvas) throw new Error('There is no 3D view to capture yet.')
+  capture.aspect = canvas.width / canvas.height
   return canvas.toDataURL('image/jpeg', 0.92)
 }
 
@@ -70,7 +71,7 @@ export default function Reimagine() {
               <button className="rm-close" onClick={() => setState(null)} aria-label="Close">×</button>
             </header>
 
-            <div className="rm-stage">
+            <div className="rm-stage" style={{ aspectRatio: capture.aspect || 16 / 9 }}>
               {state.before && <img className="rm-img" src={state.before} alt="The 3D view" />}
               {state.status === 'done' && (
                 <>

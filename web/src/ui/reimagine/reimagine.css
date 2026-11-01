@@ -5,7 +5,7 @@
 .rm-head { display: flex; align-items: center; justify-content: space-between; }
 .rm-head h2 { margin: 0; font-size: 1.6rem; font-weight: 500; letter-spacing: 0.02em; }
 .rm-close { background: none; border: 0; color: inherit; font-size: 1.8rem; line-height: 1; cursor: pointer; padding: 0 6px; }
-.rm-stage { position: relative; aspect-ratio: 16 / 9; max-height: 72vh; overflow: hidden; border-radius: 10px; background: #000; user-select: none; }
+.rm-stage { position: relative; width: 100%; max-width: calc(72vh * 16 / 9); margin: 0 auto; overflow: hidden; border-radius: 10px; background: #000; user-select: none; }
 .rm-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .rm-after { animation: rm-fade 0.8s ease; }
 .rm-divider { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #fff; box-shadow: 0 0 8px rgba(0,0,0,0.6); pointer-events: none; }

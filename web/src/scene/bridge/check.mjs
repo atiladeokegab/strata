@@ -261,6 +261,30 @@ const rects = Object.entries(cp).map(([id, o]) => { const it = col.find((c) => c
 for (const a of rects) for (const b of rects) if (a !== b) assert.ok(!crosses(a.ax, a.ay, a.ex, a.ey, b), `leader of ${a.id} crosses label ${b.id}`)
 assert.ok(Object.keys(cp).length >= 5, 'most of the column still gets labels')
 {
+  // fixed tags are obstacles: a tag right where the first-choice spot (above) would go pushes the
+  // label elsewhere, and at two zooms of a crowd no label or leader touches any fixed tag
+  const one = [{ id: 'a', x: 300, y: 300, ...labelSize('North tower') }]
+  const free = placeLabels(one, 800, 600).a
+  const tag = { x: 300 + free.dx - 40, y: 300 + free.dy - 11, w: 80, h: 22 }
+  const moved = placeLabels(one, 800, 600, [tag]).a
+  assert.ok(moved && (moved.dx !== free.dx || moved.dy !== free.dy), 'a fixed tag moves the label')
+  for (const zoom of [1, 2.5]) {
+    const crowd = CALLOUTS.map((c, i) => ({ id: c.id, x: 400 + c.pos[0] * zoom * 1.5, y: 300 + c.pos[2] * zoom * 1.5, ...labelSize(c.label) }))
+    const tags = [[480, 260, 90], [320, 330, 90], [400, 120, 300], [520, 520, 60], [560, 420, 30]].map(([x, y, w]) => ({ x, y, w, h: 22 }))
+    const out = placeLabels(crowd, 800, 600, tags)
+    assert.ok(Object.keys(out).length >= 3, `zoom ${zoom}: some labels still placed`)
+    for (const it of crowd) {
+      const o = out[it.id]
+      if (!o) continue
+      const r = { x: it.x + o.dx - it.w / 2, y: it.y + o.dy - it.h / 2, w: it.w, h: it.h }
+      for (const t of tags) {
+        assert.ok(!(r.x < t.x + t.w && t.x < r.x + r.w && r.y < t.y + t.h && t.y < r.y + r.h), `zoom ${zoom}: ${it.id} on a fixed tag`)
+        assert.ok(!crosses(it.x, it.y, it.x + o.dx * 0.7, it.y + o.dy * 0.7, t), `zoom ${zoom}: ${it.id} leader through a fixed tag`)
+      }
+    }
+  }
+}
+{
   // the footprint fill grows every construction year and is full from opening
   assert.equal(buildDone(stageForYear(1885)), 0)
   let prev = 0

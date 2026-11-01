@@ -21,8 +21,17 @@ const FAR = 900 // metres from the bridge centre beyond which callouts hide
 const WATER = L.hw + 0.25
 const v = new THREE.Vector3()
 
+// Tags that hold their place (scale, north, leaf angles, chip, caption) register here; callouts
+// treat their on-screen boxes as obstacles, so no label lands on one at any zoom.
+const FIXED = new Set()
+const fix = (el) => {
+  if (!el) return
+  FIXED.add(el)
+  return () => FIXED.delete(el)
+}
+
 function Callouts({ stage, select }) {
-  const { camera, size } = useThree()
+  const { camera, size, gl } = useThree()
   const group = useRef()
   const els = useRef({})
   const items = useMemo(
@@ -38,7 +47,13 @@ function Callouts({ stage, select }) {
       const behind = v.z > 1
       return { id: it.id, w: it.w, h: it.h, x: behind ? -1 : ((v.x + 1) / 2) * size.width, y: ((1 - v.y) / 2) * size.height }
     })
-    const spots = far ? {} : placeLabels(pts, size.width, size.height)
+    const c = gl.domElement.getBoundingClientRect()
+    const fixed = []
+    for (const el of FIXED) {
+      const r = el.getBoundingClientRect() // last frame's box; a frame behind is fine
+      if (r.width) fixed.push({ x: r.left - c.left, y: r.top - c.top, w: r.width, h: r.height })
+    }
+    const spots = far ? {} : placeLabels(pts, size.width, size.height, fixed)
     for (const it of items) {
       const e = els.current[it.id]
       if (!e?.root || !e.line || !e.btn) continue
@@ -89,10 +104,10 @@ function MapMarks() {
       <mesh geometry={g.black} material={INK} />
       <mesh geometry={g.white} material={PAPER} />
       <Html position={[80, WATER, 75]} center style={{ pointerEvents: 'none' }}>
-        <div style={TAG}>50 m</div>
+        <div ref={fix} style={TAG}>50 m</div>
       </Html>
       <Html position={[105, WATER, 24]} center style={{ pointerEvents: 'none' }}>
-        <div style={{ ...TAG, fontWeight: 700 }}>N</div>
+        <div ref={fix} style={{ ...TAG, fontWeight: 700 }}>N</div>
       </Html>
     </>
   )
@@ -132,7 +147,7 @@ function LeafAngles({ sim }) {
   })
   return [[62, -20], [-62, 20]].map(([x, z], i) => (
     <Html key={i} position={[x, WATER, z]} center zIndexRange={[20, 10]} style={{ pointerEvents: 'none' }}>
-      <div ref={(r) => (tags.current[i] = r)} style={{ ...TAG, border: '1px solid rgba(255,181,71,0.6)' }} />
+      <div ref={(r) => ((tags.current[i] = r), fix(r))} style={{ ...TAG, border: '1px solid rgba(255,181,71,0.6)' }} />
     </Html>
   ))
 }
@@ -188,7 +203,7 @@ function Mains({ sim }) {
     <>
       <mesh geometry={geo} material={mat} renderOrder={2} />
       <Html position={[35, 8, 185]} center zIndexRange={[20, 10]} style={{ pointerEvents: 'none' }}>
-        <div ref={chip} style={{ ...TAG, border: '1px solid rgba(95,212,255,0.5)' }} aria-live="off" />
+        <div ref={(r) => ((chip.current = r), fix(r))} style={{ ...TAG, border: '1px solid rgba(95,212,255,0.5)' }} aria-live="off" />
       </Html>
     </>
   )
@@ -240,7 +255,7 @@ function Works({ st }) {
 function Caption({ st, year }) {
   return (
     <Html position={[0, WATER, L.spanEnd - 20]} center zIndexRange={[20, 10]} style={{ pointerEvents: 'none' }}>
-      <div style={{ ...TAG, font: '500 13px/1.2 system-ui, sans-serif', padding: '4px 10px' }}>
+      <div ref={fix} style={{ ...TAG, font: '500 13px/1.2 system-ui, sans-serif', padding: '4px 10px' }}>
         <span style={{ opacity: 0.7 }}>{year} · stage {st.stage + 1} of 5 · </span>
         {st.label} · {Math.round(buildDone(st) * 100)}% built
       </div>

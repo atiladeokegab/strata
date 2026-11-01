@@ -84,3 +84,6 @@ export function stepLift(s, io) {
       return null
   }
 }
+
+// Shot scripts (?capture=1): window.__strataLift() starts the fast lift at once, no 90 s wait for the tour cue.
+if (globalThis.location?.search.includes('capture=1')) globalThis.__strataLift = (opts = { fast: true }) => liftForShip(opts)

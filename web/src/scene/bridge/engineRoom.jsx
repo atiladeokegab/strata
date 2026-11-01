@@ -96,10 +96,12 @@ function Machinery({ sim, steam }) {
     // two Lancashire boilers, brick-set
     for (const z of [160, 163.6]) boiler.push(new THREE.CylinderGeometry(1.4, 1.4, 11, 18).rotateZ(Math.PI / 2).translate(28, 1.9, z))
     iron.push(new THREE.CylinderGeometry(0.7, 0.7, 2 + ACC.travel, 14).translate(ACC.x, ACC.base + (2 + ACC.travel) / 2, ACC.z)) // ram
-    // hydraulic mains: house to the south pier along the approach (two pipes)
+    // hydraulic mains: house to the south pier along the approach (two pipes); they drop below the
+    // ramp outside its parapet (x 9.6) so nothing crosses the road
     for (const x of [6.4, 7.4])
       iron.push(
-        beam([H.x0, 0.6, 151], [x, 0.6, 151], 0.22), beam([x, 0.6, 151], [x, -2, 146], 0.22), beam([x, -2, 146], [x, -2, 56], 0.22, 8),
+        beam([H.x0, 0.6, 151], [x + 4.1, 0.6, 151], 0.22), beam([x + 4.1, 0.6, 151], [x + 4.1, -2, 151], 0.22),
+        beam([x + 4.1, -2, 151], [x, -2, 146], 0.22), beam([x, -2, 146], [x, -2, 56], 0.22, 8),
       )
     iron.push(beam([37, 0.6, ENGINES[0]], [37, 0.6, 151], 0.18), beam([37, 0.6, ENGINES[1]], [38, 0.6, ACC.z], 0.18))
     return { iron: merge(iron), boiler: merge(boiler) }
@@ -197,7 +199,7 @@ const PATHS = (() => {
   const n = halfPaths(1), s = halfPaths(-1)
   const southHdr = toWorld(-1)(HDR)
   // house pumps along the approach main (x 7.4) into the south pier header
-  const feed = [[37, 0.6, ENGINES[0]], [37, 0.6, 151], [7.4, 0.6, 151], [7.4, -2, 146], [7.4, -2, 56], [7.4, -10, southHdr[2]], southHdr]
+  const feed = [[37, 0.6, ENGINES[0]], [37, 0.6, 151], [11.5, 0.6, 151], [11.5, -2, 151], [7.4, -2, 146], [7.4, -2, 56], [7.4, -10, southHdr[2]], southHdr]
   // under the river along the bed to the north pier header (status: inferred route)
   const river = [southHdr, [0, L.bed + 0.6, 30], [0, L.bed + 0.6, -30], HDR]
   return { supply: [feed, ...s.supply, ...n.supply], drive: [...s.drive, ...n.drive], river }

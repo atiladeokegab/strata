@@ -2,7 +2,11 @@
 import assert from 'node:assert/strict'
 import { createHydraulics, stepHydraulics, OPEN_TIME_S, SIM_SPEED, BOLT_SETTLE_S, BOLT_TRAVEL_S, DRAW_UP, LIFT_DRAW, createCars, stepCars, carHeight, gaugePsi, PRESSURE_PSI } from './hydraulics.js'
 import { stageForYear, shown, STAGES, ERAS, eraFor, resolveYears } from './stages.js'
-import { readFileSync, readdirSync } from 'node:fs'
+import { readFileSync, readdirSync, unlinkSync } from 'node:fs'
+import { createRequire } from 'node:module'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { containersOf, clickThrough } from './xray.js'
 import * as THREE from 'three'
 import { PART_IDS } from './parts.js'
@@ -422,4 +426,87 @@ console.log('geom materials untextured, all kinded ok')
   }
   assert.ok(seen.every(([a, b]) => a && b), 'every lane arrives from the street and leaves down the far ramp onto it')
   console.log('road end checks ok')
+}
+
+// Road corridor (regression for the shore abutments walling off the road, 500df8a): the real
+// <TowerBridge> tree is bundled with React, fiber and drei stubbed, so every component renders once
+// in node with the leaves down; its meshes become a three scene that is raycast along the road.
+{
+  const { build: bundle } = createRequire(import.meta.url)('esbuild')
+  const STUB = {
+    react: `const H={useMemo:(f)=>f(),useRef:(v=null)=>({current:v}),useState:(v)=>[typeof v==='function'?v():v,()=>{}],useEffect(){},useLayoutEffect(){},useDebugValue(){},useCallback:(f)=>f,useSyncExternalStore:(s,get)=>get(),useContext:()=>({}),createContext:()=>({}),memo:(c)=>c};export const {useMemo,useRef,useState,useEffect,useLayoutEffect,useDebugValue,useCallback,useSyncExternalStore,useContext,createContext,memo}=H;export default H`,
+    'react/jsx-runtime': `export const Fragment=Symbol('F'),jsx=(type,props)=>({type,props}),jsxs=jsx`,
+    '@react-three/fiber': `export const useFrame=()=>{},useThree=(sel=(s)=>s)=>sel({gl:{},camera:{},size:{width:1,height:1},scene:{}})`,
+    '@react-three/drei': `export const Html=()=>null,Text=()=>null`,
+    textures: `export const pbr=()=>({})`,
+  }
+  const stubs = { name: 'stubs', setup(b) {
+    b.onResolve({ filter: /^(react|react\/jsx-runtime|@react-three\/(fiber|drei))$/ }, (a) => ({ path: a.path, namespace: 'stub' }))
+    b.onResolve({ filter: /look\/textures\.js$/ }, () => ({ path: 'textures', namespace: 'stub' }))
+    b.onLoad({ filter: /.*/, namespace: 'stub' }, (a) => ({ contents: STUB[a.path], loader: 'js' }))
+  } }
+  const out = join(tmpdir(), `bridge-corridor-${process.pid}.mjs`)
+  const resolveDir = fileURLToPath(new URL('.', import.meta.url))
+  // three is bundled too, so the scene and the components share one copy
+  await bundle({ stdin: { contents: `export { TowerBridge } from './TowerBridge.jsx'; export { useStore } from '../../store.js'; export { Fragment } from 'react/jsx-runtime'; export * as T from 'three'`, resolveDir, loader: 'js' }, bundle: true, format: 'esm', platform: 'node', jsx: 'automatic', plugins: [stubs], outfile: out, logLevel: 'error' })
+  const noop = new Proxy(() => noop, { get: () => noop }) // canvas textures draw into a no-op 2D context
+  globalThis.document ??= { createElement: () => ({ getContext: () => noop }) }
+  const { TowerBridge, useStore, Fragment, T } = await import(out)
+  unlinkSync(out)
+
+  const SKIP = new Set(['Traffic', 'Ship']) // moving road and river users, not structure
+  const from = []
+  const build = (el, parent) => {
+    if (el == null || typeof el !== 'object') return
+    if (Array.isArray(el)) return el.forEach((e) => build(e, parent))
+    const { type, props = {} } = el
+    if (typeof type === 'function') {
+      if (SKIP.has(type.name)) return
+      from.push(type.name), build(type(props), parent), from.pop()
+      return
+    }
+    if (type === Fragment) return build(props.children, parent)
+    let o
+    if (type === 'group') o = new T.Group()
+    else if (type === 'mesh') {
+      const g = [props.children].flat(Infinity).find((k) => typeof k?.type === 'string' && k.type.endsWith('Geometry'))
+      const geo = g ? new T[g.type[0].toUpperCase() + g.type.slice(1)](...(g.props.args ?? [])) : props.geometry
+      if (!geo) return
+      o = new T.Mesh(geo, new T.MeshBasicMaterial({ side: T.DoubleSide }))
+      o.userData.road = props.material?.userData?.kind === 'road'
+    } else if (type === 'primitive' && props.object?.isMesh) o = props.object.clone()
+    else return // lines, points, instanced traffic, lights, HTML
+    if (props.visible === false) return
+    if (props.position) o.position.fromArray([...props.position])
+    if (props.rotation) o.rotation.fromArray([...props.rotation])
+    if (props.scale != null) typeof props.scale === 'number' ? o.scale.setScalar(props.scale) : o.scale.fromArray([...props.scale])
+    o.userData.from = from.slice(-3).join('>')
+    parent.add(o)
+    if (type === 'group') build(props.children, o)
+  }
+  const ray = new T.Raycaster()
+  const cast = (root, o, d, far) => (ray.set(new T.Vector3(...o), new T.Vector3(...d)), (ray.far = far), ray.intersectObject(root, true))
+  for (const year of [1886, 1890, 1894, 1940, 2026]) {
+    useStore.getState().setYear(year)
+    const root = new T.Group()
+    build({ type: TowerBridge, props: {} }, root)
+    root.updateMatrixWorld(true)
+    let meshes = 0
+    root.traverse((o) => o.isMesh && meshes++)
+    assert.ok(meshes > 10, `${year}: the bridge renders in node (${meshes} meshes)`)
+    // leaves down, the road is open end to end at wheel, head and lorry height in both lanes and the middle
+    for (const y of [0.5, 1.7, 3])
+      for (const x of [-7, 0, 7]) {
+        const h = cast(root, [x, y, -180], [0, 0, 1], 360)[0]
+        assert.ok(!h, `${year}: road blocked at x ${x}, y ${y}, z ${h?.point.z.toFixed(1)} by ${h?.object.userData.from}`)
+      }
+    // and there is road (paint counts as road) under every 2 m of it, so walk mode never falls through
+    if (year >= 1894)
+      for (const x of [-7, 0, 7])
+        for (let z = -180; z <= 180; z += 2) {
+          const hs = cast(root, [x, 4, z], [0, -1, 0], 20)
+          assert.ok(hs.some((r) => r.object.userData.road && r.point.y >= hs[0].point.y - 0.2), `${year}: no road under x ${x}, z ${z} (${hs[0]?.object.userData.from ?? 'nothing'})`)
+        }
+  }
+  console.log('road corridor ok (clear at 0.5/1.7/3 m, road underfoot every 2 m, 1886-2026)')
 }

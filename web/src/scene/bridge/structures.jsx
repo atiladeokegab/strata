@@ -132,10 +132,27 @@ export function TowerCladding({ topY }) {
     // octagonal corner turrets with spired caps
     for (const [sx, sz] of corners) {
       const x = sx * 12, z = z0 + sz * 9
-      stone.push(new THREE.CylinderGeometry(3.2, 3.4, 47 + 1, 8).translate(x, 22.5, z))
-      granite.push(new THREE.CylinderGeometry(3.6, 3.6, 0.8, 8).translate(x, 46.4, z))
-      slate.push(new THREE.ConeGeometry(3.5, 8, 8).translate(x, 50.8, z))
-      gold.push(new THREE.ConeGeometry(0.25, 2.2, 6).translate(x, 55.9, z))
+      stone.push(new THREE.CylinderGeometry(3.2, 3.4, 46, 8).translate(x, 21.5, z))
+      granite.push(new THREE.CylinderGeometry(3.6, 3.6, 0.8, 8).translate(x, 44.4, z))
+      // open arcaded stage above the parapet, then a tall lucarned spire with a gilded finial
+      stone.push(new THREE.CylinderGeometry(2.9, 2.9, 2.4, 8).translate(x, 45.9, z))
+      granite.push(new THREE.CylinderGeometry(3.25, 3.05, 0.45, 8).translate(x, 47.3, z))
+      for (let k = 0; k < 8; k++) {
+        const t = (k * Math.PI) / 4 + Math.PI / 8, s = Math.sin(t), c = Math.cos(t)
+        glass.push(box(0.75, 1.7, 0.2, 0, 0, 0).rotateY(t).translate(x + 2.7 * s, 45.9, z + 2.7 * c)) // arcade openings, recessed in the faces
+        if (k % 2) continue
+        const lx = x + 2.15 * s, lz = z + 2.15 * c // lucarnes on four faces of the spire
+        slate.push(box(0.9, 1.4, 0.9, 0, 0, 0).rotateY(t).translate(lx, 49.3, lz), new THREE.ConeGeometry(0.72, 1.3, 4).rotateY(t + Math.PI / 4).translate(lx, 50.65, lz))
+        glass.push(box(0.5, 0.9, 0.2, 0, 0, 0).rotateY(t).translate(x + 2.62 * s, 49.2, z + 2.62 * c))
+        gold.push(new THREE.SphereGeometry(0.1, 5, 4).translate(lx, 51.4, lz))
+      }
+      slate.push(new THREE.ConeGeometry(3.05, 9, 8).translate(x, 47.5 + 4.5, z)) // tip at ~65 m above high water
+      gold.push(
+        new THREE.CylinderGeometry(0.07, 0.07, 2.6, 5).translate(x, 57.6, z), // finial rod
+        new THREE.SphereGeometry(0.3, 8, 6).translate(x, 56.9, z),
+        new THREE.ConeGeometry(0.22, 0.7, 6).translate(x, 59.1, z),
+        box(0.9, 0.35, 0.04, x + 0.4, 58.3, z), // vane
+      )
       for (const y of [4, 17, 29, 39]) {
         const ox = sx * 3.3, oz = sz * 0 // slit windows on the outer faces
         glass.push(box(0.3, 2.6, 0.9, x + ox, y, z + oz), box(0.9, 2.6, 0.3, x, y, z + sz * 3.3))
@@ -146,7 +163,12 @@ export function TowerCladding({ topY }) {
     stone.push(new THREE.CylinderGeometry(1.6, 1.8, 2.5, 8).translate(0, L.bodyTop + 8.25, z0))
     const spire = Math.max(1, topY - L.bodyTop - 9.5)
     slate.push(new THREE.ConeGeometry(1.9, spire, 8).translate(0, L.bodyTop + 9.5 + spire / 2, z0))
-    gold.push(new THREE.SphereGeometry(0.45, 8, 6).translate(0, L.bodyTop + 9.5 + spire, z0))
+    gold.push(
+      new THREE.SphereGeometry(0.45, 8, 6).translate(0, L.bodyTop + 9.5 + spire, z0),
+      new THREE.CylinderGeometry(0.08, 0.08, 3, 5).translate(0, L.bodyTop + 11 + spire, z0),
+      box(1.2, 0.45, 0.05, 0.55, L.bodyTop + 11.6 + spire, z0), // weather vane
+      new THREE.CylinderGeometry(1.75, 1.75, 0.2, 8).translate(0, L.bodyTop + 9.6, z0), // gilded collar at the spire foot
+    )
     // dormers on the long roof faces
     for (const sz of [-1, 1]) for (const x of [-5, 5]) {
       stone.push(box(2.6, 3.6, 2, x, L.bodyTop + 2.2, z0 + sz * (hz - 2.2)))

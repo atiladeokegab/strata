@@ -82,7 +82,7 @@ export function TowerDetails() {
             if (s * sx + c * sz < -0.1) continue // ribs facing into the body are hidden
             stone.push(box(0.75, 20, 0.75, 0, 0, 0).rotateY(t).translate(cx + 3.45 * s, 10, cz + 3.45 * c))
             stone.push(cone(0.55, 1, 4, 0, 0, 0).rotateY(t).translate(cx + 3.45 * s, 20.5, cz + 3.45 * c))
-            stone.push(box(0.5, 24, 0.5, 0, 0, 0).rotateY(t).translate(cx + 3.3 * s, 33, cz + 3.3 * c))
+            stone.push(box(0.5, 23, 0.5, 0, 0, 0).rotateY(t).translate(cx + 3.3 * s, 32.5, cz + 3.3 * c)) // stops under the turret ring
           }
         }
         // coat-of-arms shields over the road arch, on both faces the road passes through

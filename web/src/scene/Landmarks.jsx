@@ -5,6 +5,7 @@ import { Html } from '@react-three/drei'
 import { useStore } from '../store'
 import { heightAt, loadTerrain } from './Terrain.jsx'
 import { PeriodRiver } from './PeriodRiver.jsx'
+import { Barrage } from './Barrage.jsx'
 
 // terrain meta.json origin, used until the meta loads (scene frame: x east, y up, z south, y 0 = deck road level)
 const META = { origin_osgb: [533670.3, 180265.1] }
@@ -25,6 +26,7 @@ export function Landmarks() {
   return (
     <group name="landmarks">
       {year < 1950 && <PeriodRiver terrain={terrain} />}
+      {terrain && year >= 1939 && year <= 1945 && <Barrage terrain={terrain} />}
       {here.map((p) => {
         const h = TALL[p.id] ?? PIN
         const on = selected === p.id

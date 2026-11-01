@@ -55,6 +55,7 @@ const LOOK = {
   w: { color: '#8f6f55', roughness: 0.95 }, // sooted London stock brick
   roof: { color: '#6b6862', roughness: 0.95 },
   slate: { color: '#4d5258', roughness: 0.8 }, // Welsh slate
+  r: { color: '#8b6f58', roughness: 1 }, // Blitz rubble: brick dust and charred timber, 1940-1950
   drape: { color: '#ffffff', roughness: 0.95 }, // roofs inside the LiDAR tile wear the terrain's aerial photo (or 1890s map)
 }
 const TERRAIN = '/terrain/tower-bridge/'
@@ -80,7 +81,7 @@ function eraPatch(uniforms, shade) {
 
 // One mesh per look: footprints -> extruded walls + roofs, packed into four big geometries.
 function build(data) {
-  const out = { s: newBucket(), b: newBucket(), g: newBucket(), w: newBucket(), roof: newBucket(), slate: newBucket(), drape: newBucket() }
+  const out = { s: newBucket(), b: newBucket(), g: newBucket(), w: newBucket(), r: newBucket(), roof: newBucket(), slate: newBucket(), drape: newBucket() }
   // the terrain's uv mapping (Terrain.jsx grid): u east across the tile, v = 1 at its north edge
   const [minE, minN, maxE, maxN] = data.frame.bbox_osgb
   const [oE, oN] = data.frame.origin_osgb
@@ -96,13 +97,15 @@ function build(data) {
     }
     geo.dispose()
   }
-  // the 1890s riverside: from before the bridge until 1950, brick walls under slate (period_city.py)
+  // the 1890s riverside: from before the bridge until 1950, brick walls under slate; the Blitz ends some in 1940
+  // and leaves rubble ("r") and roofless wall stubs on their plots (period_city.py)
   data.period?.buildings.forEach((bd, i) => {
     const geo = extrude(bd)
     const tint = TINTS[bd.k === 'w' ? 'w' : 'b'][(i * 7919) % 5] // a stable mix of brick and stucco, house by house
+    const from = bd.s ?? PERIOD_FROM, to = bd.e ?? HISTORIC_BEFORE
     for (const grp of geo.groups) {
-      if (grp.materialIndex !== 0) push(out[bd.k] || out.b, geo, grp, PERIOD_FROM, bd.b, null, bd.e ?? HISTORIC_BEFORE, tint)
-      else push(out.slate, geo, grp, PERIOD_FROM, bd.b, null, bd.e ?? HISTORIC_BEFORE, SLATE[i % 3])
+      if (grp.materialIndex !== 0 || bd.s != null) push(out[bd.k] || out.b, geo, grp, from, bd.b, null, to, bd.k === 'r' ? WHITE : tint)
+      else push(out.slate, geo, grp, from, bd.b, null, to, SLATE[i % 3])
     }
     geo.dispose()
   })

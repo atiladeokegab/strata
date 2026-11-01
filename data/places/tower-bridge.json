@@ -660,6 +660,17 @@
       "stage": 8
     },
     {
+      "year": 1940,
+      "title": "The Blitz: St Katharine's east dock is destroyed",
+      "text": "From 7 September 1940 the Luftwaffe bombed London for 56 of the next 57 days and nights, the Port of London first. St Katharine Docks were badly damaged: all the warehouses around the eastern basin were destroyed, and the site stayed derelict until the 1960s. By the middle of 1940 Britain flew 1,400 barrage balloons, a third of them over London.",
+      "sources": [
+        "wiki-the-blitz",
+        "wiki-st-katharine-docks",
+        "wiki-barrage-balloon"
+      ],
+      "stage": 8
+    },
+    {
       "year": 1976,
       "title": "Electric power replaces steam",
       "text": "Electric operation took over from the original steam-powered hydraulic system. The historic steam engines remain in the engine rooms.",
@@ -846,6 +857,18 @@
       "title": "Historic England listing: Accumulator tower and chimney stack to east side of Tower Bridge Approach",
       "url": "https://britishlistedbuildings.co.uk/101385982-accumulator-tower-and-chimney-stack-to-east-side-of-tower-bridge-approach-riverside-ward",
       "kind": "primary institutional"
+    },
+    {
+      "id": "wiki-the-blitz",
+      "title": "Wikipedia: The Blitz",
+      "url": "https://en.wikipedia.org/wiki/The_Blitz",
+      "kind": "encyclopedia"
+    },
+    {
+      "id": "wiki-barrage-balloon",
+      "title": "Wikipedia: Barrage balloon",
+      "url": "https://en.wikipedia.org/wiki/Barrage_balloon",
+      "kind": "encyclopedia"
     }
   ],
   "people": [

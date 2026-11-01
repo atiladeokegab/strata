@@ -1,27 +1,720 @@
 {
   "id": "tower-bridge",
   "name": "Tower Bridge",
-  "location": {"lat": 51.50546, "lon": -0.07536, "osgb": [533782, 180242]},
+  "location": {
+    "lat": 51.50546,
+    "lon": -0.07536,
+    "osgb": [
+      533782,
+      180242
+    ],
+    "source": "osm-tb",
+    "status": "inferred",
+    "method": "Brief-supplied OSGB36 origin; confirm against terrain alignment before treating as measured."
+  },
   "frame": "metres; origin at the centre of the bridge deck at road level; x east, y up, z south",
   "parts": [
-    {"id": "north-tower", "name": "North tower", "group": "towers",
-     "dims": {"height": {"value": 65, "unit": "m", "source": "wiki-tb", "status": "text-attested"}},
-     "summary": "Steel frame clad in Cornish granite and Portland stone.", "sources": ["wiki-tb"]},
-    {"id": "south-tower", "name": "South tower", "group": "towers",
-     "dims": {"height": {"value": 65, "unit": "m", "source": "wiki-tb", "status": "text-attested"}},
-     "summary": "Twin of the north tower.", "sources": ["wiki-tb"]},
-    {"id": "bascule-north", "name": "North bascule", "group": "bascules",
-     "dims": {"max_angle": {"value": 86, "unit": "deg", "source": "wiki-tb", "status": "text-attested"}},
-     "summary": "One leaf of the opening roadway, pivoting on its counterweighted end.", "sources": ["wiki-tb"]},
-    {"id": "bascule-south", "name": "South bascule", "group": "bascules",
-     "dims": {"max_angle": {"value": 86, "unit": "deg", "source": "wiki-tb", "status": "text-attested"}},
-     "summary": "The other leaf.", "sources": ["wiki-tb"]}
+    {
+      "id": "north-tower",
+      "name": "North tower",
+      "group": "towers",
+      "dims": {
+        "height": {
+          "value": 65,
+          "unit": "m",
+          "source": "city-heritage",
+          "status": "text-attested",
+          "note": "Reported tower height; source datum differs from the scene road-level origin."
+        }
+      },
+      "summary": "Steel frame clad in Cornish granite and Portland stone; it rises from the north river pier.",
+      "sources": [
+        "tb-facts"
+      ]
+    },
+    {
+      "id": "south-tower",
+      "name": "South tower",
+      "group": "towers",
+      "dims": {
+        "height": {
+          "value": 65,
+          "unit": "m",
+          "source": "city-heritage",
+          "status": "text-attested",
+          "note": "Reported tower height; source datum differs from the scene road-level origin."
+        }
+      },
+      "summary": "Steel frame clad in Cornish granite and Portland stone; it rises from the south river pier.",
+      "sources": [
+        "tb-facts"
+      ]
+    },
+    {
+      "id": "bascule-north",
+      "name": "North bascule",
+      "group": "bascules",
+      "dims": {
+        "max_angle": {
+          "value": 86,
+          "unit": "deg",
+          "source": "wiki-tb",
+          "status": "inferred",
+          "method": "Published reference value; provisional motion limit for the scene."
+        },
+        "leaf_length": {
+          "value": 30.48,
+          "unit": "m",
+          "source": "tb-history",
+          "status": "inferred",
+          "method": "Half the 60.96 m clear central opening; provisional geometric approximation, not a measured bascule dimension."
+        }
+      },
+      "summary": "Hinged roadway leaf balanced by a counterweight and lifted by hydraulic machinery.",
+      "sources": [
+        "tb-engine"
+      ]
+    },
+    {
+      "id": "bascule-south",
+      "name": "South bascule",
+      "group": "bascules",
+      "dims": {
+        "max_angle": {
+          "value": 86,
+          "unit": "deg",
+          "source": "wiki-tb",
+          "status": "inferred",
+          "method": "Published reference value; provisional motion limit for the scene."
+        },
+        "leaf_length": {
+          "value": 30.48,
+          "unit": "m",
+          "source": "tb-history",
+          "status": "inferred",
+          "method": "Half the 60.96 m clear central opening; provisional geometric approximation, not a measured bascule dimension."
+        }
+      },
+      "summary": "South hinged roadway leaf; the paired counterweighted leaves open a navigable central passage.",
+      "sources": [
+        "tb-engine"
+      ]
+    },
+    {
+      "id": "walkway-east",
+      "name": "East high-level walkway",
+      "group": "walkways",
+      "dims": {
+        "span": {
+          "value": 70,
+          "unit": "m",
+          "source": "tb-inside",
+          "status": "text-attested"
+        },
+        "height_above_road": {
+          "value": 33.5,
+          "unit": "m",
+          "source": "tb-inside",
+          "status": "text-attested"
+        }
+      },
+      "summary": "Elevated pedestrian route between the towers; also carries suspension members.",
+      "sources": [
+        "tb-inside"
+      ]
+    },
+    {
+      "id": "walkway-west",
+      "name": "West high-level walkway",
+      "group": "walkways",
+      "dims": {
+        "span": {
+          "value": 70,
+          "unit": "m",
+          "source": "tb-inside",
+          "status": "text-attested"
+        },
+        "height_above_road": {
+          "value": 33.5,
+          "unit": "m",
+          "source": "tb-inside",
+          "status": "text-attested"
+        }
+      },
+      "summary": "Elevated pedestrian route between the towers; also carries suspension members.",
+      "sources": [
+        "tb-inside"
+      ]
+    },
+    {
+      "id": "pier-north",
+      "name": "North river pier",
+      "group": "foundations",
+      "dims": {},
+      "summary": "Massive masonry pier founded in the Thames riverbed and supporting the north tower.",
+      "sources": [
+        "tb-history"
+      ]
+    },
+    {
+      "id": "pier-south",
+      "name": "South river pier",
+      "group": "foundations",
+      "dims": {},
+      "summary": "Massive masonry pier founded in the Thames riverbed and supporting the south tower.",
+      "sources": [
+        "tb-history"
+      ]
+    },
+    {
+      "id": "suspension-north",
+      "name": "North side-span suspension",
+      "group": "suspension",
+      "dims": {
+        "span": {
+          "value": 82.296,
+          "unit": "m",
+          "source": "tb-history",
+          "status": "text-attested"
+        }
+      },
+      "summary": "Chains and stiffening members support the approach roadway between abutment and tower.",
+      "sources": [
+        "tb-engine"
+      ]
+    },
+    {
+      "id": "suspension-south",
+      "name": "South side-span suspension",
+      "group": "suspension",
+      "dims": {
+        "span": {
+          "value": 82.296,
+          "unit": "m",
+          "source": "tb-history",
+          "status": "text-attested"
+        }
+      },
+      "summary": "Chains and stiffening members support the approach roadway between abutment and tower.",
+      "sources": [
+        "tb-engine"
+      ]
+    },
+    {
+      "id": "counterweight-north",
+      "name": "North bascule counterweight",
+      "group": "machinery",
+      "dims": {},
+      "summary": "Counterbalance at the tail of the north moving leaf reduces the lifting effort.",
+      "sources": [
+        "tb-engine"
+      ]
+    },
+    {
+      "id": "counterweight-south",
+      "name": "South bascule counterweight",
+      "group": "machinery",
+      "dims": {},
+      "summary": "Counterbalance at the tail of the south moving leaf reduces the lifting effort.",
+      "sources": [
+        "tb-engine"
+      ]
+    },
+    {
+      "id": "pivot-north",
+      "name": "North bascule pivot",
+      "group": "machinery",
+      "dims": {},
+      "summary": "Large hinge pin and bearing carry the north leaf as it rotates.",
+      "sources": [
+        "tb-engine"
+      ]
+    },
+    {
+      "id": "pivot-south",
+      "name": "South bascule pivot",
+      "group": "machinery",
+      "dims": {},
+      "summary": "Large hinge pin and bearing carry the south leaf as it rotates.",
+      "sources": [
+        "tb-engine"
+      ]
+    },
+    {
+      "id": "accumulator",
+      "name": "Hydraulic accumulator",
+      "group": "machinery",
+      "dims": {},
+      "summary": "Stores pressurised water so the bridge leaves can be raised on demand.",
+      "sources": [
+        "tb-engine"
+      ]
+    },
+    {
+      "id": "engine-room",
+      "name": "Engine rooms",
+      "group": "machinery",
+      "dims": {
+        "historic_lift_time": {
+          "value": 60,
+          "unit": "s",
+          "source": "tb-inside",
+          "status": "text-attested",
+          "note": "Time reported for the original steam engines; not a calibration of the interactive simulator."
+        }
+      },
+      "summary": "Victorian steam plant supplied hydraulic power for bridge lifts before electrification.",
+      "sources": [
+        "tb-inside"
+      ]
+    },
+    {
+      "id": "approach-north",
+      "name": "North approach span",
+      "group": "approaches",
+      "dims": {},
+      "summary": "Road approach connects the north abutment to the river crossing.",
+      "sources": [
+        "tb-history"
+      ]
+    },
+    {
+      "id": "approach-south",
+      "name": "South approach span",
+      "group": "approaches",
+      "dims": {},
+      "summary": "Road approach connects the south abutment to the river crossing.",
+      "sources": [
+        "tb-history"
+      ]
+    },
+    {
+      "id": "abutment-north",
+      "name": "North abutment",
+      "group": "foundations",
+      "dims": {},
+      "summary": "Shore structure anchors the north side-span suspension chains.",
+      "sources": [
+        "tb-history"
+      ]
+    },
+    {
+      "id": "abutment-south",
+      "name": "South abutment",
+      "group": "foundations",
+      "dims": {},
+      "summary": "Shore structure anchors the south side-span suspension chains.",
+      "sources": [
+        "tb-history"
+      ]
+    },
+    {
+      "id": "cofferdam-north",
+      "name": "North cofferdam",
+      "group": "construction",
+      "dims": {},
+      "summary": "Temporary enclosure isolated the north pier worksite from the river during foundation construction.",
+      "sources": [
+        "tb-timeline"
+      ]
+    },
+    {
+      "id": "cofferdam-south",
+      "name": "South cofferdam",
+      "group": "construction",
+      "dims": {},
+      "summary": "Temporary enclosure isolated the south pier worksite from the river during foundation construction.",
+      "sources": [
+        "tb-timeline"
+      ]
+    },
+    {
+      "id": "hydraulic-engine-north",
+      "name": "North hydraulic machinery",
+      "group": "machinery",
+      "dims": {},
+      "summary": "Hydraulic equipment in the north pier drives the north bascule and bridge lifts.",
+      "sources": [
+        "tb-engine"
+      ]
+    },
+    {
+      "id": "hydraulic-engine-south",
+      "name": "South hydraulic machinery",
+      "group": "machinery",
+      "dims": {},
+      "summary": "Hydraulic equipment in the south pier drives the south bascule and bridge lifts.",
+      "sources": [
+        "tb-engine"
+      ]
+    }
   ],
   "events": [
-    {"year": 1886, "title": "Construction begins", "text": "Work starts on the piers.", "sources": ["wiki-tb"], "stage": 0},
-    {"year": 1894, "title": "Opened", "text": "Opened by the Prince of Wales on 30 June 1894.", "sources": ["wiki-tb"], "stage": 4}
+    {
+      "year": 1176,
+      "title": "A stone London Bridge begins upstream",
+      "text": "Peter de Colechurch began building the first stone London Bridge, a much earlier crossing upstream from the future Tower Bridge site.",
+      "sources": [
+        "tb-bridge-foundation"
+      ],
+      "stage": -1
+    },
+    {
+      "year": 1885,
+      "title": "Before the bridge: wharves, stairs and crossings",
+      "text": "The river edge was a working port of wharves and warehouses. Irongate Stairs and nearby river stairs gave access to boats; the Tower Subway and London Bridge were established crossings before this bridge.",
+      "sources": [
+        "smg-irongate",
+        "southwark-area",
+        "tb-timeline",
+        "london-assembly-subway"
+      ],
+      "stage": -1
+    },
+    {
+      "year": 1886,
+      "title": "Stage 1: river foundations begin",
+      "text": "Work began in April. Crews built temporary staging and began the piers and abutments; the first iron caisson was sunk in September to enclose work below the riverbed.",
+      "sources": [
+        "tb-timeline",
+        "tb-history"
+      ],
+      "stage": 0
+    },
+    {
+      "year": 1887,
+      "title": "Stage 2: approaches and hydraulic design",
+      "text": "The northern approach and its chain anchorage entered construction, followed by hydraulic machinery contracts. Foundation work continued in the river.",
+      "sources": [
+        "tb-history"
+      ],
+      "stage": 1
+    },
+    {
+      "year": 1888,
+      "title": "Stage 3: southern approach",
+      "text": "The southern approach and its chain anchorage entered construction. Design work continued while crews advanced the foundations and shore structures.",
+      "sources": [
+        "tb-history"
+      ],
+      "stage": 2
+    },
+    {
+      "year": 1889,
+      "title": "Stage 4: steel and masonry superstructure",
+      "text": "Contracts began for the iron and steel superstructure and the masonry superstructure. The contemporary contract schedule dates both awards to May.",
+      "sources": [
+        "tb-history"
+      ],
+      "stage": 3
+    },
+    {
+      "year": 1890,
+      "title": "Stage 5: foundation works and rising steelwork",
+      "text": "Foundation and tower construction advanced from the caisson works toward the visible steel towers. The precise sequence of work during this year is not itemised in the cited contract table.",
+      "sources": [
+        "tb-history",
+        "tb-photo-1891"
+      ],
+      "stage": 4,
+      "status": "inferred",
+      "note": "Year-specific visual state is an interpolation between the dated foundation contracts and the circa-1891 archive photograph."
+    },
+    {
+      "year": 1891,
+      "title": "Stage 6: tower frames rise",
+      "text": "An archive photograph records both steel tower frames under construction, with the north tower further advanced and a temporary shore span carrying materials.",
+      "sources": [
+        "tb-photo-1891"
+      ],
+      "stage": 5
+    },
+    {
+      "year": 1892,
+      "title": "Stage 7: high-level walkways approach completion",
+      "text": "The high-level walkways approached completion and the masonry work continued. Paving and lighting entered the contract programme.",
+      "sources": [
+        "tb-inside",
+        "tb-history"
+      ],
+      "stage": 6
+    },
+    {
+      "year": 1893,
+      "title": "Stage 8: bascule girders and finishing work",
+      "text": "Photographs show the north bascule's four main girders and cross-bracing. Work continued toward completion of the bridge and its machinery.",
+      "sources": [
+        "tb-photo-1893",
+        "tb-timeline"
+      ],
+      "stage": 7
+    },
+    {
+      "year": 1894,
+      "title": "Stage 9: tested and opened",
+      "text": "The final granite stone was set in January; engineers tested the hydraulics in April. The Prince of Wales opened the bridge on 30 June.",
+      "sources": [
+        "tb-timeline"
+      ],
+      "stage": 8
+    },
+    {
+      "year": 1910,
+      "title": "High-level walkways close",
+      "text": "Low use led to the closure of the elevated pedestrian routes. Many pedestrians preferred waiting at road level for the leaves to close.",
+      "sources": [
+        "tb-inside"
+      ],
+      "stage": 8
+    },
+    {
+      "year": 1976,
+      "title": "Electric power replaces steam",
+      "text": "Electric operation took over from the original steam-powered hydraulic system. The historic steam engines remain in the engine rooms.",
+      "sources": [
+        "tb-inside"
+      ],
+      "stage": 8
+    },
+    {
+      "year": 1982,
+      "title": "Walkways reopen as a visitor attraction",
+      "text": "The public could again enter the high-level walkways as part of the new visitor attraction.",
+      "sources": [
+        "tb-inside"
+      ],
+      "stage": 8
+    }
   ],
   "sources": [
-    {"id": "wiki-tb", "title": "Tower Bridge, Wikipedia", "url": "https://en.wikipedia.org/wiki/Tower_Bridge", "kind": "secondary"}
+    {
+      "id": "tb-timeline",
+      "title": "Timeline: The construction of Tower Bridge",
+      "url": "https://www.towerbridge.org.uk/stories/timeline-the-construction-of-tower-bridge",
+      "kind": "primary institutional"
+    },
+    {
+      "id": "tb-inside",
+      "title": "Explore inside Tower Bridge",
+      "url": "https://www.towerbridge.org.uk/explore-inside",
+      "kind": "primary institutional"
+    },
+    {
+      "id": "tb-facts",
+      "title": "Top facts of Tower Bridge",
+      "url": "https://www.towerbridge.org.uk/stories/top-facts-of-tower-bridge",
+      "kind": "primary institutional"
+    },
+    {
+      "id": "tb-engine",
+      "title": "Tower Bridge: a lecture by John Wolfe Barry",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/0/0d/The_tower_bridge%3B_a_lecture_%28IA_towerbridgelectu00barriala%29.pdf",
+      "kind": "contemporary engineering account"
+    },
+    {
+      "id": "tb-history",
+      "title": "Tower Bridge: its history and construction",
+      "url": "https://libarch.nmu.org.ua/bitstream/handle/GenofondUA/26131/e9a4a94a9986f225e2406b8592438ce8.pdf?isAllowed=y&sequence=1",
+      "kind": "contemporary engineering account"
+    },
+    {
+      "id": "tb-photo-1891",
+      "title": "Tower Bridge construction, London Picture Archive",
+      "url": "https://www.londonpicturearchive.org.uk/view-item?i=323026",
+      "kind": "archive photograph record"
+    },
+    {
+      "id": "tb-photo-1893",
+      "title": "Tower Bridge construction, London Picture Archive bascule detail",
+      "url": "https://www.londonpicturearchive.org.uk/view-item?i=323070",
+      "kind": "archive photograph record"
+    },
+    {
+      "id": "smg-irongate",
+      "title": "Engineering plan at Irongate Stairs and General Steam Navigation warehouse",
+      "url": "https://collection.sciencemuseumgroup.org.uk/objects/co8538149/engineering-plan-for-tower-bridge-showing-loads-of-west-wall-of-gen-steam-nav-cos-warehouse-at-ironsgate-stairs",
+      "kind": "archive engineering drawing"
+    },
+    {
+      "id": "southwark-area",
+      "title": "Tower Bridge Conservation Area appraisal",
+      "url": "https://services.southwark.gov.uk/assets/attach/2148/Tower_Bridge.pdf",
+      "kind": "local authority heritage record"
+    },
+    {
+      "id": "hrp-tower",
+      "title": "The story of the Tower of London",
+      "url": "https://www.hrp.org.uk/tower-of-london/history-and-stories/the-story-of-the-tower-of-london/",
+      "kind": "primary institutional"
+    },
+    {
+      "id": "city-heritage",
+      "title": "Tower Bridge Heritage Statement",
+      "url": "https://docs.planning.org.uk/20250425/54/SUVCEXKB03G00/9e7l8wjdb8adlu14.pdf",
+      "kind": "local authority heritage record"
+    },
+    {
+      "id": "wiki-tb",
+      "title": "Tower Bridge",
+      "url": "https://en.wikipedia.org/wiki/Tower_Bridge",
+      "kind": "secondary reference"
+    },
+    {
+      "id": "osm-tb",
+      "title": "OpenStreetMap: Tower Bridge",
+      "url": "https://www.openstreetmap.org/search?query=Tower%20Bridge%2C%20London",
+      "kind": "map reference"
+    },
+    {
+      "id": "london-assembly-subway",
+      "title": "Tower Subway connecting Tower Hill to Tooley Street",
+      "url": "https://www.london.gov.uk/who-we-are/what-london-assembly-does/questions-mayor/find-answer/tower-subway-connecting-tower-hill-tooley-street",
+      "kind": "government record"
+    },
+    {
+      "id": "tb-bridge-foundation",
+      "title": "The history of City Bridge Foundation",
+      "url": "https://www.towerbridge.org.uk/stories/the-history-of-city-bridge-foundation",
+      "kind": "primary institutional"
+    }
+  ],
+  "people": [
+    {
+      "id": "horace-jones",
+      "name": "Sir Horace Jones",
+      "role": "Architect and City surveyor; co-designed the bridge with John Wolfe Barry.",
+      "sources": [
+        "tb-timeline"
+      ]
+    },
+    {
+      "id": "john-wolfe-barry",
+      "name": "Sir John Wolfe Barry",
+      "role": "Chief engineer who carried the engineering and architectural work through to completion after Jones died.",
+      "sources": [
+        "tb-timeline",
+        "tb-engine"
+      ]
+    },
+    {
+      "id": "henry-marc-brunel",
+      "name": "Henry Marc Brunel",
+      "role": "Assistant engineer on the construction project.",
+      "sources": [
+        "tb-timeline"
+      ]
+    },
+    {
+      "id": "edward-cruttwell",
+      "name": "Edward Cruttwell",
+      "role": "Resident engineer during construction.",
+      "sources": [
+        "tb-timeline"
+      ]
+    },
+    {
+      "id": "william-arrol",
+      "name": "Sir William Arrol",
+      "role": "Contractor for the iron and steel superstructure.",
+      "sources": [
+        "tb-history"
+      ]
+    },
+    {
+      "id": "william-armstrong",
+      "name": "Sir William Armstrong",
+      "role": "Hydraulic machinery contractor; his engineers tested the bascules in 1894.",
+      "sources": [
+        "tb-history",
+        "tb-timeline"
+      ]
+    }
+  ],
+  "related_places": [
+    {
+      "id": "tower-of-london",
+      "name": "Tower of London",
+      "relationship": "Neighbouring historic fortress on the north bank; its setting influenced the bridge's masonry design.",
+      "sources": [
+        "hrp-tower",
+        "tb-engine"
+      ]
+    },
+    {
+      "id": "shad-thames",
+      "name": "Shad Thames warehouses",
+      "relationship": "South-bank warehouse district and riverside working landscape beside the bridge approach.",
+      "sources": [
+        "southwark-area"
+      ]
+    },
+    {
+      "id": "irongate-stairs",
+      "name": "Irongate Stairs",
+      "relationship": "Historic Thames access beside the bridge works; an engineering drawing records the adjoining warehouse wall.",
+      "sources": [
+        "smg-irongate"
+      ]
+    },
+    {
+      "id": "tower-subway",
+      "name": "Tower Subway",
+      "relationship": "Earlier pedestrian crossing under the Thames near the Tower, predating Tower Bridge.",
+      "sources": [
+        "london-assembly-subway"
+      ]
+    },
+    {
+      "id": "london-bridge",
+      "name": "London Bridge",
+      "relationship": "Established crossing upstream; congestion there helped motivate a new crossing east of the Tower.",
+      "sources": [
+        "tb-timeline"
+      ]
+    },
+    {
+      "id": "old-london-bridge",
+      "name": "Old London Bridge",
+      "relationship": "Medieval stone crossing upstream. Peter de Colechurch began building it in 1176; it was distinct from Tower Bridge and the modern London Bridge.",
+      "sources": [
+        "tb-bridge-foundation"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "id": "opening-clearance",
+      "text": "The central bascule opening is reported as 200 feet (60.96 metres) clear.",
+      "value": 60.96,
+      "unit": "m",
+      "source": "tb-history",
+      "status": "text-attested"
+    },
+    {
+      "id": "side-span-length",
+      "text": "Each suspension side span is 270 feet (82.296 metres) long.",
+      "value": 82.296,
+      "unit": "m",
+      "source": "tb-history",
+      "status": "text-attested"
+    },
+    {
+      "id": "materials",
+      "text": "The contemporary account records about 31 million bricks and 14,000 tons of iron and steel used in construction.",
+      "source": "tb-history",
+      "status": "text-attested"
+    },
+    {
+      "id": "walkway-use",
+      "text": "The walkways allowed pedestrians to cross above the roadway while the bascules were raised; they closed to the public in 1910 and reopened in 1982.",
+      "source": "tb-inside",
+      "status": "text-attested"
+    },
+    {
+      "id": "power-change",
+      "text": "Steam-powered bridge lifting was replaced by electric operation in 1976.",
+      "source": "tb-inside",
+      "status": "text-attested"
+    }
   ]
 }

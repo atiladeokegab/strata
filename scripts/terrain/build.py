@@ -189,7 +189,9 @@ def main():
         },
         "attribution": "LiDAR © Environment Agency (OGL v3). Imagery © Esri, Maxar, Earthstar Geographics.",
     }
-    (OUT / "meta.json").write_text(json.dumps(meta, indent=2) + "\n")
+    prev = OUT / "meta.json"  # keep what others add (near.py's near and files, credits)
+    meta = {**(json.loads(prev.read_text()) if prev.exists() else {}), **meta}
+    prev.write_text(json.dumps(meta, indent=2) + "\n")
     print(json.dumps({k: meta[k] for k in ("origin_osgb", "origin_h", "water_h", "min_h", "max_h", "bridge_axis_deg")}))
     for p in sorted(OUT.parent.rglob("*.*")):
         print(f"{p.relative_to(ROOT)}  {p.stat().st_size / 1e6:.2f} MB")

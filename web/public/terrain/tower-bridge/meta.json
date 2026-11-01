@@ -41,5 +41,55 @@
     "height": "Open Government Licence v3.0. Contains Environment Agency information \u00a9 Environment Agency copyright and/or database right 2022.",
     "color": "Esri World Imagery terms of use. Imagery \u00a9 Esri, Maxar, Earthstar Geographics, and the GIS User Community."
   },
-  "attribution": "LiDAR \u00a9 Environment Agency (OGL v3). Imagery \u00a9 Esri, Maxar, Earthstar Geographics."
+  "attribution": "LiDAR \u00a9 Environment Agency (OGL v3). Imagery \u00a9 Esri, Maxar, Earthstar Geographics.",
+  "near": {
+    "bbox_osgb": [
+      533370,
+      180040,
+      533970,
+      180640
+    ],
+    "size_px": [
+      1200,
+      1200
+    ],
+    "res_m": 0.5,
+    "color_px": [
+      4096,
+      4096
+    ],
+    "dsm_2012_share": 0.431,
+    "dsm_2012_bias_m": 0.029,
+    "note": "Desktop tier only. Height is the EA 2012 0.5 m DSM on 43% of the tile; where 2012 and the 2022 1 m composite differ by over 3.0 m (changed buildings), and on the carved river, banks and bridge cut, it is the 2022 tile resampled."
+  },
+  "files": {
+    "height.png": {
+      "source": "Environment Agency National LIDAR Programme, LIDAR Composite DSM 1 m (last return), WCS https://environment.data.gov.uk/spatialdata/lidar-composite-digital-surface-model-last-return-dsm-1m/wcs coverage 9ba4d5ac-d596-445a-9056-dae3ddec0178__Lidar_Composite_Elevation_LZ_DSM_1m",
+      "licence": "Open Government Licence v3.0. Contains Environment Agency information \u00a9 Environment Agency copyright and/or database right 2022."
+    },
+    "color.jpg": {
+      "source": "Esri World Imagery, MapServer export https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export",
+      "licence": "Esri World Imagery terms of use. Imagery \u00a9 Esri, Maxar, Earthstar Geographics, and the GIS User Community."
+    },
+    "color-1890s.jpg": {
+      "source": "National Library of Scotland, OS London Five-foot Town Plan 1893-96, tiles https://mapseries-tilesets.s3.amazonaws.com/london_1890s/ z18 (scripts/history/fetch_1890s.py)",
+      "licence": "CC-BY. Reproduced with the permission of the National Library of Scotland, https://maps.nls.uk/copyright.html"
+    },
+    "near/height.png": {
+      "source": "Environment Agency LIDAR Tiles DSM 2012 0.5 m, tile TQ3380 (flights D0155383, April 2012, and D0154364, Dec 2011), https://environment.data.gov.uk/tiles/collections/survey/lidar_tiles_dsm/2012/0.5/TQ3080; merged with height.png (2022 1 m composite) where changed",
+      "licence": "Open Government Licence v3.0. Contains Environment Agency information \u00a9 Environment Agency copyright and/or database right 2012 and 2022."
+    },
+    "near/color.jpg": {
+      "source": "Esri World Imagery, cached tiles https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x} at z19 (196 tiles, 0.19 m), resampled to OSGB 4096 px over 600 m, JPEG q82",
+      "licence": "Esri World Imagery terms of use. Imagery \u00a9 Esri, Maxar, Earthstar Geographics, and the GIS User Community."
+    },
+    "near/color-1890s.jpg": {
+      "source": "National Library of Scotland, OS London Five-foot Town Plan 1893-96, tiles https://mapseries-tilesets.s3.amazonaws.com/london_1890s/{z}/{x}/{y}.png at z20 (729 tiles), resampled to OSGB, JPEG q82",
+      "licence": "CC-BY. Reproduced with the permission of the National Library of Scotland, https://maps.nls.uk/copyright.html"
+    },
+    "../waternormals.jpg": {
+      "source": "Procedural: 40 summed sine waves (scripts/terrain/build.py)",
+      "licence": "Project's own"
+    }
+  }
 }

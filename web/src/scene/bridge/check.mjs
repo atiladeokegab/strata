@@ -1,6 +1,6 @@
 // Self-check for the pure bridge logic: `node web/src/scene/bridge/check.mjs`
 import assert from 'node:assert/strict'
-import { createHydraulics, stepHydraulics, OPEN_TIME_S, SIM_SPEED, BOLT_SETTLE_S, BOLT_TRAVEL_S } from './hydraulics.js'
+import { createHydraulics, stepHydraulics, OPEN_TIME_S, SIM_SPEED, BOLT_SETTLE_S, BOLT_TRAVEL_S, DRAW_UP, LIFT_DRAW, createCars, stepCars, carHeight } from './hydraulics.js'
 import { stageForYear, shown, ERAS, eraFor } from './stages.js'
 import { containersOf } from './xray.js'
 import { createShip, stepShip, WAIT_X, HOLD_X } from './shipSim.js'
@@ -94,6 +94,19 @@ assert.deepEqual(containersOf('engine-room'), ['engine-room'])
 assert.deepEqual(containersOf('north-tower'), ['north-tower'])
 assert.deepEqual(containersOf('bascule-north'), [])
 assert.deepEqual(containersOf(null), [])
+assert.deepEqual(containersOf('pier-north'), ['pier-north'])
+// lifts: draw a little from the accumulators while running, wait when they are empty
+assert.ok(LIFT_DRAW < DRAW_UP / 10)
+{
+  const sim = createHydraulics(), l = createCars()
+  for (let t = 0; t < 30; t += 0.05) stepCars(l, sim, 0.05)
+  assert.ok(sim.stored < 1 && sim.stored > 0.95, `lifts draw a little, stored ${sim.stored}`)
+  assert.ok(carHeight(l, 0) > 0.3 && Math.abs(carHeight(l, 0) + carHeight(l, 1) - 1) < 1e-9, 'cars move, counter-phase')
+  sim.stored = 0
+  const phase = l.phase
+  stepCars(l, sim, 1)
+  assert.equal(l.phase, phase, 'lifts pause on an empty accumulator')
+}
 console.log('bridge checks ok')
 
 // Ship: waits for the leaves, holds short of the bridge if they drop, but a committed ship keeps going.

@@ -6,6 +6,6 @@ export function containersOf(sel) {
   if (m?.[3]) return [sel]
   if (m) return [m[1] === 'stairs' || m[1] === 'lift' ? `${m[2]}-tower` : `pier-${m[2]}`]
   if (sel === 'accumulator') return ['pier-north', 'pier-south', 'engine-room']
-  if (sel === 'engine-room') return ['engine-room']
+  if (sel === 'engine-room' || /^pier-(north|south)$/.test(sel)) return [sel] // a shell selected shows its insides
   return []
 }

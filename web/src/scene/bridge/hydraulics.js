@@ -13,7 +13,7 @@ const DEG = Math.PI / 180
 const OMEGA_MAX = (86 * DEG) / OPEN_TIME_S // rad/s at full flow
 const TAU = 1.5 // s, engine/leaf response lag (inertia of ~1,000 t leaf)
 const SLOW_ZONE = 6 * DEG // valve throttles back over the last few degrees
-const DRAW_UP = 0.012 // stored fraction per s at full speed, raising
+export const DRAW_UP = 0.012 // stored fraction per s at full speed, raising
 const DRAW_DOWN = 0.003 // lowering is mostly braked against the counterweight balance
 const PUMP = 0.004 // stored fraction per s the steam pumps restore
 
@@ -52,3 +52,21 @@ export function stepHydraulics(s, target, dt, maxAngleRad) {
   s.stored = Math.min(1, Math.max(0, s.stored - used + (s.pumping ? PUMP * dt : 0)))
   return stepBolts(s, target, dt)
 }
+
+// The 1894 passenger lifts ran off the same accumulators. Two cars per tower run counter-phase,
+// so one is always rising: a running pair draws LIFT_DRAW, and both wait while the rams are empty.
+export const LIFT_DRAW = 0.0006 // stored fraction per s, ~1/20 of DRAW_UP
+export const LIFT_RATE = 0.12 // rad/s of the car cycle, ~50 s round trip
+
+export const createCars = () => ({ phase: 0 })
+
+// Advance lift pair `l` by dt real seconds against accumulator state `sim`. Mutates both.
+export function stepCars(l, sim, dt) {
+  if (sim.stored <= 0) return l // no pressure: the cars wait
+  l.phase += LIFT_RATE * dt
+  sim.stored = Math.max(0, sim.stored - LIFT_DRAW * dt)
+  return l
+}
+
+// Car height 0..1 for car i (0 or 1) of a pair.
+export const carHeight = (l, i) => (1 - Math.cos(l.phase + i * Math.PI)) / 2

@@ -68,7 +68,7 @@ function Half({ side, rt, st, towerTop, era }) {
             <Stairs />
           </Part>
           <Part id={id('lift')} rt={rt} explode={[0, 4, -14]} clipY={rising(st, 1, S.L.pierTop, towerTop)}>
-            <Lifts />
+            <Lifts sim={sim} />
           </Part>
         </>
       )}

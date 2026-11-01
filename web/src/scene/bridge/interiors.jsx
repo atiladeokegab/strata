@@ -6,6 +6,7 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { beam, box, merge, M } from './geom.js'
 import { L } from './structures.jsx'
+import { createCars, stepCars, carHeight } from './hydraulics.js'
 
 const STAIR_TURRETS = [[-12, L.pierZ - 9], [12, L.pierZ + 9]]
 const LIFTS = [-11, 11] // shaft x, between the arch columns and the outer wall, at the tower's mid z
@@ -37,8 +38,8 @@ export function Stairs() {
 }
 
 const TOP = L.walkY // the cars serve road level and the walkway
-export function Lifts() {
-  const cars = useRef(), weights = useRef()
+export function Lifts({ sim }) {
+  const cars = useRef(), weights = useRef(), lift = useRef(createCars())
   const g = useMemo(() => {
     const iron = [], z = L.pierZ, hx = 1.2, hz = 1.5
     for (const x of LIFTS) {
@@ -51,9 +52,10 @@ export function Lifts() {
     const weight = box(0.3, 2, 0.9, 0, 0, 0)
     return { iron: merge(iron), car, weight, glass: box(1.62, 1.1, 1.6, 0, 1.7, 0) }
   }, [])
-  useFrame(({ clock }) => {
+  useFrame((_, dt) => {
+    stepCars(lift.current, sim, Math.min(dt, 0.1))
     cars.current.children.forEach((c, i) => {
-      const y = (TOP / 2) * (1 - Math.cos(clock.elapsedTime * 0.12 + i * Math.PI)) // ~50 s round trip
+      const y = TOP * carHeight(lift.current, i)
       c.position.y = y
       weights.current.children[i].position.y = TOP + 3 - y
     })

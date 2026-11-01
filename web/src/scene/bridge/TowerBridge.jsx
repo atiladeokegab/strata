@@ -22,6 +22,8 @@ import { Ship } from './ship.jsx'
 import { Stairs, Lifts } from './interiors.jsx'
 import { Traffic } from './traffic.jsx'
 import { TopView } from './topview.jsx'
+import { liftSpeed } from './liftSequence.js'
+import { LiftControls } from './liftControls.jsx'
 
 // The live sim state, for any panel that wants to show pressure or stored volume. Read-only.
 export const bridgeHydraulics = createHydraulics()
@@ -169,7 +171,7 @@ export function TowerBridge(props) {
     rt.fades.current = containersOf(rt.selected.current)
     // Bascules can only be worked once the bridge is open (stage 5); before that they sit closed.
     const lever = st.stage >= 5 ? useStore.getState().bascule : 0
-    stepHydraulics(rt.sim, lever, Math.min(dt, 0.1) * SIM_SPEED, maxAngle)
+    stepHydraulics(rt.sim, lever, Math.min(dt, 0.1) * SIM_SPEED * liftSpeed(), maxAngle)
   })
 
   return (
@@ -196,6 +198,7 @@ export function TowerBridge(props) {
       {shown('engine', st.stage) && <EngineRoom rt={rt} steam={era.steam} explode={[14, 6, 20]} />}
       <TopView stage={st.stage} maxAngle={maxAngle} />
       {st.stage >= 5 && <Traffic rt={rt} year={year} sim={bridgeHydraulics} maxAngle={maxAngle} />}
+      {st.stage >= 5 && <LiftControls year={year} towerTop={towerTop} style={LABEL} />}
       {st.stage < 5 && (
         <Html position={[0, towerTop + 14, 0]} center zIndexRange={[10, 0]} style={{ pointerEvents: 'none' }}>
           <div className="bridge-stage-label" style={LABEL}>

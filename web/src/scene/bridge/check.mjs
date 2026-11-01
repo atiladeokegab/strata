@@ -7,7 +7,7 @@ import { createShip, stepShip, WAIT_X, HOLD_X } from './shipSim.js'
 import { vesselForYear, needsLift, leafInput, CLEARANCE } from './vessels.js'
 import { createRiver, stepRiver, gap, CRAFT, CLEAR } from './riverSim.js'
 import { createTraffic, stepTraffic, onLeaves, TYPES, STOP_U, BASCULE_U } from './trafficSim.js'
-import { createLift, liftForShip, stepLift, PASSED_X } from './liftSequence.js'
+import { createLift, liftForShip, stepLift, liftSpeed, setLiftTimeScale, PASSED_X, FILM_SCALE } from './liftSequence.js'
 
 const MAX = (86 * Math.PI) / 180
 const run = (s, target, seconds) => {
@@ -158,12 +158,14 @@ assert.ok(Object.keys(crowd).length <= 8 && Object.keys(crowd).length >= 3, 'a c
 assert.equal(new Set(CALLOUTS.map((c) => c.id)).size, CALLOUTS.length)
 console.log('callout checks ok')
 // lift for a ship: the full cycle over the real hydraulic, ship and traffic sims, wired as in the app
-{
+const liftCycle = (scale) => {
+  setLiftTimeScale(scale)
   const h = createHydraulics(), ship = createShip(), t = createTraffic(2026, 3), s = createLift()
   let lever = 0, phases = ['idle'], dt = 0.05
   liftForShip(s)
   assert.equal(s.caption, 'Signals to red')
-  for (let i = 0; i < 20 * 60 * 4 && !(s.phase === 'idle' && phases.length > 1); i++) {
+  let i = 0
+  for (; i < 20 * 60 * 4 && !(s.phase === 'idle' && phases.length > 1); i++) {
     const io = { dt, onLeaves: onLeaves(t), angle: h.angle, maxAngle: MAX, shipX: ship.x, shipSailing: ship.sailing }
     const prev = s.phase
     const next = stepLift(s, io)
@@ -175,11 +177,16 @@ console.log('callout checks ok')
     const closed = s.red || lever > 0 || h.angle > 0.001
     stepTraffic(t, dt, closed)
     if (h.angle > 0.001) assert.equal(onLeaves(t), 0, 'no road user on a moving leaf')
-    stepHydraulics(h, lever, dt * SIM_SPEED, MAX)
-    stepShip(ship, h.angle / MAX, dt)
+    const k = liftSpeed(s)
+    stepHydraulics(h, lever, dt * SIM_SPEED * k, MAX)
+    stepShip(ship, h.angle / MAX, dt * k)
   }
   assert.deepEqual(phases, ['idle', 'red', 'raising', 'passing', 'lowering', 'resume', 'idle'], `lift phases ${phases}`)
   assert.equal(lever, 0)
   assert.ok(t.lanes.every((l) => l.list.some((v) => v.u > STOP_U + 5)), 'traffic moves again after the lift')
+  setLiftTimeScale(1)
+  return i * dt
 }
-console.log('lift checks ok')
+const slow = liftCycle(1), film = liftCycle(FILM_SCALE)
+assert.ok(film < 50, `film lift completes in under 50 s of sim time, took ${film.toFixed(1)} s`)
+console.log(`lift checks ok (cycle ${slow.toFixed(0)} s at scale 1, ${film.toFixed(0)} s at FILM_SCALE ${FILM_SCALE})`)

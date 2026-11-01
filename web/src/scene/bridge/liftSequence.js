@@ -5,6 +5,12 @@
 // Phases: red → raising → passing → lowering → resume → idle.
 export const PASSED_X = -60 // ship's x once it is clear of the opening, heading west
 const RESUME_S = 6 // how long the "Traffic resumes" caption stays up
+// Multiplies SIM_SPEED (hydraulics) and the ship's clock while a lift runs. The film sets FILM_SCALE
+// so the whole sequence plays in about 45 s; 1 keeps the normal demo pace.
+export const FILM_SCALE = 3
+export let liftTimeScale = 1
+export const setLiftTimeScale = (k) => (liftTimeScale = k)
+export const liftSpeed = (s = lift) => (s.phase === 'idle' ? 1 : liftTimeScale)
 
 export const CAPTIONS = {
   idle: '',

@@ -61,10 +61,10 @@ assert.ok(!shown('cladding', 3) && shown('cladding', 5))
 assert.ok(!shown('engine', 4) && shown('engine', 5))
 // later history: thresholds in order, each flag flips exactly at its year
 const yrs = Object.values(ERAS)
-assert.ok(yrs.every((y, i) => y > 1894 && (!i || y > yrs[i - 1])), 'eras after opening, in order')
+assert.ok(yrs.every((y, i) => y > 1894 && (!i || y >= yrs[i - 1])), 'eras after opening, in order (nightLighting and olympics share 2012)')
 assert.ok(eraFor(1900).walkwayOpen && !eraFor(1950).walkwayOpen && eraFor(1982).walkwayOpen && !eraFor(1981).glazed)
 assert.ok(eraFor(1975).steam && !eraFor(1976).steam)
-assert.ok(!eraFor(1989).nightLighting && eraFor(1990).nightLighting)
+assert.ok(!eraFor(2011).nightLighting && eraFor(2012).nightLighting)
 assert.ok(eraFor(2012).olympics && !eraFor(2011).olympics && !eraFor(2013).olympics)
 assert.ok(!eraFor(2013).glassFloor && eraFor(2014).glassFloor)
 // data is law: a sourced event year overrides the constant; no event, or an inferred one, falls back

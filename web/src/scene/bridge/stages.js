@@ -45,7 +45,7 @@ export const ERAS = {
   electricDrive: 1976, // steam pumping engines replaced by electro-hydraulic drive
   jubilee: 1977, // red, white and blue paint (see steelColour in geom.js)
   walkwaysReopened: 1982, // reopened, glazed, as the exhibition
-  nightLighting: 1990, // floodlighting fixtures on the towers
+  nightLighting: 2012, // floodlighting fixtures on the towers; Atlas's 2012 floodlighting event in the data lands at the same time
   olympics: 2012, // Olympic rings hung from the walkways, that year only
   glassFloor: 2014, // glass floor panels in the walkways
 }

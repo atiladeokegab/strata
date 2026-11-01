@@ -6,6 +6,10 @@ import './reimagine/reimagine.css'
 import './identify/identify.css'
 
 const MAX_SIDE = 1600 // downscale before upload: phone photos are big, the model needs far less
+const SAMPLES = '/identify-samples/'
+let manifest = null
+const loadManifest = () =>
+  (manifest ??= fetch(`${SAMPLES}manifest.json`).then((r) => (r.ok ? r.json() : { items: [] })).catch(() => ({ items: [] })))
 
 async function toDataURL(file) {
   const bmp = await createImageBitmap(file) // decodes HEIC on Safari and applies EXIF rotation
@@ -20,7 +24,9 @@ export default function Identify() {
   const selected = useStore((s) => s.selected)
   const select = useStore((s) => s.select)
   const flyTo = useStore((s) => s.flyTo)
-  const [state, setState] = useState(null) // null | {photo, status: 'busy'|'done'|'error', result?, error?}
+  const [state, setState] = useState(null) // null | {status: 'pick'|'busy'|'done'|'error', photo?, result?, error?, sample?}
+  const [samples, setSamples] = useState([])
+  useEffect(() => { loadManifest().then((m) => setSamples(m.items)) }, [])
 
   const name = (id) => parts.find((p) => p.id === id)?.name || id
 
@@ -61,10 +67,7 @@ export default function Identify() {
   const res = state?.result
   return (
     <>
-      <label className="rm-open id-open">
-        Your own eyes
-        <input type="file" accept="image/jpeg,image/png,image/webp,image/*" capture="environment" onChange={pick} hidden />
-      </label>
+      <button className="rm-open" onClick={() => setState({ status: 'pick' })}>Your own eyes</button>
       {state && (
         <div className="rm-backdrop" onClick={() => setState(null)}>
           <div className="rm-modal" role="dialog" aria-modal="true" aria-label="Your photo of the bridge" onClick={(e) => e.stopPropagation()}>
@@ -73,7 +76,26 @@ export default function Identify() {
               <button className="rm-close" onClick={() => setState(null)} aria-label="Close">×</button>
             </header>
 
-            <div className="id-stage">
+            {state.status === 'pick' && (
+              <div className="id-pick">
+                <p>Snap or upload a photo of the real Tower Bridge. The model finds the parts it can see and works out where you stood.</p>
+                <label className="id-fly id-upload">
+                  Take or choose a photo
+                  <input type="file" accept="image/jpeg,image/png,image/webp,image/*" capture="environment" onChange={pick} hidden />
+                </label>
+                {samples.length > 0 && <p className="rm-muted">Or try a sample:</p>}
+                <div className="id-samples">
+                  {samples.map((it) => (
+                    <button key={it.file} className="id-sample" onClick={() => setState({ status: 'done', photo: SAMPLES + it.file, result: it.result, sample: it })}>
+                      <img src={SAMPLES + it.file} alt="" />
+                      <span>{it.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {state.status !== 'pick' && <div className="id-stage">
               {state.photo && <img className="id-photo" src={state.photo} alt="Your photo" />}
               {res?.is_bridge && res.parts.map(({ id, box }) => (
                 <button
@@ -96,17 +118,21 @@ export default function Identify() {
               {state.status === 'error' && (
                 <div className="rm-veil" role="alert"><p>{state.error}</p></div>
               )}
-            </div>
+            </div>}
+            {state.sample && (
+              <p className="rm-muted id-credit">Photo: <a href={state.sample.source} target="_blank" rel="noreferrer">{state.sample.credit}</a></p>
+            )}
 
             {res && (res.is_bridge ? (
               <footer className="id-foot">
                 <p><strong>You stood:</strong> {res.where}</p>
-                <p className="rm-muted">{res.parts.length ? "Tap a part to learn about it." : "No parts were clear enough to box."} Seen by {res.model}.</p>
+                <p className="rm-muted">{res.parts.length ? "Tap a part to learn about it." : "No parts were clear enough to box."} {state.sample ? 'Answered earlier' : 'Seen'} by {res.model}.</p>
                 {flyTo && <button className="id-fly" onClick={fly}>Fly to where you stood</button>}
               </footer>
             ) : (
               <footer className="id-foot" role="alert">
                 <p><strong>This does not look like Tower Bridge.</strong> {res.where}</p>
+                <p className="rm-muted">{state.sample ? 'Answered earlier' : 'Seen'} by {res.model}.</p>
               </footer>
             ))}
           </div>

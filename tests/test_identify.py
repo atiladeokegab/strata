@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import json
 from types import SimpleNamespace
@@ -12,7 +13,7 @@ JPEG = "data:image/jpeg;base64," + base64.b64encode(b"\xff\xd8\xff\xe0" + b"0" *
 
 def app_with(monkeypatch, reply, calls=None):
     class Responses:
-        def create(self, **kw):
+        async def create(self, **kw):
             if calls is not None:
                 calls.append(kw)
             return SimpleNamespace(output_text=json.dumps(reply))
@@ -66,11 +67,11 @@ def test_fast_answer_falls_back_to_sure_when_insane(monkeypatch):
     }
 
     class Responses:
-        def create(self, **kw):
+        async def create(self, **kw):
             return SimpleNamespace(output_text=json.dumps(replies[kw["model"]]))
 
     monkeypatch.setattr(identify, "client", lambda: SimpleNamespace(responses=Responses()))
-    r = identify.identify(identify.IdentifyIn(image=JPEG))
+    r = asyncio.run(identify.identify(identify.IdentifyIn(image=JPEG)))
     assert r["model"] == "gpt-6.1-sol" and r["where"] == "More London"
 
 
@@ -86,3 +87,26 @@ def test_sane_catches_mirrored_and_river_cameras():
     assert not identify.sane(r((200, -5, -100)))  # in the river
     assert identify.sane(r((5, 2, 150)))  # on the southern approach
     assert not identify.sane({"is_bridge": False, "parts": [], "camera": {"x": 0, "y": 0, "z": 0}})
+
+
+def test_sure_is_cancelled_when_fast_is_sane(monkeypatch):
+    cancelled = []
+
+    class Responses:
+        async def create(self, **kw):
+            if kw["model"] == identify.SURE[0]:
+                try:
+                    await asyncio.sleep(10)
+                except asyncio.CancelledError:
+                    cancelled.append(True)
+                    raise
+            return SimpleNamespace(output_text=json.dumps(
+                {"is_bridge": True, "parts": [], "camera": {"x": 250, "y": -5, "z": 200}, "where": "Shad Thames"}))
+
+    monkeypatch.setattr(identify, "client", lambda: SimpleNamespace(responses=Responses()))
+
+    async def run():
+        r = await identify.identify(identify.IdentifyIn(image=JPEG))
+        await asyncio.sleep(0)  # let the cancellation land
+        return r
+    assert asyncio.run(run())["model"] == identify.FAST[0] and cancelled == [True]

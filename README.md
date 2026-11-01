@@ -1,3 +1,5 @@
+<p align="center"><a href="https://strata-901257379404.europe-west2.run.app"><b>▶ Open the live app: https://strata-901257379404.europe-west2.run.app</b></a></p>
+
 <p align="center">
   <img src="docs/img/banner.png" alt="Strata: a live render of Tower Bridge over the Environment Agency LiDAR point cloud, coloured by height" width="100%">
 </p>
@@ -16,8 +18,12 @@
 <p align="center">Strata rebuilds famous places from real LiDAR and their own sourced history, for visitors, students and teachers.</p>
 
 <p align="center">
-  <a href="https://strata-901257379404.europe-west2.run.app"><b>Open the live demo</b></a>
+  <a href="https://strata-901257379404.europe-west2.run.app"><img alt="Try Strata live" src="https://img.shields.io/badge/%E2%96%B6%20Try%20it%20live-strata.run.app-00A86B?style=for-the-badge"></a>
+  &nbsp;
+  <a href="https://drive.google.com/file/d/1uNi3PW-jJgSrKpRLj1RA3SoMRMLxtWnQ/view?usp=sharing"><img alt="Watch the 90 s demo" src="https://img.shields.io/badge/%F0%9F%8E%AC%20Watch%20the%2090%20s%20demo-Google%20Drive-1d70b8?style=for-the-badge"></a>
 </p>
+
+<p align="center"><b>Live app:</b> <a href="https://strata-901257379404.europe-west2.run.app">https://strata-901257379404.europe-west2.run.app</a></p>
 
 <p align="center">
   <img src="docs/img/hero.jpg" alt="Strata in the browser: Tower Bridge on the Thames over the LiDAR point cloud, with the glass side panel, the parts list and the timeline" width="100%">

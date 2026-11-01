@@ -35,10 +35,11 @@ def tile(x, y):
     return Image.open(io.BytesIO(p.read_bytes())).convert("RGB")
 
 
-def main():
+def osgb_mosaic(px=1.0):
+    """The town plan resampled onto the terrain's OSGB bbox at px metres per pixel (row 0 north), RGB uint8."""
     minE, minN, maxE, maxN = BBOX
-    w, h = maxE - minE, maxN - minN
-    E, N = np.meshgrid(np.arange(w) + minE + 0.5, maxN - 0.5 - np.arange(h))
+    w, h = round((maxE - minE) / px), round((maxN - minN) / px)
+    E, N = np.meshgrid((np.arange(w) + 0.5) * px + minE, maxN - (np.arange(h) + 0.5) * px)
     lon, lat = Transformer.from_crs(27700, 4326, always_xy=True).transform(E, N)
     n = 2 ** Z
     px = (lon + 180) / 360 * n * 256
@@ -55,9 +56,14 @@ def main():
     iy = np.clip((py - y0 * 256).astype(int), 0, mosaic.shape[0] - 1)
     out = mosaic[iy, ix]
     assert out.shape == (h, w, 3) and out.std() > 10, "mosaic is blank: tiles did not load"
+    return out, (x1 - x0 + 1) * (y1 - y0 + 1)
+
+
+def main():
+    out, n = osgb_mosaic()
     # ink lines are ~1 px; a 3 px min filter thickens them so they survive the mipmaps seen from orbit
     Image.fromarray(out).filter(ImageFilter.MinFilter(3)).save(OUT / "color-1890s.jpg", quality=85)
-    print(f"{(x1 - x0 + 1) * (y1 - y0 + 1)} tiles -> {OUT / 'color-1890s.jpg'}")
+    print(f"{n} tiles -> {OUT / 'color-1890s.jpg'}")
 
 
 if __name__ == "__main__":

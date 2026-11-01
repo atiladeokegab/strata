@@ -8,12 +8,15 @@ import * as THREE from 'three'
 import { useStore } from '../store'
 
 const URL = '/buildings/tower-bridge.json'
+// the 1890s riverside, traced from the OS Town Plan 1893-96 (scripts/history/period_city.py); shown before 1950
+const PERIOD_URL = '/buildings/tower-bridge-1890s.json'
 // optional: Google's tile status, when build-google's files are in the build
 const google = Object.values(import.meta.glob('./google/state.js', { eager: true }))[0]
 const useGoogleShown = google?.useGoogleShown ?? (() => false)
 
 let cache
-const load = () => (cache ??= fetch(URL).then((r) => (r.ok ? r.json() : Promise.reject(new Error(`${URL}: ${r.status}`)))))
+const get = (u) => fetch(u).then((r) => (r.ok ? r.json() : Promise.reject(new Error(`${u}: ${r.status}`))))
+const load = () => (cache ??= Promise.all([get(URL), get(PERIOD_URL).catch(() => null)]).then(([data, period]) => ({ ...data, period })))
 
 function useBuildingsShown() {
   const lidar = useStore((s) => s.lidar)
@@ -39,6 +42,8 @@ const FACADES = {
   s: () => facade((g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#4a4e52'; g.fillRect(20, 14, 24, 34); g.fillStyle = '#d6d2ca'; g.fillRect(0, 56, 64, 3) }, 3.6, 3.6),
   // London stock brick: smaller windows, a stone lintel
   b: () => facade((g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#3b3d40'; g.fillRect(22, 20, 20, 28); g.fillStyle = '#efe6d6'; g.fillRect(19, 15, 26, 5) }, 3.2, 3.2),
+  // Victorian riverside warehouse: stock brick, small barred windows, a column of loading doors every bay
+  w: () => facade((g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#2f2b28'; g.fillRect(8, 22, 14, 20); g.fillStyle = '#4a3020'; g.fillRect(40, 12, 18, 40); g.fillStyle = '#e4d8c4'; g.fillRect(0, 58, 64, 3) }, 5.0, 3.4),
   // curtain wall: floor slabs and mullions over glass
   g: () => facade((g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#4f5b63'; g.fillRect(0, 54, 64, 10); g.fillStyle = '#c9d2d8'; g.fillRect(0, 0, 3, 64) }, 1.6, 3.8),
 }
@@ -47,7 +52,9 @@ const LOOK = {
   s: { color: '#d9d1bf', roughness: 0.86 },
   b: { color: '#b39270', roughness: 0.92 },
   g: { color: '#8ea2b0', roughness: 0.14, metalness: 0.55, envMapIntensity: 1.4 },
+  w: { color: '#8f6f55', roughness: 0.95 }, // sooted London stock brick
   roof: { color: '#6b6862', roughness: 0.95 },
+  slate: { color: '#4d5258', roughness: 0.8 }, // Welsh slate
   drape: { color: '#ffffff', roughness: 0.95 }, // roofs inside the LiDAR tile wear the terrain's aerial photo (or 1890s map)
 }
 const TERRAIN = '/terrain/tower-bridge/'
@@ -58,9 +65,9 @@ const BUILT_BY = 1894 // the bridge opened: a building dated after this has no p
 function eraPatch(uniforms, shade) {
   return (sh) => {
     sh.uniforms.uYear = uniforms.uYear
-    sh.vertexShader = 'attribute float aStart;\nattribute float aBase;\nuniform float uYear;\nvarying float vUp;\n' + sh.vertexShader.replace(
+    sh.vertexShader = 'attribute float aStart;\nattribute float aEnd;\nattribute float aBase;\nuniform float uYear;\nvarying float vUp;\n' + sh.vertexShader.replace(
       '#include <begin_vertex>',
-      '#include <begin_vertex>\nvUp = position.y - aBase;\nif (aStart > uYear) transformed = vec3(0.0);',
+      '#include <begin_vertex>\nvUp = position.y - aBase;\nif (aStart > uYear || aEnd <= uYear) transformed = vec3(0.0);',
     )
     if (shade) {
       sh.fragmentShader = 'varying float vUp;\n' + sh.fragmentShader.replace(
@@ -73,18 +80,13 @@ function eraPatch(uniforms, shade) {
 
 // One mesh per look: footprints -> extruded walls + roofs, packed into four big geometries.
 function build(data) {
-  const out = { s: newBucket(), b: newBucket(), g: newBucket(), roof: newBucket(), drape: newBucket() }
+  const out = { s: newBucket(), b: newBucket(), g: newBucket(), w: newBucket(), roof: newBucket(), slate: newBucket(), drape: newBucket() }
   // the terrain's uv mapping (Terrain.jsx grid): u east across the tile, v = 1 at its north edge
   const [minE, minN, maxE, maxN] = data.frame.bbox_osgb
   const [oE, oN] = data.frame.origin_osgb
   const tileUv = (x, z) => [(x + oE - minE) / (maxE - minE), 1 - (z - oN + maxN) / (maxN - minN)]
   for (const bd of data.buildings) {
-    const ring = (flat) => { const p = []; for (let i = 0; i < flat.length; i += 2) p.push(new THREE.Vector2(flat[i], -flat[i + 1])); return p }
-    const shape = new THREE.Shape(ring(bd.o))
-    for (const h of bd.h || []) shape.holes.push(new THREE.Path(ring(h)))
-    const geo = new THREE.ExtrudeGeometry(shape, { depth: bd.t - bd.b, bevelEnabled: false })
-    geo.rotateX(-Math.PI / 2) // shape (x, -z) extruded along +y
-    geo.translate(0, bd.b, 0)
+    const geo = extrude(bd)
     // before 1950 only buildings with evidence of standing by 1894 (OSM start_date) show; the LiDAR relief carries the rest
     const start = bd.s != null && bd.s <= BUILT_BY ? bd.s : Math.max(bd.s ?? HISTORIC_BEFORE, HISTORIC_BEFORE)
     for (const grp of geo.groups) {
@@ -94,18 +96,49 @@ function build(data) {
     }
     geo.dispose()
   }
+  // the 1890s riverside: from before the bridge until 1950, brick walls under slate (period_city.py)
+  data.period?.buildings.forEach((bd, i) => {
+    const geo = extrude(bd)
+    const tint = TINTS[bd.k === 'w' ? 'w' : 'b'][(i * 7919) % 5] // a stable mix of brick and stucco, house by house
+    for (const grp of geo.groups) {
+      if (grp.materialIndex !== 0) push(out[bd.k] || out.b, geo, grp, PERIOD_FROM, bd.b, null, bd.e ?? HISTORIC_BEFORE, tint)
+      else push(out.slate, geo, grp, PERIOD_FROM, bd.b, null, bd.e ?? HISTORIC_BEFORE, SLATE[i % 3])
+    }
+    geo.dispose()
+  })
   return Object.fromEntries(Object.entries(out).map(([k, b]) => [k, toGeometry(b)]))
 }
 
-const newBucket = () => ({ pos: [], nor: [], uv: [], start: [], base: [] })
+// multipliers on the facade colour: yellow London stock, sooted stock, red brick, painted stucco (houses only)
+const TINTS = {
+  w: [[1, 1, 1], [0.82, 0.8, 0.78], [1.08, 0.86, 0.74], [0.9, 0.86, 0.8], [1.05, 1.0, 0.92]],
+  b: [[1.12, 1.08, 1.0], [0.86, 0.84, 0.82], [1.1, 0.82, 0.7], [1.38, 1.4, 1.42], [1.0, 0.96, 0.9]],
+}
+const SLATE = [[1, 1, 1], [0.86, 0.88, 0.92], [1.12, 1.06, 1.0]]
+const WHITE = [1, 1, 1]
+const PERIOD_FROM = 1066 // before the timeline starts: the period city stands from the first year shown
 
-function push(b, geo, { start, count }, year, base, uvAt) {
+function extrude(bd) {
+  const ring = (flat) => { const p = []; for (let i = 0; i < flat.length; i += 2) p.push(new THREE.Vector2(flat[i], -flat[i + 1])); return p }
+  const shape = new THREE.Shape(ring(bd.o))
+  for (const h of bd.h || []) shape.holes.push(new THREE.Path(ring(h)))
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: bd.t - bd.b, bevelEnabled: false })
+  geo.rotateX(-Math.PI / 2) // shape (x, -z) extruded along +y
+  geo.translate(0, bd.b, 0)
+  return geo
+}
+
+const newBucket = () => ({ pos: [], nor: [], uv: [], col: [], start: [], end: [], base: [] })
+
+function push(b, geo, { start, count }, year, base, uvAt, end = 1e4, tint = WHITE) {
   const { position, normal, uv } = geo.attributes
   for (let i = start; i < start + count; i++) {
     b.pos.push(position.getX(i), position.getY(i), position.getZ(i))
     b.nor.push(normal.getX(i), normal.getY(i), normal.getZ(i))
     b.uv.push(...(uvAt ? uvAt(position.getX(i), position.getZ(i)) : [uv.getX(i), uv.getY(i)]))
+    b.col.push(...tint)
     b.start.push(year)
+    b.end.push(end)
     b.base.push(base)
   }
 }
@@ -115,7 +148,9 @@ function toGeometry(b) {
   g.setAttribute('position', new THREE.Float32BufferAttribute(b.pos, 3))
   g.setAttribute('normal', new THREE.Float32BufferAttribute(b.nor, 3))
   g.setAttribute('uv', new THREE.Float32BufferAttribute(b.uv, 2))
+  g.setAttribute('color', new THREE.Float32BufferAttribute(b.col, 3))
   g.setAttribute('aStart', new THREE.Float32BufferAttribute(b.start, 1))
+  g.setAttribute('aEnd', new THREE.Float32BufferAttribute(b.end, 1))
   g.setAttribute('aBase', new THREE.Float32BufferAttribute(b.base, 1))
   g.computeBoundingSphere()
   return g
@@ -145,7 +180,7 @@ export function Buildings() {
     const geos = build(data)
     return Object.entries(geos).map(([k, geometry]) => {
       const map = k === 'drape' ? photos[0] : FACADES[k]?.()
-      const material = new THREE.MeshStandardMaterial({ ...LOOK[k], ...(map && { map }) })
+      const material = new THREE.MeshStandardMaterial({ ...LOOK[k], ...(map && { map }), vertexColors: true })
       material.onBeforeCompile = eraPatch(uniforms, true)
       material.customProgramCacheKey = () => 'strata-era'
       const depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking })

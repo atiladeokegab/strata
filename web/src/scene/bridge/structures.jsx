@@ -6,6 +6,7 @@ import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { beam, box, merge, M } from './geom.js'
+import { WALK, walkwayTruss } from './walkway.js'
 
 export const L = {
   hw: -9, // Thames high water below the roadway
@@ -298,23 +299,9 @@ export function Accumulators({ sim }) {
 // ---- high walkways (span between the towers, built once at the root) ----
 export function Walkway({ x, glazed = true, glassFloor = false }) {
   const g = useMemo(() => {
-    const z1 = -(L.pierZ + L.towerHalfZ), z0 = -z1, w = 1.6, y0 = L.walkY, y1 = L.walkY + L.walkH
-    const gs = []
-    for (const sx of [-w, w]) for (const y of [y0, y1]) gs.push(beam([x + sx, y, z0], [x + sx, y, z1], 0.22, 6))
-    const n = 20
-    for (let i = 0; i <= n; i++) {
-      const z = z0 + ((z1 - z0) * i) / n
-      for (const sx of [-w, w]) {
-        gs.push(beam([x + sx, y0, z], [x + sx, y1, z], 0.12, 4))
-        if (i < n) {
-          const zn = z0 + ((z1 - z0) * (i + 1)) / n
-          gs.push(i % 2 ? beam([x + sx, y0, z], [x + sx, y1, zn], 0.09, 4) : beam([x + sx, y1, z], [x + sx, y0, zn], 0.09, 4))
-        }
-      }
-      gs.push(beam([x - w, y1, z], [x + w, y1, z], 0.1, 4))
-    }
+    const z1 = -(L.pierZ + L.towerHalfZ), z0 = -z1, w = WALK.w, y0 = L.walkY, y1 = L.walkY + L.walkH
     return {
-      truss: merge(gs),
+      truss: walkwayTruss(x, -(L.pierZ + L.towerHalfZ), y0, y1),
       roof: box(2 * w + 0.6, 0.3, z0 - z1, x, y1 + 0.2, 0),
       floor: box(2 * w, 0.35, z0 - z1, x, y0 + 0.1, 0),
       glazing: box(2 * w - 0.3, L.walkH - 0.6, z0 - z1, x, (y0 + y1) / 2, 0),

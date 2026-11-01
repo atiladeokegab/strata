@@ -563,3 +563,17 @@ console.log('geom materials untextured, all kinded ok')
   assert.ok(POST_Z + POST_W / 2 < -GATE_U + 0.5 && POST_Z > STOP_U, 'barrier sits between the stop line and the gate')
   console.log('gate post checks ok')
 }
+
+// High walkway girders: everything stays between the tower faces and the booms, and the lattice stays a lattice.
+{
+  const { walkwayTruss, WALK } = await import('./walkway.js')
+  const ze = 35.5, y0 = 35, y1 = 39.3, g = walkwayTruss(10.5, ze, y0, y1)
+  g.computeBoundingBox()
+  const b = g.boundingBox
+  assert.ok(b.min.z >= -ze - 0.05 && b.max.z <= ze + 0.05, `walkway truss bears on, not into, the tower faces (${b.min.z.toFixed(2)}..${b.max.z.toFixed(2)})`)
+  assert.ok(b.min.y >= y0 - 0.4 && b.max.y <= y1 + 0.01, 'walkway truss between floor bracing and roof boom')
+  assert.ok(b.min.x >= 10.5 - WALK.w - 0.3 && b.max.x <= 10.5 + WALK.w + 0.3, 'walkway truss within its two girders')
+  const verts = g.attributes.position.count
+  assert.ok(verts < 60000, `walkway truss stays light (${verts} verts)`)
+  console.log(`walkway truss ok (${verts} verts)`)
+}

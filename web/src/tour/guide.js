@@ -32,6 +32,14 @@ const yearStop = (year, note) => ({
   },
 })
 
+// Asked again on every visit (Back included), but never while an answer is still coming or just sent: one request in flight.
+let askedAt = -Infinity
+export function askDocent() {
+  if (document.querySelector('.docent .msg.busy') || performance.now() - askedAt < 1500) return false
+  askedAt = performance.now()
+  return type('form.ask input', 'How do the counterweights help the bascules open?', true)
+}
+
 // state: what the app should show for the step (anything left out returns to DEFAULT, so Back and Next are clean).
 // cam: a flyTo position (CameraRig looks back at the bridge). spot: the control to point at. when: show the step only if true.
 const DEFAULT = { year: THIS_YEAR, exploded: false, lidar: false, view: 'orbit', selected: null, sheet: false }
@@ -55,7 +63,7 @@ export const STEPS = [
     text: 'The inspector shows its sizes, each with a source and a status: text-attested, measured or inferred.' },
   { id: 'docent', title: 'Ask the docent', spot: '.docent', state: { selected: 'counterweight-north', sheet: true },
     text: 'Ask anything. Answers cite their sources, and the docent says so when it cannot cite one.',
-    run: () => type('form.ask input', 'How do the counterweights help the bascules open?', true) }, // asked again on every visit, Back included
+    run: () => askDocent() },
   { id: 'search', title: 'Search', spot: '.search', state: { sheet: true },
     text: 'Find any part, event or source by name.',
     run: () => type('.search input', 'bascule'), leave: () => type('.search input', '') },

@@ -58,13 +58,13 @@ function flag(x, y, z) {
 function bunting(out, a, b, sag, cols) {
   const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b), along = B.clone().sub(A)
   const n = Math.max(2, Math.round(along.length()))
-  const side = along.clone().setY(0).normalize().multiplyScalar(0.3)
+  const side = along.clone().setY(0).normalize().multiplyScalar(0.21)
   for (let i = 0; i < n; i++) {
     const t = (i + 0.5) / n, c = A.clone().addScaledVector(along, t)
     c.y -= sag * Math.sin(Math.PI * t)
     const u = (128 + cols[i % cols.length] * 16 + 8) / 256
     const g = new THREE.BufferGeometry()
-    g.setAttribute('position', new THREE.Float32BufferAttribute([...c.clone().sub(side).toArray(), ...c.clone().add(side).toArray(), c.x, c.y - 0.7, c.z], 3))
+    g.setAttribute('position', new THREE.Float32BufferAttribute([...c.clone().sub(side).toArray(), ...c.clone().add(side).toArray(), c.x, c.y - 0.5, c.z], 3))
     g.setAttribute('uv', new THREE.Float32BufferAttribute([u, 0.5, u, 0.5, u, 0.5], 2))
     g.setIndex([0, 1, 2])
     g.computeVertexNormals()

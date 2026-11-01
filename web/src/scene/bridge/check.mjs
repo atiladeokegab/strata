@@ -11,6 +11,7 @@ import { containersOf, clickThrough } from './xray.js'
 import * as THREE from 'three'
 import { PART_IDS } from './parts.js'
 import { KERB_X, FOOTWAY_OUT, roadSurface } from './roadway.js'
+import { steelColour } from './geom.js'
 import { createShip, stepShip, WAIT_X, HOLD_X, CRUISE } from './shipSim.js'
 import { leverAfter, leverForKey, leverLabel, KEY_STEP } from './drive.js'
 import { vesselForYear, needsLift, leafInput, CLEARANCE } from './vessels.js'
@@ -72,6 +73,7 @@ assert.ok(eraFor(1975).steam && !eraFor(1976).steam)
 // approach lamps: 1894 gas, 1940 blacked out, 2026 electric
 assert.ok(eraFor(1894).gasLamps && !eraFor(1894).blackout && !eraFor(1938).blackout)
 assert.ok(eraFor(1939).blackout && eraFor(1940).blackout && eraFor(1944).blackout && !eraFor(1945).blackout)
+assert.ok(['#5a4033', '#7d8285', '#7d8285', '#5b8fd0'].every((c, i) => steelColour(eraFor([1938, 1939, 1976, 1977][i])) === c), 'paint: brown, grey from 1939, Jubilee from 1977')
 assert.ok(eraFor(1894).woodBlocks && eraFor(1929).woodBlocks && !eraFor(1930).woodBlocks && !eraFor(2026).woodBlocks)
 assert.ok(!eraFor(1950).gasLamps && !eraFor(2026).gasLamps && !eraFor(2026).blackout)
 assert.ok(!eraFor(2011).nightLighting && eraFor(2012).nightLighting)

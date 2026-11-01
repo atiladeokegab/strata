@@ -78,6 +78,7 @@ export const MATERIALS = {
 const cache = {}
 export const M = new Proxy({}, { get: (_, k) => (cache[k] ??= MATERIALS[k]()) })
 
-// Painted chocolate-brown in 1894; red, white and blue for the 1977 Silver Jubilee; blue and
-// white since. status: inferred (wiki-tb), not yet in data.
-export const steelColour = (year) => (year < 1977 ? '#5a4033' : '#5b8fd0')
+// Paint by era (towerbridge.org.uk "Top facts"): 'bright chocolate' brown from 1894, battleship grey
+// as camouflage pre-WW2, red, white and blue from the 1977 Silver Jubilee (blue on the steel, white trim).
+// Shades are inferred. Takes eraFor() flags.
+export const steelColour = (era) => (era.jubileePaint ? '#5b8fd0' : era.greyPaint ? '#7d8285' : '#5a4033')

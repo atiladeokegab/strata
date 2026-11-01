@@ -43,12 +43,13 @@ export const shown = (kind, stage) => {
 export const ERAS = {
   walkwaysClosed: 1910, // closed to the public for lack of use
   asphalt: 1930, // carriageway wood blocks -> asphalt, and painted markings; inferred, no dated source yet
+  battleshipGrey: 1939, // steel repainted grey as camouflage, "pre-WW2" (towerbridge.org.uk); year inferred
   blackout: 1939, // wartime: lamps dark, kerbs and lamp posts banded white, sandbags (blackout from 1 Sept 1939)
   thirdEngine: 1942, // a third steam pumping engine added (Wikipedia, citing Milne, The Thames at War, 2020, p.153)
   blackoutEnd: 1945,
   electricLamps: 1950, // approach lanterns gas -> electric; inferred, no dated source yet
   electricDrive: 1976, // steam pumping engines replaced by electro-hydraulic drive
-  jubilee: 1977, // red, white and blue paint (see steelColour in geom.js)
+  jubilee: 1977, // red, white and blue paint (steelColour in geom.js)
   walkwaysReopened: 1982, // reopened, glazed, as the exhibition
   nightLighting: 2012, // floodlighting fixtures on the towers; Atlas's 2012 floodlighting event in the data lands at the same time
   olympics: 2012, // Olympic rings hung from the walkways, that year only
@@ -103,6 +104,8 @@ export function eraFor(year, eras = FALLBACK) {
     blackout: year >= y('blackout') && year < y('blackoutEnd'),
     gasLamps: year < y('electricLamps'),
     woodBlocks: year < y('asphalt'),
+    greyPaint: year >= y('battleshipGrey'),
+    jubileePaint: year >= y('jubilee'),
     glazed: year >= y('walkwaysReopened'),
     thirdEngine: year >= y('thirdEngine'),
     steam: year < y('electricDrive'),

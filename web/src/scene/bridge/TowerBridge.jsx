@@ -157,7 +157,7 @@ export function TowerBridge(props) {
       fades: { current: [] }, // shell part ids x-rayed for the current selection
       selected: { current: useStore.getState().selected },
       hovered: { current: null },
-      steel: { current: steelColour(year) },
+      steel: { current: steelColour(era) },
       road: { current: 'asphalt' },
       select,
     }),
@@ -165,7 +165,7 @@ export function TowerBridge(props) {
     [],
   )
   rt.select = select
-  rt.steel.current = steelColour(year)
+  rt.steel.current = steelColour(era)
   rt.road.current = era.woodBlocks ? 'wood' : 'asphalt'
 
   useEffect(() => {

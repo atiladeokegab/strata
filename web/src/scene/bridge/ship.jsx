@@ -9,12 +9,8 @@ import { Part } from './Part.jsx'
 import { beam, box, merge } from './geom.js'
 import { L } from './structures.jsx'
 import { pbr } from '../look/textures.js'
+import { createShip, stepShip, CRUISE } from './shipSim.js'
 
-const WAIT_X = 250
-const END_X = -300
-const CRUISE = 9 // m/s; shortcut: brisk for the film (a real barque under the bridge did ~2-3 m/s)
-const ACCEL = 0.6 // m/s²
-const OPEN_FRACTION = 0.8
 
 // Hull plan outline in (x, z): transom stern at +x, pointed bow at -x.
 const hullShape = () => {
@@ -179,7 +175,7 @@ function foamTexture() {
 }
 
 // Live ship state (one ship), for a panel or a test harness that wants to place it. x is metres east.
-export const shipState = { x: WAIT_X, v: 0, sailing: false }
+export const shipState = createShip()
 
 export function Ship({ rt, maxAngle }) {
   const geo = useMemo(buildShip, [])
@@ -204,12 +200,7 @@ export function Ship({ rt, maxAngle }) {
   useFrame(({ clock }, dt) => {
     dt = Math.min(dt, 0.1)
     const s = shipState
-    if (!s.sailing && rt.sim.angle > OPEN_FRACTION * maxAngle) s.sailing = true
-    if (s.sailing) {
-      s.v = Math.min(CRUISE, s.v + ACCEL * dt)
-      s.x -= s.v * dt
-      if (s.x < END_X) Object.assign(s, { x: WAIT_X, v: 0, sailing: false }) // off-screen: back to the queue
-    }
+    stepShip(s, rt.sim.angle / maxAngle, dt)
     const t = clock.elapsedTime
     move.current.position.set(s.x, L.hw, 0)
     bob.current.position.y = Math.sin(t * 0.9) * 0.25

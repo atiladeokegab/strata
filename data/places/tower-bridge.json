@@ -672,6 +672,16 @@
         "tb-inside"
       ],
       "stage": 8
+    },
+    {
+      "year": 2012,
+      "title": "Tower Bridge floodlighting: new LED system first officially switched on",
+      "text": "On 30 May 2012, Tower Bridge's replacement LED lighting system had its first official switch-on. This was a dated launch of the new system, not evidence that the bridge was floodlit for the first time in 2012; the project replaced an earlier lighting system.",
+      "sources": [
+        "tb-led-lighting-2012"
+      ],
+      "stage": 8,
+      "status": "text-attested"
     }
   ],
   "sources": [
@@ -819,6 +829,13 @@
       "url": "https://www.towerbridge.org.uk/stories/royal-connections-to-tower-bridge",
       "kind": "primary institutional",
       "locator": "The second Elizabethan era"
+    },
+    {
+      "id": "tb-led-lighting-2012",
+      "title": "Landmark dazzles in diamond white for Queen's Jubilee weekend",
+      "url": "https://www.edfenergy.com/media-centre/news-releases/landmark-dazzles-diamond-white-queens-jubilee-weekend",
+      "kind": "project partner press release",
+      "locator": "30 May 2012: new LED lighting system's first official switch-on; notes it replaced the previous system."
     }
   ],
   "people": [

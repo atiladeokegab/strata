@@ -1,7 +1,7 @@
 // Self-check for the pure bridge logic: `node web/src/scene/bridge/check.mjs`
 import assert from 'node:assert/strict'
 import { createHydraulics, stepHydraulics, OPEN_TIME_S, SIM_SPEED, BOLT_SETTLE_S, BOLT_TRAVEL_S, DRAW_UP, LIFT_DRAW, createCars, stepCars, carHeight, gaugePsi, PRESSURE_PSI } from './hydraulics.js'
-import { stageForYear, shown, STAGES, ERAS, eraFor, resolveYears } from './stages.js'
+import { stageForYear, shown, STAGES, ERAS, eraFor, resolveYears, approachWorks } from './stages.js'
 import { readFileSync, readdirSync, unlinkSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
@@ -331,6 +331,20 @@ assert.ok(Object.keys(cp).length >= 5, 'most of the column still gets labels')
     prev = d
   }
   assert.equal(buildDone(stageForYear(1894)), 1)
+}
+{
+  // approach works: ramp rises 1888-1891 and never falls, road laid in 1893, a label every build year
+  let prev = -1
+  for (let y = 1886; y <= 1894; y++) {
+    const w = approachWorks(stageForYear(y))
+    assert.ok(w.ramp >= prev, `ramp never falls (${y})`)
+    prev = w.ramp
+    assert.equal(w.road, y >= 1893, `road laid from 1893 (${y})`)
+    assert.equal(!!w.label, y < 1894, `works label in build years only (${y})`)
+  }
+  assert.equal(approachWorks(stageForYear(1887)).ramp, 0)
+  assert.ok(approachWorks(stageForYear(1889)).ramp > 0 && approachWorks(stageForYear(1889)).ramp < 1)
+  assert.equal(approachWorks(stageForYear(1891)).ramp, 1)
 }
 console.log('callout checks ok')
 // lift for a ship: the full cycle over the real hydraulic, ship and traffic sims, wired as in the app

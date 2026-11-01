@@ -33,6 +33,16 @@ export const PART_STAGE = {
   engine: { from: 5 }, // south-bank power house, 1894
 }
 
+// Shore approach works: the abutment towers rise in stage 0 (with the piers), the ramp embankment
+// and parapets rise through stages 1-3, and the road surface is laid in 1893, the last year of
+// stage 4. -> {ramp 0..1, road, label}; label null when no work is going on.
+export function approachWorks({ stage, progress }) {
+  if (stage >= 5) return { ramp: 1, road: true, label: null }
+  if (stage < 1) return { ramp: 0, road: false, label: stage < 0 ? null : 'Abutment towers rising' }
+  if (stage <= 3) return { ramp: Math.min(1, (stage - 1 + progress) / 3), road: false, label: 'Approach ramp: embankment and parapets rising' }
+  return progress < 1 ? { ramp: 1, road: false, label: 'Approach ramp built, road to be laid' } : { ramp: 1, road: true, label: 'Road surface laid' }
+}
+
 export const shown = (kind, stage) => {
   const r = PART_STAGE[kind]
   return stage >= r.from && (r.until === undefined || stage <= r.until)

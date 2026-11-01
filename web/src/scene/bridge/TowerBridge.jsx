@@ -10,7 +10,7 @@ import { Part } from './Part.jsx'
 import { BasculeDrive } from './BasculeDrive.jsx'
 import { steelColour } from './geom.js'
 import { createHydraulics, stepHydraulics, SIM_SPEED } from './hydraulics.js'
-import { stageForYear, shown, eraFor, resolveYears } from './stages.js'
+import { stageForYear, shown, eraFor, resolveYears, approachWorks } from './stages.js'
 import { containersOf } from './xray.js'
 import * as H from './history.jsx'
 import * as S from './structures.jsx'
@@ -54,8 +54,8 @@ function Half({ side, rt, st, towerTop, era, maxAngle }) {
       {st.stage >= 5 && <Cabin side={side} rt={rt} />}
       {shown('abutment', st.stage) && (
         <Part id={id('abutment')} rt={rt} explode={[0, 0, -28]} clipY={rising(st, 0, S.L.hw - 1, towerTop)}>
-          <S.Abutment side={side} />
-          <A.RampDetails side={side} era={era} />
+          <S.Abutment side={side} {...approachWorks(st)} />
+          {approachWorks(st).road && <A.RampDetails side={side} era={era} />}
         </Part>
       )}
       {shown('frame', st.stage) && (

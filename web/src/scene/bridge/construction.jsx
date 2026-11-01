@@ -3,8 +3,10 @@
 // status: inferred from period photographs (wiki-tb); positions are illustrative, not surveyed.
 import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
+import { Html } from '@react-three/drei'
 import { beam, box, merge, M } from './geom.js'
-import { L } from './structures.jsx'
+import { L, RAMP } from './structures.jsx'
+import { approachWorks } from './stages.js'
 import { pbr } from '../look/textures.js'
 
 const Z = L.pierZ
@@ -162,6 +164,18 @@ function Cradles() {
   )
 }
 
+// What is going on at this shore end this year, over the middle of the ramp.
+function ApproachLabel({ st }) {
+  const { label } = approachWorks(st)
+  if (!label) return null
+  return (
+    <Html position={[0, 8, L.spanEnd - 10 - RAMP / 2]} center zIndexRange={[10, 0]} style={{ pointerEvents: 'none' }}>
+      <div style={TAG}>{label}</div>
+    </Html>
+  )
+}
+const TAG = { padding: '2px 8px', borderRadius: 4, background: 'rgba(12,16,22,0.72)', color: '#f3efe6', font: '500 12px/1.2 system-ui, sans-serif', whiteSpace: 'nowrap' }
+
 export function ConstructionSite({ st, towerTop }) {
   // follow TowerBridge's clip planes (frame rising in stage 1, cladding in stage 4); the frame
   // geometry itself stops at L.bodyTop
@@ -175,6 +189,7 @@ export function ConstructionSite({ st, towerTop }) {
       {st.stage === 2 && <Centring />}
       {st.stage === 3 && <Cradles />}
       {st.stage === 4 && <Scaffold top={workTop} />}
+      <ApproachLabel st={st} />
     </>
   )
 }

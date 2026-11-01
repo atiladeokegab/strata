@@ -404,33 +404,39 @@ const slope = (w, h, x, yTop0, z0, z1, drop) => {
   return box(w, h, Math.hypot(len, drop)).translate(0, -h / 2, 0).rotateX(-a).translate(x, yTop0 - drop / 2, (z0 + z1) / 2)
 }
 
-export function Abutment({ side = 'north' }) {
+// ramp 0..1: the ramp embankment and parapets rise out of the street; road: road surface laid
+export function Abutment({ side = 'north', ramp = 1, road = true }) {
   const g = useMemo(() => {
     const z = L.spanEnd - 5, drop = STREET_DROP[side]
     const z0 = z - 5, z1 = z0 - RAMP
-    const stone = [], slate = [], road = []
+    const stone = [], slate = [], road = [], bank = []
     const t = { stone, slate, granite: [], gold: [], iron: [], windows: [], doors: [] }
     for (const sx of [-1, 1]) {
       abutmentTower(sx, z, t, L) // 6 m wide tower at x=±13, inner face at |x| 10, clear of the 18 m road
       // ramp parapets: stone walls down to below the street, 1.1 m above the road
-      stone.push(slope(0.6, 1.1 + 14, sx * (ROAD_HALF + 0.3), 1.1, z0, z1, drop))
+      bank.push(slope(0.6, 1.1 + 14, sx * (ROAD_HALF + 0.3), 1.1, z0, z1, drop))
     }
     road.push(box(2 * ROAD_HALF, 1, 10, 0, -0.5, z)) // through the gap between the towers
     stone.push(box(2 * ROAD_HALF + 2, -1 - L.hw, 10, 0, (L.hw - 1) / 2, z)) // solid fill under it
     road.push(slope(2 * ROAD_HALF, 1, 0, 0, z0, z1, drop))
-    stone.push(slope(2 * ROAD_HALF, 13, 0, -1, z0, z1, drop)) // embankment fill under the ramp
-    return { stone: merge(stone), slate: merge(slate), road: merge(road), granite: merge(t.granite), gold: merge(t.gold), iron: merge(t.iron), windows: merge(t.windows), doors: merge(t.doors) }
+    bank.push(slope(2 * ROAD_HALF, 13, 0, -1, z0, z1, drop)) // embankment fill under the ramp
+    return { stone: merge(stone), slate: merge(slate), road: merge(road), granite: merge(t.granite), gold: merge(t.gold), iron: merge(t.iron), windows: merge(t.windows), doors: merge(t.doors), bank: merge(bank) }
   }, [side])
+  const foot = -STREET_DROP[side] // street level: the bank shows above it in step with the works
   return (
     <>
       <mesh geometry={g.stone} material={M.stone} castShadow receiveShadow />
       <mesh geometry={g.slate} material={M.slate} castShadow />
-      <mesh geometry={g.road} material={M.road} receiveShadow />
       <mesh geometry={g.granite} material={M.granite} castShadow receiveShadow />
       <mesh geometry={g.gold} material={M.gold} />
       <mesh geometry={g.iron} material={M.iron} castShadow />
       <mesh geometry={g.windows} material={M.glass} />
       <mesh geometry={g.doors} material={M.iron} />
+      {/* the bank grows up out of the street as the ramp works go on */}
+      <group position-y={foot} scale-y={Math.max(ramp, 0.001)}>
+        <mesh geometry={g.bank} material={M.stone} position-y={-foot} castShadow receiveShadow />
+      </group>
+      {road && <mesh geometry={g.road} material={M.road} receiveShadow />}
     </>
   )
 }

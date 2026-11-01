@@ -149,30 +149,30 @@ function Machinery({ sim, steam }) {
 
 // Smoke puffs from the stack, only while the pumps run. Outside Part so it never highlights.
 const PUFFS = 14
+const MAINS = [['drive', 0], ['supply', 0], ['river', 0.15]]
 function Smoke({ sim }) {
   const ref = useRef()
   const material = useMemo(() => new THREE.MeshStandardMaterial({ color: '#8a8580', transparent: true, opacity: 0.35, depthWrite: false, roughness: 1 }), [])
   const level = useRef(0)
+  const dummy = useMemo(() => new THREE.Object3D(), [])
+  const puff = useMemo(() => new THREE.IcosahedronGeometry(1, 1), [])
   useFrame(({ clock }, dt) => {
     level.current += ((sim.pumping ? 1 : 0) - level.current) * Math.min(1, dt * 1.5)
     const t = clock.elapsedTime
     ref.current.visible = level.current > 0.02
     material.opacity = 0.35 * level.current
-    ref.current.children.forEach((p, i) => {
+    if (!ref.current.visible) return
+    for (let i = 0; i < PUFFS; i++) {
       const k = (t * 0.25 + i / PUFFS) % 1 // 0 at the stack mouth, 1 dispersed
-      p.position.set(CHIMNEY.x + k * 9 + Math.sin(i * 7.3) * k * 2, CHIMNEY.h + 1 + k * 14, CHIMNEY.z + Math.cos(i * 3.1) * k * 3)
-      p.scale.setScalar(0.6 + k * 2.4)
-    })
+      dummy.position.set(CHIMNEY.x + k * 9 + Math.sin(i * 7.3) * k * 2, CHIMNEY.h + 1 + k * 14, CHIMNEY.z + Math.cos(i * 3.1) * k * 3)
+      dummy.scale.setScalar(0.6 + k * 2.4)
+      dummy.updateMatrix()
+      ref.current.setMatrixAt(i, dummy.matrix)
+    }
+    ref.current.instanceMatrix.needsUpdate = true
   })
-  return (
-    <group ref={ref}>
-      {Array.from({ length: PUFFS }, (_, i) => (
-        <mesh key={i} material={material}>
-          <icosahedronGeometry args={[1, 1]} />
-        </mesh>
-      ))}
-    </group>
-  )
+  // one draw for all puffs; instances move every frame, so skip the stale bounding-sphere cull
+  return <instancedMesh ref={ref} args={[puff, material, PUFFS]} frustumCulled={false} />
 }
 
 // ---- power flow: dashes run along the mains while water moves ----
@@ -250,8 +250,9 @@ function Flow({ rt, steam }) {
     ref.current.visible = rt.explode.current < 0.05 // the mains don't follow exploded parts
     const drive = Math.min(1, Math.abs(sim.omega) / OMEGA_MAX)
     const supply = Math.min(1, drive + (sim.pumping ? 0.35 : 0))
-    for (const [k, level, base] of [['drive', drive, 0], ['supply', supply, 0], ['river', supply, 0.15]]) {
+    for (const [k, base] of MAINS) {
       const mat = m[k]
+      const level = k === 'drive' ? drive : supply
       mat.emissiveIntensity = base + level * 2.5
       mat.emissiveMap.offset.x -= level * 1.2 * Math.min(dt, 0.1) // dashes run start -> end of each path
     }

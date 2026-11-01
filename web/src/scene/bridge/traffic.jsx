@@ -84,6 +84,7 @@ export function Traffic({ rt, year, sim, maxAngle }) {
   const geos = useMemo(() => Object.fromEntries(Object.entries(BODIES).map(([k, f]) => [k, merge(f())])), [])
   const meshes = useRef({})
   const gate = useRef({ closed: false, swing: 0 })
+  const n = useMemo(() => Object.fromEntries(Object.keys(TYPES).map((k) => [k, 0])), []) // per-type instance counts, reused each frame
 
   useFrame((_, dt) => {
     const g = gate.current
@@ -93,7 +94,7 @@ export function Traffic({ rt, year, sim, maxAngle }) {
     g.closed = lift.red || store.bascule > 0 || sim.angle > 0.001
     g.swing += ((g.closed ? 1 : 0) - g.swing) * (1 - Math.exp(-Math.min(dt, 0.1) * 1.5))
     stepTraffic(t, Math.min(dt, 0.1), g.closed)
-    const n = Object.fromEntries(Object.keys(TYPES).map((k) => [k, 0]))
+    for (const k in n) n[k] = 0
     for (const L of t.lanes)
       for (const v of L.list) {
         const m = meshes.current[v.type]
@@ -103,7 +104,8 @@ export function Traffic({ rt, year, sim, maxAngle }) {
         o.updateMatrix()
         m.setMatrixAt(n[v.type]++, o.matrix)
       }
-    for (const [k, m] of Object.entries(meshes.current)) {
+    for (const k in meshes.current) {
+      const m = meshes.current[k]
       if (!m) continue
       m.count = n[k]
       m.instanceMatrix.needsUpdate = true

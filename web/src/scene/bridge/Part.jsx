@@ -17,6 +17,8 @@ export function Part({ id, rt, home = [0, 0, 0], explode = [0, 0, 0], xray = fal
   const meshes = useRef([])
   const fadeSel = useRef(0)
   const plane = useRef(new THREE.Plane(new THREE.Vector3(0, -1, 0), 0))
+  const clipList = useRef([plane.current])
+  const last = useRef(null) // what the materials were last written with; null forces a write
 
   useLayoutEffect(() => {
     const list = [], ms = []
@@ -28,11 +30,13 @@ export function Part({ id, rt, home = [0, 0, 0], explode = [0, 0, 0], xray = fal
         o.material = o.material.clone()
         o.userData.ownMat = true
       }
+      o.userData.raycast ??= o.raycast // InstancedMesh keeps its own raycast
       list.push(o.material)
       ms.push(o)
     })
     mats.current = list
     meshes.current = ms
+    last.current = null
   })
 
   useFrame((_, dt) => {
@@ -45,11 +49,15 @@ export function Part({ id, rt, home = [0, 0, 0], explode = [0, 0, 0], xray = fal
     const glow = sel ? 0.45 : hov ? 0.2 : 0
     fadeSel.current += ((xray && rt.fades.current.includes(id) ? 1 : 0) - fadeSel.current) * (1 - Math.exp(-Math.min(dt, 0.1) * 3))
     const shell = xray ? Math.max(rt.explode.current, fadeSel.current) : 0
-    // a see-through shell lets clicks through to what it contains; a dimmed part stays clickable
-    for (const o of meshes.current) o.raycast = shell > 0.3 ? noRaycast : THREE.Mesh.prototype.raycast
     const fade = Math.max(shell, dim) // dim: fixed fade, e.g. a closed walkway
     if (clipY !== null) plane.current.set(DOWN, clipY).applyMatrix4(rt.root.current.matrixWorld)
-    const clip = clipY === null ? null : [plane.current]
+    // Material writes only when something changed: most frames nothing does.
+    const clip = clipY === null ? null : clipList.current
+    const was = last.current
+    if (was && was.glow === glow && was.fade === fade && was.shell === shell && was.steel === rt.steel.current && was.clip === clip) return
+    last.current = { glow, fade, shell, steel: rt.steel.current, clip }
+    // a see-through shell lets clicks through to what it contains; a dimmed part stays clickable
+    for (const o of meshes.current) o.raycast = shell > 0.3 ? noRaycast : o.userData.raycast
     for (const m of mats.current) {
       m.emissive.copy(HIGHLIGHT)
       m.emissiveIntensity = glow

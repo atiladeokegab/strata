@@ -281,6 +281,7 @@ function Clipper({ mats }) {
 const MESH = { barque: Barque, tug: Tug, coaster: Coaster, clipper: Clipper }
 const FLAG_AT = { barque: [26.4, DECK + 6.2, 0], tug: [12.2, 4.6, 0], coaster: [21, 6, 0], clipper: [15, 3.8, 0] }
 const PUFFS = 7
+const PUFF = new THREE.IcosahedronGeometry(1, 1) // shared by every puff
 
 export function Ship({ rt, year, maxAngle }) {
   const vessel = vesselForYear(year)
@@ -352,9 +353,7 @@ export function Ship({ rt, year, maxAngle }) {
         {vessel.kind === 'tug' && (
           <group ref={smoke}>
             {mats.smoke.map((m, i) => (
-              <mesh key={i} material={m}>
-                <icosahedronGeometry args={[1, 1]} />
-              </mesh>
+              <mesh key={i} material={m} geometry={PUFF} />
             ))}
           </group>
         )}

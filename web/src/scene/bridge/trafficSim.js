@@ -19,7 +19,45 @@ const STREET_RUN = 30 // m of level street past the ramp foot before a road user
 export const START_U = -(ABUT_Z + RAMP_LEN + STREET_RUN)
 export const END_U = -START_U
 // Road surface height at bridge z (0 = deck level); drop = { north, south } in m, north is -z.
-export const roadY = (z, drop) => -(z < 0 ? drop.north : drop.south) * Math.min(1, Math.max(0, (Math.abs(z) - ABUT_Z) / RAMP_LEN))
+// Past the ramp foot an optional street profile (streetProfile) takes over, eased in over STREET_BLEND.
+export const RAMP_FOOT = ABUT_Z + RAMP_LEN
+const STREET_BLEND = 10
+export function roadY(z, drop, street = null) {
+  const d = Math.abs(z) - RAMP_FOOT
+  const ramp = -(z < 0 ? drop.north : drop.south) * Math.min(1, Math.max(0, (Math.abs(z) - ABUT_Z) / RAMP_LEN))
+  const ys = street && d > 0 ? street[z < 0 ? 'north' : 'south'] : null
+  if (!ys) return ramp
+  const i = Math.min(d, ys.length - 1.001), k = Math.floor(i)
+  const t = ys[k] + (ys[k + 1] - ys[k]) * (i - k)
+  if (Number.isNaN(t)) return ramp // off the terrain tile
+  const w = Math.min(1, d / STREET_BLEND)
+  return ramp + (t - ramp) * w * w * (3 - 2 * w)
+}
+
+// Street surface past each ramp foot for a lane at x of half-width `half`, every metre out to the
+// spawn point. ground(x, z) is the terrain height in the bridge frame (or null off the tile). The
+// LIDAR DSM carries kerbs, bollards, vans and the drops beside the approach viaduct, so samples more
+// than STREET_TOL from the flat street level are dropped, each metre is the median of what is left
+// across the lane and ±1 m along it, and the profile is then median- and mean-smoothed over 5 m.
+const STREET_TOL = 1.5
+const median = (a) => (a.length ? a.sort((p, q) => p - q)[a.length >> 1] : NaN)
+export function streetProfile(ground, x, half, drop) {
+  const n = Math.ceil(END_U - RAMP_FOOT) + 12
+  const side = (sgn, flat) => {
+    const raw = Array.from({ length: n }, (_, k) => {
+      const s = []
+      for (const dx of [-1, -0.5, 0, 0.5, 1]) for (const dz of [-1, 0, 1]) {
+        const y = ground(x + dx * half, sgn * (RAMP_FOOT + k) + dz)
+        if (y != null && Math.abs(y - flat) <= STREET_TOL) s.push(y)
+      }
+      return s.length >= 5 ? median(s) : NaN
+    })
+    const win = (a, k, f) => f(a.slice(Math.max(0, k - 2), k + 3).filter((y) => !Number.isNaN(y)))
+    const med = raw.map((_, k) => win(raw, k, median))
+    return Float32Array.from(med, (_, k) => win(med, k, (a) => (a.length ? a.reduce((p, q) => p + q) / a.length : NaN)))
+  }
+  return { north: side(-1, -drop.north), south: side(1, -drop.south) }
+}
 const ACCEL = 2 // m/s²
 const BRAKE = 3 // m/s², comfortable deceleration used to plan the stop
 const CLEAR_RUN = 40 // m beyond the leaf over which road users keep hurrying

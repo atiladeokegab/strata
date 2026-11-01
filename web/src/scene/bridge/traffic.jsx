@@ -3,13 +3,13 @@
 // swinging barrier and red/green signal at each entry gate.
 // The gates close when the lever is pulled or a leaf is off its seat; vehicles never enter a
 // bascule while it is raised, so nothing here follows the leaf rotation.
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../../store.js'
 import { Part } from './Part.jsx'
 import { box, merge, M } from './geom.js'
-import { createTraffic, stepTraffic, onLeaves, roadY, TYPES, GATE_U, POST_X, POST_Z, POST_W } from './trafficSim.js'
+import { createTraffic, stepTraffic, onLeaves, roadY, streetProfile, RAMP_FOOT, TYPES, GATE_U, POST_X, POST_Z, POST_W } from './trafficSim.js'
 import { STREET_DROP } from './structures.jsx'
 import { FOOTWAY_H } from './roadway.js'
 import { lift, stepLift, liftSpeed, gatesClosed } from './liftSequence.js'
@@ -87,6 +87,26 @@ export function Traffic({ rt, year, sim, maxAngle }) {
   const meshes = useRef({})
   const gate = useRef({ closed: false, swing: 0 })
   const n = useMemo(() => Object.fromEntries(Object.keys(TYPES).map((k) => [k, 0])), []) // per-type instance counts, reused each frame
+  // LIDAR street surface past the ramp feet, one profile per lane; null (flat street) until the terrain loads.
+  // Dynamic import: Terrain.jsx uses import.meta.glob, which the node corridor check cannot evaluate.
+  const street = useRef(null)
+  useEffect(() => {
+    let live = true
+    import('../Terrain.jsx')
+      .then(async ({ loadTerrain, heightAt }) => {
+        const T = await loadTerrain()
+        if (!live) return
+        // bridge frame -> the terrain's grid frame (Stage turns the terrain by the bridge axis)
+        const a = (T.meta.bridge_axis_deg * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a)
+        const ground = (x, z) => heightAt(T, x * c - z * s, x * s + z * c)
+        street.current = t.lanes.map((L) => streetProfile(ground, L.x, L.kinds.includes('ped') ? 0.5 : 1, STREET_DROP))
+      })
+      .catch(() => {}) // no terrain: keep the flat street
+    return () => {
+      live = false
+      street.current = null
+    }
+  }, [t])
 
   useFrame((_, dt) => {
     const g = gate.current
@@ -99,18 +119,20 @@ export function Traffic({ rt, year, sim, maxAngle }) {
     stepTraffic(t, Math.min(dt, 0.1), g.closed, liftSpeed())
     lift.clear = g.closed && onLeaves(t) === 0 // measured after a step taken with the gates shut
     for (const k in n) n[k] = 0
-    for (const L of t.lanes)
+    t.lanes.forEach((L, li) => {
+      const sp = street.current?.[li]
       for (const v of L.list) {
         const m = meshes.current[v.type]
         if (!m || n[v.type] >= CAP[v.type]) continue
         const z = L.dir * (v.u - TYPES[v.type].len / 2)
-        const y = roadY(z, STREET_DROP)
-        // pitch with the ramp: nose down (+x in the body frame) when the road falls ahead
-        o.position.set(L.x, y + (v.type === 'ped' ? FOOTWAY_H : 0), z)
-        o.rotation.set(Math.atan(y - roadY(z + L.dir, STREET_DROP)), L.dir > 0 ? 0 : Math.PI, 0, 'YXZ')
+        const y = roadY(z, STREET_DROP, sp)
+        // pitch with the road: nose down (+x in the body frame) when it falls ahead
+        o.position.set(L.x, y + (v.type === 'ped' && Math.abs(z) <= RAMP_FOOT ? FOOTWAY_H : 0), z)
+        o.rotation.set(Math.atan(y - roadY(z + L.dir, STREET_DROP, sp)), L.dir > 0 ? 0 : Math.PI, 0, 'YXZ')
         o.updateMatrix()
         m.setMatrixAt(n[v.type]++, o.matrix)
       }
+    })
     for (const k in meshes.current) {
       const m = meshes.current[k]
       if (!m) continue

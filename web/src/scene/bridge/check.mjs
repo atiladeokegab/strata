@@ -15,7 +15,7 @@ import { createShip, stepShip, WAIT_X, HOLD_X, CRUISE } from './shipSim.js'
 import { leverAfter, leverForKey, leverLabel, KEY_STEP } from './drive.js'
 import { vesselForYear, needsLift, leafInput, CLEARANCE } from './vessels.js'
 import { createRiver, stepRiver, gap, CRAFT, CLEAR } from './riverSim.js'
-import { createTraffic, stepTraffic, onLeaves, roadY, TYPES, STOP_U, BASCULE_U, START_U, END_U, ABUT_Z, RAMP_LEN, POST_X, POST_Z, POST_W, GATE_U } from './trafficSim.js'
+import { createTraffic, stepTraffic, onLeaves, roadY, streetProfile, RAMP_FOOT, TYPES, STOP_U, BASCULE_U, START_U, END_U, ABUT_Z, RAMP_LEN, POST_X, POST_Z, POST_W, GATE_U } from './trafficSim.js'
 import { createLift, liftForShip, stepLift, liftSpeed, setLiftTimeScale, applyShipWarp, gatesClosed, heldLever, PASSED_X, FILM_SCALE } from './liftSequence.js'
 
 const MAX = (86 * Math.PI) / 180
@@ -434,7 +434,7 @@ console.log('geom materials untextured, all kinded ok')
 {
   const { build: bundle } = createRequire(import.meta.url)('esbuild')
   const STUB = {
-    react: `const H={useMemo:(f)=>f(),useRef:(v=null)=>({current:v}),useState:(v)=>[typeof v==='function'?v():v,()=>{}],useEffect(){},useLayoutEffect(){},useDebugValue(){},useCallback:(f)=>f,useSyncExternalStore:(s,get)=>get(),useContext:()=>({}),createContext:()=>({}),memo:(c)=>c};export const {useMemo,useRef,useState,useEffect,useLayoutEffect,useDebugValue,useCallback,useSyncExternalStore,useContext,createContext,memo}=H;export default H`,
+    react: `const H={useMemo:(f)=>f(),useRef:(v=null)=>({current:v}),useState:(v)=>[typeof v==='function'?v():v,()=>{}],useEffect(){},useLayoutEffect(){},useDebugValue(){},useCallback:(f)=>f,useSyncExternalStore:(s,get)=>get(),useContext:()=>({}),createContext:()=>({}),memo:(c)=>c,use:()=>({}),Suspense:()=>null};export const {useMemo,useRef,useState,useEffect,useLayoutEffect,useDebugValue,useCallback,useSyncExternalStore,useContext,createContext,memo,use,Suspense}=H;export default H`,
     'react/jsx-runtime': `export const Fragment=Symbol('F'),jsx=(type,props)=>({type,props}),jsxs=jsx`,
     '@react-three/fiber': `export const useFrame=()=>{},useThree=(sel=(s)=>s)=>sel({gl:{},camera:{},size:{width:1,height:1},scene:{}})`,
     '@react-three/drei': `export const Html=()=>null,Text=()=>null`,
@@ -601,4 +601,28 @@ console.log('geom materials untextured, all kinded ok')
   const gz = bb(inf.glazing)
   assert.ok(gz.min.x > 10.5 - WALK.w && gz.max.x < 10.5 + WALK.w && gz.min.y >= top - 1e-4, 'glazing inside the lattice, above the floor')
   console.log('walkway floor, glass floor and glazing ok')
+}
+
+// Street past the ramp foot follows the terrain: median across the lane (kerbs and vans in the DSM
+// do not lift it), eased in from the ramp foot, flat street when there is no terrain.
+{
+  const drop = { north: 2.6, south: 4 }
+  const ground = (x, z) => (Math.abs(z) > 300 ? null : x > 3.2 ? 5 : -3 - 0.02 * (Math.abs(z) - RAMP_FOOT)) // a kerb/van spike at one edge
+  const sp = streetProfile(ground, 2.5, 1, drop)
+  const want = (z) => -3 - 0.02 * (Math.abs(z) - RAMP_FOOT)
+  assert.ok(Math.abs(roadY(RAMP_FOOT + 20, drop, sp) - want(RAMP_FOOT + 20)) < 0.01, 'street follows the terrain past the blend, ignoring the spike')
+  assert.ok(Math.abs(roadY(-RAMP_FOOT - 25, drop, sp) - want(-RAMP_FOOT - 25)) < 0.01, 'north street too')
+  for (const sgn of [-1, 1]) {
+    let prev = roadY(sgn * (RAMP_FOOT - 1), drop, sp)
+    for (let d = -1; d < 40; d += 0.25) {
+      const y = roadY(sgn * (RAMP_FOOT + d), drop, sp)
+      assert.ok(Math.abs(y - prev) < 0.06, `no step from the ramp onto the street (${sgn}, ${d})`)
+      prev = y
+    }
+  }
+  assert.equal(roadY(RAMP_FOOT + 20, drop, null), -4, 'flat street until the terrain loads')
+  const off = streetProfile(() => null, 2.5, 1, drop)
+  assert.equal(roadY(RAMP_FOOT + 20, drop, off), -4, 'flat street off the terrain tile')
+  assert.ok(roadY(RAMP_FOOT - 10, drop, sp) === roadY(RAMP_FOOT - 10, drop), 'ramp itself unchanged')
+  console.log('street terrain checks ok')
 }

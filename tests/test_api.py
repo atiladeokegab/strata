@@ -100,9 +100,10 @@ def test_refuses_uncited_or_invented_answers(client, fake_model, text):
     assert result["refused"] is True and result["citations"] == []
 
 
-def test_unsupported_number_with_valid_source(client, fake_model):
+@pytest.mark.parametrize("number", ["999999 m", "999999m", "65e9 m"])
+def test_unsupported_number_with_valid_source(client, fake_model, number):
     source = client.get("/api/places/tower-bridge").json()["sources"][0]["id"]
-    fake_model["text"] = f'The tower is 999999 m tall [{source}].'
+    fake_model["text"] = f'The tower is {number} tall [{source}].'
     assert client.post("/api/ask", json={"question": "How tall is the tower?"}).json()["refused"]
 
 

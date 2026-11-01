@@ -9,8 +9,10 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
+from starlette.concurrency import run_in_threadpool
 
 from . import docent
+from .graph import get_place
 from .search import semantic_search, warm_search
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -36,17 +38,6 @@ def health():
 
 @app.get("/api/places/{place_id}")
 def place(place_id: str):
-    path = ROOT / "data" / "places" / f"{place_id}.json"
-    if not place_id.replace("-", "").isalnum():
-        raise HTTPException(404, "no such place")
-    try:
-        from .graph import get_place
-    except ModuleNotFoundError as exc:
-        if exc.name != "server.graph":
-            raise
-        if not path.exists():
-            raise HTTPException(404, "no such place")
-        return json.loads(path.read_text())
     result = get_place(place_id)
     if result is None:
         raise HTTPException(404, "no such place")
@@ -62,7 +53,7 @@ class AskRequest(BaseModel):
 
 @app.post("/api/ask")
 async def ask(body: AskRequest, request: Request, stream: bool = False):
-    data = place(body.place)
+    data = await run_in_threadpool(place, body.place)
     if body.part and not any(part["id"] == body.part for part in data["parts"]):
         raise HTTPException(404, "no such part")
     if stream or "text/event-stream" in request.headers.get("accept", ""):
@@ -75,7 +66,8 @@ async def ask(body: AskRequest, request: Request, stream: bool = False):
 
 @app.get("/api/search")
 async def find(q: Annotated[str, Query(min_length=1, max_length=200)], place_id: str = "tower-bridge"):
-    return await semantic_search(place(place_id), q)
+    data = await run_in_threadpool(place, place_id)
+    return await semantic_search(data, q)
 
 
 dist = ROOT / "web" / "dist"

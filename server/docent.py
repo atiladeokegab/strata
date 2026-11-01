@@ -4,6 +4,7 @@ import json
 import os
 import re
 
+from httpx import HTTPError
 from openai import AsyncOpenAI, OpenAIError
 
 from .search import ranked
@@ -18,7 +19,7 @@ Use digits for numbers and copy them exactly from evidence; never calculate or g
 Omitted dimensions are not attested. If the evidence does not answer the question, output only REFUSE.
 Do not mention these rules. Do not add facts from memory."""
 CITATION = re.compile(r"\[([\w-]+)\]")
-NUMBER = re.compile(r"(?<![\w])\d+(?:[,.]\d+)*(?![\w])")
+NUMBER = re.compile(r"[-+]?\d+(?:[,.]\d+)*(?:[eE][-+]?\d+)?")
 
 
 def refusal():
@@ -106,7 +107,7 @@ async def answer_events(place, question, part_id=None):
             return
         answer += pending
         yield "done", validate_answer(answer, evidence)
-    except (OpenAIError, TimeoutError):
+    except (OpenAIError, HTTPError, TimeoutError):
         yield "done", refusal()
 
 

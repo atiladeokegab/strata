@@ -10,6 +10,7 @@ from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.concurrency import run_in_threadpool
+from starlette.middleware.gzip import GZipMiddleware
 
 from . import docent
 from .graph import get_place
@@ -71,6 +72,24 @@ async def find(q: Annotated[str, Query(min_length=1, max_length=200)], place_id:
     return await semantic_search(data, q)
 
 
+class WebFiles(StaticFiles):
+    """Vite build: hashed /assets/* never change; index.html must always revalidate."""
+
+    def file_response(self, full_path, stat_result, scope, status_code=200):
+        response = super().file_response(full_path, stat_result, scope, status_code)
+        if scope["path"].startswith("/assets/"):
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        elif str(full_path).endswith(".html"):
+            response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
+def web_app(directory):
+    # Gzip only the static site (not the API's SSE or audio); jpg/png are already compressed.
+    return GZipMiddleware(WebFiles(directory=directory, html=True), minimum_size=1000,
+                          exclude_content_types=("image/jpeg", "image/png", "text/event-stream"))
+
+
 dist = ROOT / "web" / "dist"
 if dist.exists():
-    app.mount("/", StaticFiles(directory=dist, html=True), name="web")
+    app.mount("/", web_app(dist), name="web")

@@ -146,7 +146,7 @@ export default function Home({ onEnter }) {
           </button>
         </div>
       </div>
-      <aside className="home-next" aria-label="Coming next">
+      <section className="home-next" aria-label="Coming next">
         <p className="home-next-label">Coming next</p>
         <ul>
           {NEXT.map((p) => (
@@ -156,7 +156,7 @@ export default function Home({ onEnter }) {
             </li>
           ))}
         </ul>
-      </aside>
+      </section>
     </section>
   )
 }

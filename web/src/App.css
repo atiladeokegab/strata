@@ -23,7 +23,7 @@
 .brand { display: flex; align-items: center; gap: var(--s2); padding: var(--s4) var(--pad) var(--s2); }
 .brand .place { margin-left: auto; color: var(--muted); font-size: var(--t2); }
 .search { position: relative; padding: var(--s2) var(--s4) var(--s3); }
-.search input, .ask input { width: 100%; height: 40px; padding: 0 var(--s4); border-radius: var(--pill); border: 1px solid var(--line); background: var(--fill); font-size: var(--t2); outline: none; }
+.search input, .ask input { width: 100%; height: 40px; padding: 0 var(--s4); border-radius: var(--pill); border: 1px solid var(--line); background: var(--fill); font-size: var(--t2); }
 .search input::placeholder, .ask input::placeholder { color: var(--muted); }
 .search input:focus, .ask input:focus { border-color: var(--line-strong); background: var(--fill-hover); }
 .search input::-webkit-search-cancel-button { -webkit-appearance: none; width: 14px; height: 14px; cursor: pointer;
@@ -69,7 +69,7 @@
 .sources { display: flex; flex-wrap: wrap; gap: 6px; }
 
 /* chips: neutral; status reads from the label, with red kept only for a refusal */
-.chip { display: inline-flex; align-items: center; max-width: 100%; height: 22px; padding: 0 var(--s2); border-radius: var(--pill); border: 1px solid var(--line-strong);
+.chip { display: inline-flex; align-items: center; max-width: 100%; height: 24px; padding: 0 var(--s2); border-radius: var(--pill); border: 1px solid var(--line-strong);
   font: 500 var(--t1)/1 var(--sans); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: none; }
 .chip.status { font-size: 11px; letter-spacing: .02em; }
 .chip.text-attested, .chip.measured { color: var(--ink); }
@@ -176,6 +176,7 @@ input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 
 
 .move-pad { display: none; }
 @media (pointer: coarse) {
+  .search input, .ask input, .ask button { height: 44px; } .ask .icon { width: 44px; } /* 44 px touch targets */
   .move-pad { position: absolute; right: var(--gap); bottom: calc(40vh + 110px); display: grid; grid-template: repeat(2, 52px) / repeat(3, 52px); gap: 6px; touch-action: none; user-select: none; -webkit-user-select: none; }
   .move-pad button { font-size: 20px; color: var(--ink); }
   .move-pad button:active { background: var(--fill-on); }

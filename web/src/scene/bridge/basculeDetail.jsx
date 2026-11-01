@@ -8,6 +8,7 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { beam, box, merge, M } from './geom.js'
 import { L } from './structures.jsx'
+import { LITE } from '../look/tier.js'
 
 const LEN = -L.pivotZ
 const TOP = -L.pivotY // deck top
@@ -42,6 +43,29 @@ function build() {
     const [za, ya] = bays[i], [zb, yb] = bays[i + 1]
     for (const [x0, x1] of [[-7.15, -3.35], [-2.65, 2.65], [3.35, 7.15]]) {
       soffit.push(beam([x0, ya, za], [x1, yb, zb], 0.07, 4), beam([x1, ya, za], [x0, yb, zb], 0.07, 4))
+    }
+  }
+
+  // underside, the face the camera sees as the leaf rises: main-girder bottom flanges along the taper,
+  // web stiffeners, and a lower lateral bracing plane between the girder bottoms where they run deep
+  const slope = Math.atan(3.4 / LEN), run = Math.hypot(LEN, 3.4)
+  for (const x of GIRDERS) fascia.push(box(1.3, 0.08, run, 0, 0, 0).rotateX(-slope).translate(x, (bottom(0) + bottom(LEN)) / 2 - 0.04, LEN / 2))
+  if (!LITE) for (const x of GIRDERS) for (const s of [-1, 1]) {
+    if (Math.abs(x) === 7.5 && s * x > 0) continue // outer faces of the outer girders have their own below
+    for (let z = 0.75; z < LEN; z += 1.5) {
+      const h = TOP - 0.06 - bottom(z)
+      fascia.push(box(0.05, h, 0.22, x + s * 0.37, TOP - 0.06 - h / 2, z))
+    }
+  }
+  const deep = []
+  for (let z = 0.5; TOP - bottom(z) > 2; z += 3) deep.push([z, bottom(z) + 0.06])
+  for (const [z, y] of deep) fascia.push(beam([-7.5, y, z], [7.5, y, z], 0.1, 4))
+  for (let i = 0; i + 1 < deep.length; i++) {
+    const [za, ya] = deep[i], [zb, yb] = deep[i + 1]
+    for (let g = 0; g + 1 < GIRDERS.length; g++) {
+      const [x0, x1] = [GIRDERS[g], GIRDERS[g + 1]]
+      fascia.push(beam([x0, ya, za], [x1, yb, zb], 0.08, 4))
+      if (!LITE) fascia.push(beam([x1, ya, za], [x0, yb, zb], 0.08, 4))
     }
   }
 

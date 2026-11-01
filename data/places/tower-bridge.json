@@ -1008,6 +1008,31 @@
       ],
       "status": "text-attested",
       "locator": "Printed p. 64, “The Foundations.”"
+    },
+    {
+      "id": "construction-duration",
+      "title": "Construction time",
+      "text": "Tower Bridge took eight years to build from the start of construction to completion.",
+      "value": 8,
+      "unit": "years",
+      "source": "tb-timeline",
+      "sources": [
+        "tb-timeline"
+      ],
+      "status": "text-attested",
+      "locator": "Official construction timeline, 1886 construction begins; ‘Did you know’ duration statement."
+    },
+    {
+      "id": "rivet-count",
+      "title": "Rivets used in construction",
+      "text": "More than 13 million rivets were used to assemble the steelwork of Tower Bridge.",
+      "source": "tb-facts",
+      "sources": [
+        "tb-facts"
+      ],
+      "status": "text-attested",
+      "qualifier": "more than",
+      "locator": "Official top facts, ‘It took immense skill to build.’"
     }
   ]
 }

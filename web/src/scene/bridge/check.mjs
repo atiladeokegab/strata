@@ -509,6 +509,7 @@ console.log('geom materials untextured, all kinded ok')
         }
   }
   console.log('road corridor ok (clear at 0.5/1.7/3 m, road underfoot every 2 m, 1886-2026)')
+}
 // Gate posts and signals vs the deck section and the tower arch: no clash with the masonry.
 {
   const src = readFileSync(new URL('structures.jsx', import.meta.url), 'utf8')

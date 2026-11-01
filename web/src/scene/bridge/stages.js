@@ -42,7 +42,7 @@ export const shown = (kind, stage) => {
 // Fallback years from the Tower Bridge history (wiki-tb); resolveYears() overrides from events.
 export const ERAS = {
   walkwaysClosed: 1910, // closed to the public for lack of use
-  blackout: 1940, // wartime blackout: lamps dark, kerbs and lamp bases banded white (London practice from Sept 1939)
+  blackout: 1939, // wartime: lamps dark, kerbs and lamp posts banded white, sandbags (blackout from 1 Sept 1939)
   blackoutEnd: 1945,
   electricLamps: 1950, // approach lanterns gas -> electric; inferred, no dated source yet
   electricDrive: 1976, // steam pumping engines replaced by electro-hydraulic drive

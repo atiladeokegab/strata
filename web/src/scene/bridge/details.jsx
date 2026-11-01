@@ -8,6 +8,7 @@ import { KERB_X, KERB_W, FOOTWAY_H, FOOTWAY_OUT } from './roadway.js'
 import { balustrade, BAL_X, BAL_Y } from './balustrade.js'
 import { LITE } from '../look/tier.js'
 import { walkwayKnees } from './walkway.js'
+import { POST_X, POST_Z } from './trafficSim.js'
 
 // Renders { materialKey: [geometries] } as one merged mesh per material.
 // materials: optional {key: material} overriding M for some keys (e.g. lantern glass by era)
@@ -125,7 +126,7 @@ const LANTERN = {
 export const lanternFor = (era) => ({ lantern: era?.blackout ? LANTERN.blackout : era?.gasLamps ? LANTERN.gas : LANTERN.electric })
 
 export function lamp(out, x, y, z, era) {
-  if (era?.blackout) out.white.push(box(0.74, 0.3, 0.74, x, y + 0.35, z)) // white band on the base
+  if (era?.blackout) out.white.push(box(0.74, 0.3, 0.74, x, y + 0.35, z), cyl(0.16, 0.16, 0.4, 8, x, y + 1.6, z)) // white bands on the base and column
   out.steel.push(
     box(0.7, 1, 0.7, x, y + 0.5, z),
     cyl(0.12, 0.17, 4.2, 8, x, y + 3.1, z),
@@ -153,7 +154,21 @@ export const footways = (out, z0, z1, era) => {
   }
 }
 
-export const kit = () => ({ iron: [], glass: [], gold: [], white: [], stone: [], granite: [], steel: [], lantern: [] })
+export const kit = () => ({ iron: [], glass: [], gold: [], white: [], stone: [], granite: [], steel: [], lantern: [], sand: [] })
+
+// Wartime sandbags (inferred: general ARP practice, no Tower Bridge photo of them yet). One merged
+// mesh per tower Part, so 1939-44 costs two draw calls; skipped on the lite tier.
+const SAND = new THREE.MeshStandardMaterial({ color: '#9b8b67', roughness: 0.95 })
+function sandbags(out, x, z, w, d, courses) {
+  const along = w >= d, len = along ? w : d, n = Math.max(1, Math.round(len / 0.6))
+  for (let c = 0; c < courses; c++) {
+    const k = n - (c % 2), l = len - (c % 2) * (len / n), cross = (along ? d : w) - c * 0.06 // stagger every other course
+    for (let i = 0; i < k; i++) {
+      const t = -l / 2 + ((i + 0.5) * l) / k, size = l / k - 0.04
+      out.sand.push(along ? box(size, 0.2, cross, x + t, 0.1 + c * 0.21, z) : box(cross, 0.2, size, x, 0.1 + c * 0.21, z + t))
+    }
+  }
+}
 
 export function ApproachDetails({ era }) {
   return (
@@ -176,7 +191,22 @@ export function ApproachDetails({ era }) {
 
 // Fixed deck through the tower arch.
 export function DeckMarkings({ era }) {
-  return <Meshes deps={[era?.blackout]} build={() => { const o = kit(); dashes(o, L.pierZ - 9.5, L.pierZ + 9.5); footways(o, L.pierZ - L.towerHalfZ, L.pierZ + L.towerHalfZ, era); return o }} />
+  return (
+    <Meshes
+      deps={[era?.blackout]}
+      materials={{ sand: SAND }}
+      build={() => {
+        const o = kit()
+        dashes(o, L.pierZ - 9.5, L.pierZ + 9.5)
+        footways(o, L.pierZ - L.towerHalfZ, L.pierZ + L.towerHalfZ, era)
+        if (era?.blackout && !LITE) {
+          for (const sx of [-1, 1]) sandbags(o, sx * 8.65, L.pierZ - L.towerHalfZ + 0.7, 0.9, 1.2, 5) // against the tower's shore-side jambs
+          sandbags(o, POST_X - 0.15, POST_Z, 0.9, 1.0, 3) // round the foot of the gate post
+        }
+        return o
+      }}
+    />
+  )
 }
 
 // Built in north-local coordinates, then moved into the leaf frame so it rides on <PivotFrame>.

@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react'
 import { useStore } from './store'
 import { Stage } from './ui/Stage'
 import { Panel } from './ui/Panel'
-import { Dock } from './ui/Dock'
+import { Controls, Dock } from './ui/Dock'
 import Reimagine from './ui/Reimagine'
+import Identify from './ui/Identify'
+import Home from './ui/home/Home'
 import './App.css'
 
 const PLACE = 'tower-bridge'
@@ -37,14 +39,20 @@ export default function App() {
   const view = useStore((s) => s.view)
   const loadPlace = useStore((s) => s.loadPlace)
   const [error, setError] = useState(false)
+  // the museum landing first; ?tour=1 (film takes) goes straight in. Only one canvas lives at a time, so Reimagine captures the bridge.
+  const [entered, setEntered] = useState(() => new URLSearchParams(location.search).get('tour') === '1')
   const load = () => { setError(false); loadPlace(PLACE).catch(() => setError(true)) }
   useEffect(load, []) // eslint-disable-line react-hooks/exhaustive-deps
+  if (!entered) return <Home onEnter={() => setEntered(true)} />
   return (
     <div className={`app view-${view}`}>
       <Stage />
       <Panel />
       <Dock />
-      <Reimagine />
+      <Controls>
+        <Reimagine />
+        <Identify />
+      </Controls>
       <Credit />
       {view === 'walk' && <p className="walk-hint glass">W A S D to walk · drag to look · Shift to run</p>}
       {(!place || error) && <Loading error={error} retry={load} />}

@@ -1,6 +1,9 @@
-// The glass side panel: search, the part inspector and the docent.
+// The glass side panel: search, the place card, the part inspector and the docent.
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../store'
+import { bridgeHydraulics } from '../scene/bridge/TowerBridge.jsx'
+import { useTour, startTour, stopTour } from '../tour/tour.js'
+import Voice from './Voice'
 import { readDocentStream } from '../lib/docentStream'
 
 const STATUS = { 'text-attested': 'Text-attested', measured: 'Measured', inferred: 'Inferred' }
@@ -81,8 +84,8 @@ function Inspector() {
   if (!part) {
     return (
       <section className="inspector">
-        <p className="eyebrow">The structure</p>
-        <p className="hint">Click any part of the bridge, or pick one here.</p>
+        <p className="eyebrow">The parts</p>
+        <p className="hint">Tap any part of the bridge, or pick one here.</p>
         <div className="parts">
           {place.parts.map((p) => <button key={p.id} type="button" onClick={() => select(p.id)}>{p.name}</button>)}
         </div>
@@ -108,7 +111,47 @@ function Inspector() {
           ))}
         </dl>
       )}
+      {/bascule|accumulator/.test(part.id) && <Hydraulics />}
       {part.sources?.length > 0 && <div className="sources">{part.sources.map((s) => <SourceChip key={s} id={s} />)}</div>}
+    </section>
+  )
+}
+
+// live readout of the simulated hydraulics the bridge runs; refreshed ten times a second
+function Hydraulics() {
+  const [h, setH] = useState(() => ({ ...bridgeHydraulics }))
+  useEffect(() => { const t = setInterval(() => setH({ ...bridgeHydraulics }), 100); return () => clearInterval(t) }, [])
+  const deg = (h.angle * 180) / Math.PI
+  const rows = [
+    ['Leaf angle', `${deg.toFixed(1)}°`],
+    ['Swing rate', `${((h.omega * 180) / Math.PI).toFixed(2)}°/s`],
+    ['Accumulator', `${Math.round(h.stored * 100)}%`],
+    ['Pumps', h.pumping ? 'Running' : 'Idle'],
+    ['Valve', h.valve > 0.02 ? 'Raising' : h.valve < -0.02 ? 'Lowering' : 'Shut'],
+  ]
+  return (
+    <div className="hydraulics" aria-live="off">
+      <p className="eyebrow">Hydraulics, live <StatusChip status="inferred" /></p>
+      <dl>{rows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd className="num">{v}</dd></div>)}</dl>
+      <p className="hint small">Simulated from the 750 psi accumulator system. Move the bascule slider to work it.</p>
+    </div>
+  )
+}
+
+function PlaceCard() {
+  const place = useStore((s) => s.place)
+  const selected = useStore((s) => s.selected)
+  const touring = useTour((s) => s.playing)
+  if (!place || selected) return null
+  const opened = place.events?.find((e) => /open/i.test(e.title))
+  return (
+    <section className="place-card">
+      <h1>{place.name}</h1>
+      <p className="where">{[place.location?.label || place.location?.name || 'River Thames, London', opened && `Opened ${opened.year}`].filter(Boolean).join(' · ')}</p>
+      <button type="button" className="primary" onClick={touring ? stopTour : startTour}>
+        <svg viewBox="0 0 16 16" aria-hidden="true">{touring ? <path d="M4 3h3v10H4zM9 3h3v10H9z" /> : <path d="M4 2.5v11l9-5.5z" />}</svg>
+        {touring ? 'Stop the story' : 'Play the story'}
+      </button>
     </section>
   )
 }
@@ -120,24 +163,29 @@ function Docent() {
   const [log, setLog] = useState([])
   const [q, setQ] = useState('')
   const [busy, setBusy] = useState(false)
+  const [talk, setTalk] = useState(false)
   const end = useRef(null)
   useEffect(() => { end.current?.scrollIntoView({ block: 'nearest' }) }, [log, busy])
   const ask = async (e) => {
     e.preventDefault()
     const question = q.trim()
     if (!question || busy || !place) return
-    setLog((l) => [...l, { who: 'you', text: question }, { who: 'docent', text: '' }])
+    setLog((l) => [...l, { who: 'you', text: question }])
     setQ(''); setBusy(true)
     try {
       const r = await fetch('/api/ask', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
         body: JSON.stringify({ place: place.id, ...(selected ? { part: selected } : {}), question }) })
       if (!r.ok) throw new Error([404, 405].includes(r.status) ? 'The docent is not on this server yet.' : `The docent could not answer just now (${r.status}).`)
-      const a = await readDocentStream(r, (text) => {
-        setLog((l) => l.map((m, i) => i === l.length - 1 ? { ...m, text: m.text + text } : m))
-      })
-      setLog((l) => l.map((m, i) => i === l.length - 1 ? { ...m, text: a.answer, citations: a.citations || [], refused: a.refused } : m))
+      const done = (a) => setLog((l) => [...l.filter((m) => !m.live), { who: 'docent', text: a.answer, citations: a.citations || [], refused: a.refused }])
+      if (!(r.headers.get('content-type') || '').includes('event-stream')) { done(await r.json()); return }
+      let text = ''
+      done(await readDocentStream(r, (t) => {
+        text += t ?? ''
+        setBusy(false)
+        setLog((l) => [...l.filter((m) => !m.live), { who: 'docent', text, live: true }])
+      }))
     } catch (err) {
-      setLog((l) => l.map((m, i) => i === l.length - 1 ? { ...m, text: err.message.startsWith('The docent') ? err.message : 'The docent could not answer just now.', error: true } : m))
+      setLog((l) => [...l.filter((m) => !m.live), { who: 'docent', text: err.message.startsWith('The docent') ? err.message : 'The docent could not answer just now.', error: true }])
     } finally { setBusy(false) }
   }
   return (
@@ -146,7 +194,7 @@ function Docent() {
       <div className="log">
         {log.length === 0 && <p className="hint">It answers from the sources and says so when it cannot cite one.</p>}
         {log.map((m, i) => (
-          <div key={i} className={`msg ${m.who === 'you' ? 'mine' : 'reply'}${m.refused ? ' refused' : ''}${m.error ? ' error' : ''}`}>
+          <div key={i} className={`msg ${m.who === 'you' ? 'mine' : 'reply'}${m.refused ? ' refused' : ''}${m.error ? ' error' : ''}${m.live ? ' live' : ''}`}>
             {m.refused && <span className="chip status refused">No source, so no answer</span>}
             <p>{m.text}</p>
             {m.citations?.length > 0 && <div className="sources">{m.citations.map((c) => <SourceChip key={c} id={c} />)}</div>}
@@ -158,8 +206,12 @@ function Docent() {
       <form className="ask" onSubmit={ask}>
         <input value={q} onChange={(e) => setQ(e.target.value)} maxLength={500}
           placeholder={part ? `Ask about the ${part.name.toLowerCase()}` : 'How do the bascules open?'} aria-label="Question for the docent" />
+        <button type="button" className={`icon${talk ? ' on' : ''}`} aria-pressed={talk} onClick={() => setTalk(!talk)} aria-label="Talk to the docent" title="Talk to the docent">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5a2.5 2.5 0 0 0-2.5 2.5v4a2.5 2.5 0 0 0 5 0V4A2.5 2.5 0 0 0 8 1.5zM3.5 7.5a.75.75 0 0 1 1.5 0 3 3 0 0 0 6 0 .75.75 0 0 1 1.5 0 4.5 4.5 0 0 1-3.75 4.44V14h-1.5v-2.06A4.5 4.5 0 0 1 3.5 7.5z" /></svg>
+        </button>
         <button type="submit" disabled={busy || !q.trim()}>Ask</button>
       </form>
+      {talk && <div className="voice"><Voice /></div>}
     </section>
   )
 }
@@ -175,6 +227,7 @@ export function Panel() {
       </header>
       <Search />
       <div className="scroll">
+        <PlaceCard />
         <Inspector />
         <Docent />
       </div>

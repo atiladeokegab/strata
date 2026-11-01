@@ -1,9 +1,9 @@
 :root {
   --ink: #eee8da; --muted: #a69f8f; --gold: #dab768; --gold-dim: rgba(218, 183, 104, .24);
-  --glass: rgba(14, 13, 11, .66); --line: rgba(238, 232, 218, .1);
+  --glass: rgba(16, 15, 13, .72); --panel-w: 400px; --gap: 16px; --line: rgba(238, 232, 218, .1);
   --serif: "Newsreader", Georgia, serif; --sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
-  color: var(--ink); background: #0b0b09; font: 14px/1.5 var(--sans);
+  color: var(--ink); background: #0b0b09; font: 15px/1.5 var(--sans);
   font-synthesis: none; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; color-scheme: dark;
 }
 * { box-sizing: border-box; }

@@ -9,6 +9,8 @@ import { BridgeStandIn, GroundStandIn, WaterStandIn } from './StandIns'
 const Terrain = makeSlot('Terrain', ['../scene/Terrain.jsx'], GroundStandIn)
 const Water = makeSlot('Water', ['../scene/Water.jsx'], WaterStandIn)
 const TowerBridge = makeSlot('TowerBridge', ['../scene/bridge/TowerBridge.jsx', '../scene/bridge/index.jsx'], BridgeStandIn)
+const Look = makeSlot('Look', ['../scene/Look.jsx'], DefaultLook)
+const Tour = makeSlot('Tour', ['../scene/Tour.jsx'])
 const SUN = [-320, 260, 420] // late-afternoon light from the south-west
 
 function partOf(object, ids) {
@@ -29,6 +31,26 @@ export function Stage() {
       camera={{ position: [170, 75, 190], fov: 45, near: 0.3, far: 6000 }}
       onPointerMissed={(e) => e.type === 'click' && select(null)}
     >
+      <Look />
+      <Tour />
+      <CameraRig />
+      <group
+        onClick={(e) => { const id = hit(e); if (id) { e.stopPropagation(); select(id) } }}
+        onPointerOver={(e) => { if (hit(e)) { e.stopPropagation(); document.body.style.cursor = 'pointer' } }}
+        onPointerOut={() => { document.body.style.cursor = '' }}
+      >
+        <Terrain />
+        <Water />
+        <TowerBridge />
+      </group>
+    </Canvas>
+  )
+}
+
+// sky and light until build-look's Look.jsx lands, and if it ever fails
+function DefaultLook() {
+  return (
+    <>
       <color attach="background" args={['#c9d3d8']} />
       <fog attach="fog" args={['#c9d3d8', 900, 3200]} />
       <Sky distance={4500} sunPosition={SUN} turbidity={7} rayleigh={1.4} mieCoefficient={0.006} mieDirectionalG={0.85} />
@@ -45,16 +67,6 @@ export function Stage() {
         shadow-camera-far={1500}
         shadow-bias={-0.0004}
       />
-      <CameraRig />
-      <group
-        onClick={(e) => { const id = hit(e); if (id) { e.stopPropagation(); select(id) } }}
-        onPointerOver={(e) => { if (hit(e)) { e.stopPropagation(); document.body.style.cursor = 'pointer' } }}
-        onPointerOut={() => { document.body.style.cursor = '' }}
-      >
-        <Terrain />
-        <Water />
-        <TowerBridge />
-      </group>
-    </Canvas>
+    </>
   )
 }

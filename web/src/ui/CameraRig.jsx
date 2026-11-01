@@ -2,8 +2,9 @@
 import { useEffect, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
-import { Vector3, MathUtils } from 'three'
+import { Box3, Vector3, MathUtils } from 'three'
 import { useStore } from '../store'
+import { isTourPlaying } from '../tour/tour.js'
 
 export const EYE = 1.7 // walk height above the road deck, metres
 const PRESETS = {
@@ -15,7 +16,9 @@ const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2)
 
 export function CameraRig() {
   const view = useStore((s) => s.view)
+  const selected = useStore((s) => s.selected)
   const camera = useThree((s) => s.camera)
+  const scene = useThree((s) => s.scene)
   const controls = useRef()
   const fly = useRef(null)
 
@@ -37,10 +40,27 @@ export function CameraRig() {
     useStore.setState({ cameraTo: null })
   }, [cameraTo, camera])
 
+  // fly to a part when it is selected: keep the current viewing angle, frame its bounds
+  useEffect(() => {
+    if (!selected || view === 'walk' || !controls.current || isTourPlaying()) return // the tour frames its own close-ups
+    const box = new Box3()
+    scene.traverse((o) => { if (o.name === selected && o.isMesh) box.expandByObject(o) })
+    if (box.isEmpty()) return
+    const centre = box.getCenter(new Vector3())
+    const radius = Math.max(box.getSize(new Vector3()).length() / 2, 6)
+    const fromTarget = controls.current.target.clone()
+    const dir = camera.position.clone().sub(fromTarget).normalize()
+    const to = view === 'top'
+      ? new Vector3(centre.x, Math.max(radius * 3, 120), centre.z + 0.01)
+      : centre.clone().add(dir.multiplyScalar(MathUtils.clamp(radius * 3.2, 60, 900)))
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
+    fly.current = { t: reduce ? 1 : 0, from: camera.position.clone(), to, fromTarget, toTarget: centre }
+  }, [selected]) // eslint-disable-line react-hooks/exhaustive-deps
+
   useFrame((_, dt) => {
     const f = fly.current
     if (!f) return
-    f.t = Math.min(1, f.t + dt / 0.9)
+    f.t = Math.min(1, f.t + dt / 1.1)
     const k = ease(f.t)
     camera.position.lerpVectors(f.from, f.to, k)
     const target = new Vector3().lerpVectors(f.fromTarget, f.toTarget, k)

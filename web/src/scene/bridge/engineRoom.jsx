@@ -7,20 +7,16 @@ import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { beam, box, merge, M } from './geom.js'
-import { pbr } from '../look/textures.js'
 import { LITE } from '../look/tier.js'
 import { Part } from './Part.jsx'
 import { L } from './structures.jsx'
 import { OPEN_TIME_S } from './hydraulics.js'
 
-// repeat is tiles per metre on merged geometry (geom.js merge gives metre UVs)
-const mat = (kind, variant, repeat, props) =>
-  Object.assign(new THREE.MeshStandardMaterial({ ...pbr(variant, repeat), ...props }), { userData: { kind } })
 let MATS
 const mats = () =>
   (MATS ??= {
-    // shortcut: brick keeps its own map so Look skips it (as stone it would read as granite); swap to a 'brick' kind once Look has one
-    brick: mat('stone', 'stone:portland', 0.5, { color: '#b5654c' }),
+    // brown stock brick (listing: "brown stock brick with grey brick detailing"); Look adds the London stock maps
+    brick: Object.assign(new THREE.MeshStandardMaterial({ color: '#a8855a', roughness: 0.9 }), { userData: { kind: 'brick' } }),
     stone: M.stone,
     granite: M.granite,
     slate: M.slate,

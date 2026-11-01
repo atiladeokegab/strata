@@ -11,20 +11,22 @@ import { Meshes } from './details.jsx'
 export function TowerLights() {
   return (
     <Meshes
-      build={() => {
-        const iron = [], glass = [], z0 = L.pierZ, hx = L.towerHalfX, hz = L.towerHalfZ
-        const flood = (x, y, z) => {
-          iron.push(box(0.8, 0.45, 0.8, x, y + 0.22, z), box(0.2, 0.3, 0.2, x, y - 0.1, z))
-          glass.push(box(0.65, 0.06, 0.65, x, y + 0.47, z))
-        }
-        for (const sx of [-1, 1]) for (const dz of [-6, 0, 6]) flood(sx * (hx + 1.6), 0.1, z0 + dz)
-        for (const sz of [-1, 1]) for (const x of [-4, 4]) flood(x, 28.4, z0 + sz * (hz + 0.1))
-        for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]])
-          for (const a of [0, Math.PI / 2]) flood(sx * 12 + sx * 3.3 * Math.cos(a), 46.85, z0 + sz * 9 + sz * 3.3 * Math.sin(a))
-        return { iron, glass }
-      }}
+      build={() => towerLightsKit()}
     />
   )
+}
+
+export function towerLightsKit() {
+  const iron = [], glass = [], z0 = L.pierZ, hx = L.towerHalfX, hz = L.towerHalfZ
+  const flood = (x, y, z) => {
+    iron.push(box(0.8, 0.45, 0.8, x, y + 0.22, z), box(0.2, 0.3, 0.2, x, y - 0.1, z))
+    glass.push(box(0.65, 0.06, 0.65, x, y + 0.47, z))
+  }
+  for (const sx of [-1, 1]) for (const dz of [-6, 0, 6]) flood(sx * (hx + 1.6), 0.1, z0 + dz)
+  for (const sz of [-1, 1]) for (const x of [-4, 4]) flood(x, 28.4, z0 + sz * (hz + 0.1))
+  for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]])
+    for (const a of [0, Math.PI / 2]) flood(sx * 12 + sx * 3.3 * Math.cos(a), 46.85, z0 + sz * 9 + sz * 3.3 * Math.sin(a))
+  return { iron, glass }
 }
 
 // A few visitors standing along an open walkway.

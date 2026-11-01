@@ -27,6 +27,7 @@ import { OpeningDay } from './opening.jsx'
 import { TopView } from './topview.jsx'
 import { liftSpeed, heldLever } from './liftSequence.js'
 import { LiftControls } from './liftControls.jsx'
+import { LITE } from '../look/tier.js'
 
 // The live sim state, for any panel that wants to show pressure or stored volume. Read-only.
 export const bridgeHydraulics = createHydraulics()
@@ -63,7 +64,7 @@ function Half({ side, rt, st, towerTop, era, maxAngle }) {
         <Part id={towerId} rt={rt} explode={[0, 4, -14]} clipY={rising(st, 1, S.L.pierTop, towerTop)}>
           <S.TowerFrame />
           <S.FixedDeck />
-          <D.DeckMarkings era={era} />
+          {!(LITE && st.stage >= 5) && <D.DeckMarkings era={era} />}
         </Part>
       )}
       {/* interiors ride with the frame; separate Parts so they are clickable through the x-rayed shell */}
@@ -82,9 +83,22 @@ function Half({ side, rt, st, towerTop, era, maxAngle }) {
       {/* cladding rises over the finished frame without clipping the steel */}
       {shown('cladding', st.stage) && (
         <Part id={towerId} rt={rt} explode={[0, 30, -14]} xray clipY={rising(st, 4, S.L.pierTop, towerTop + 2)}>
-          <S.TowerCladding topY={towerTop} />
-          <D.TowerDetails />
-          {era.nightLighting && <H.TowerLights />}
+          {LITE ? (
+            // phones: cladding, details, floodlights and (once open) the deck markings as one mesh per material.
+            // shortcut: on LITE the open bridge's kerbs ride the cladding's explode and x-ray, and the 1939-45 band
+            // white also brightens the tower shields; split them back out if phones get the exploded view.
+            <D.Meshes
+              deps={[towerTop, era.nightLighting, era.blackout, era.woodBlocks, st.stage >= 5]}
+              materials={D.lanternFor(era)}
+              build={() => D.join(S.claddingKit(towerTop), D.towerDetailsKit(), era.nightLighting ? H.towerLightsKit() : {}, st.stage >= 5 ? D.deckMarkingsKit(era) : {})}
+            />
+          ) : (
+            <>
+              <S.TowerCladding topY={towerTop} />
+              <D.TowerDetails />
+              {era.nightLighting && <H.TowerLights />}
+            </>
+          )}
         </Part>
       )}
       {shown('bascule', st.stage) && (
@@ -204,9 +218,19 @@ export function TowerBridge(props) {
             clipY={rising(st, 3, S.L.walkY - 0.5, S.L.walkY + S.L.walkH + 0.5)}
             dim={st.stage >= 5 && !era.walkwayOpen ? 0.7 : 0}
           >
-            <S.Walkway x={side === 'east' ? S.L.walkX : -S.L.walkX} glazed={era.glazed} glassFloor={era.glassFloor} />
-            <D.WalkwayDetails x={side === 'east' ? S.L.walkX : -S.L.walkX} era={era} />
-            {st.stage >= 5 && era.walkwayOpen && <H.WalkwayPeople x={side === 'east' ? S.L.walkX : -S.L.walkX} />}
+            {LITE ? (
+              // phones: the walkway and its details as one mesh per material, and no visitors
+              <D.Meshes
+                deps={[side, era.glazed, era.glassFloor]}
+                build={() => D.join(S.walkwayKit(side === 'east' ? S.L.walkX : -S.L.walkX, era.glazed, era.glassFloor), D.walkwayDetailsKit(side === 'east' ? S.L.walkX : -S.L.walkX))}
+              />
+            ) : (
+              <>
+                <S.Walkway x={side === 'east' ? S.L.walkX : -S.L.walkX} glazed={era.glazed} glassFloor={era.glassFloor} />
+                <D.WalkwayDetails x={side === 'east' ? S.L.walkX : -S.L.walkX} era={era} />
+              </>
+            )}
+            {!LITE && st.stage >= 5 && era.walkwayOpen && <H.WalkwayPeople x={side === 'east' ? S.L.walkX : -S.L.walkX} />}
             {era.olympics && side === 'east' && <H.OlympicRings x={side === 'east' ? S.L.walkX : -S.L.walkX} />}
           </Part>
         ))}

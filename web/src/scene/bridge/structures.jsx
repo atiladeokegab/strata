@@ -124,73 +124,8 @@ function archShape() {
 
 export function TowerCladding({ topY }) {
   const g = useMemo(() => {
-    const z0 = L.pierZ, hx = L.towerHalfX, hz = L.towerHalfZ
-    const arch = new THREE.ExtrudeGeometry(archShape(), { depth: 2 * hz, bevelEnabled: false }).translate(0, 0, z0 - hz)
-    const stone = [box(2 * hx, L.bodyTop - 14, 2 * hz, 0, (L.bodyTop + 14) / 2, z0)]
-    const granite = [14, 28, L.bodyTop].map((y) => box(2 * hx + 1, 0.7, 2 * hz + 1, 0, y, z0))
-    const slate = []
-    const gold = []
-    const glass = []
-    // octagonal corner turrets with spired caps
-    for (const [sx, sz] of corners) {
-      const x = sx * 12, z = z0 + sz * 9
-      stone.push(new THREE.CylinderGeometry(3.2, 3.4, 46, 8).translate(x, 21.5, z))
-      granite.push(new THREE.CylinderGeometry(3.6, 3.6, 0.8, 8).translate(x, 44.4, z))
-      // open arcaded stage above the parapet, then a tall lucarned spire with a gilded finial
-      stone.push(new THREE.CylinderGeometry(2.9, 2.9, 2.4, 8).translate(x, 45.9, z))
-      granite.push(new THREE.CylinderGeometry(3.25, 3.05, 0.45, 8).translate(x, 47.3, z))
-      for (let k = 0; k < 8; k++) {
-        const t = (k * Math.PI) / 4 + Math.PI / 8, s = Math.sin(t), c = Math.cos(t)
-        glass.push(box(0.75, 1.7, 0.2, 0, 0, 0).rotateY(t).translate(x + 2.7 * s, 45.9, z + 2.7 * c)) // arcade openings, recessed in the faces
-        if (k % 2 || LITE) continue // phones: no lucarnes
-        const lx = x + 2.15 * s, lz = z + 2.15 * c // lucarnes on four faces of the spire
-        slate.push(box(0.9, 1.4, 0.9, 0, 0, 0).rotateY(t).translate(lx, 49.3, lz), new THREE.ConeGeometry(0.72, 1.3, 4).rotateY(t + Math.PI / 4).translate(lx, 50.65, lz))
-        glass.push(box(0.5, 0.9, 0.2, 0, 0, 0).rotateY(t).translate(x + 2.62 * s, 49.2, z + 2.62 * c))
-        gold.push(new THREE.SphereGeometry(0.1, 5, 4).translate(lx, 51.4, lz))
-      }
-      slate.push(new THREE.ConeGeometry(3.05, 9, 8).translate(x, 47.5 + 4.5, z)) // tip at ~65 m above high water
-      gold.push(
-        new THREE.CylinderGeometry(0.07, 0.07, 2.6, 5).translate(x, 57.6, z), // finial rod
-        new THREE.SphereGeometry(0.3, 8, 6).translate(x, 56.9, z),
-        new THREE.ConeGeometry(0.22, 0.7, 6).translate(x, 59.1, z),
-        box(0.9, 0.35, 0.04, x + 0.4, 58.3, z), // vane
-      )
-      for (const y of [4, 17, 29, 39]) {
-        const ox = sx * 3.3, oz = sz * 0 // slit windows on the outer faces
-        glass.push(box(0.3, 2.6, 0.9, x + ox, y, z + oz), box(0.9, 2.6, 0.3, x, y, z + sz * 3.3))
-      }
-    }
-    // central roof: a rectangular pyramid, lantern and spire up to the data height
-    slate.push(new THREE.ConeGeometry(1, 7, 4).rotateY(Math.PI / 4).scale(hx / 0.707, 1, hz / 0.707).translate(0, L.bodyTop + 3.5, z0))
-    stone.push(new THREE.CylinderGeometry(1.6, 1.8, 2.5, 8).translate(0, L.bodyTop + 8.25, z0))
-    const spire = Math.max(1, topY - L.bodyTop - 9.5)
-    slate.push(new THREE.ConeGeometry(1.9, spire, 8).translate(0, L.bodyTop + 9.5 + spire / 2, z0))
-    gold.push(
-      new THREE.SphereGeometry(0.45, 8, 6).translate(0, L.bodyTop + 9.5 + spire, z0),
-      new THREE.CylinderGeometry(0.08, 0.08, 3, 5).translate(0, L.bodyTop + 11 + spire, z0),
-      box(1.2, 0.45, 0.05, 0.55, L.bodyTop + 11.6 + spire, z0), // weather vane
-      new THREE.CylinderGeometry(1.75, 1.75, 0.2, 8).translate(0, L.bodyTop + 9.6, z0), // gilded collar at the spire foot
-    )
-    // dormers on the long roof faces
-    for (const sz of [-1, 1]) for (const x of [-5, 5]) {
-      stone.push(box(2.6, 3.6, 2, x, L.bodyTop + 2.2, z0 + sz * (hz - 2.2)))
-      slate.push(new THREE.ConeGeometry(1.9, 2.4, 4).rotateY(Math.PI / 4).translate(x, L.bodyTop + 5.2, z0 + sz * (hz - 2.2)))
-    }
-    // lancet windows
-    for (const y of [17.5, 24, 31.5, 37.5]) {
-      for (const x of [-6, -2, 2, 6]) for (const sz of [-1, 1]) glass.push(box(1.3, 3.4, 0.3, x, y, z0 + sz * (hz + 0.05)))
-      for (const dz of [-4, 0, 4]) for (const sx of [-1, 1]) glass.push(box(0.3, 3.4, 1.3, sx * (hx + 0.05), y, z0 + dz))
-    }
-    // the walkway doors on the river faces
-    for (const sx of [-1, 1]) glass.push(box(2.6, 3.8, 0.3, sx * L.walkX, L.walkY + 2.1, z0 + hz + 0.06))
-    return {
-      arch,
-      stone: merge(stone),
-      granite: merge(granite),
-      slate: merge(slate),
-      gold: merge(gold),
-      glass: merge(glass),
-    }
+    const { stone, ...rest } = claddingKit(topY)
+    return { arch: stone[0], stone: merge(stone.slice(1)), ...Object.fromEntries(Object.entries(rest).map(([k, gs]) => [k, merge(gs)])) }
   }, [topY])
   return (
     <>
@@ -202,6 +137,70 @@ export function TowerCladding({ topY }) {
       <mesh geometry={g.glass} material={M.glass} />
     </>
   )
+}
+
+// Cladding geometry per material key (stone[0] is the road arch); LITE merges it with the tower details.
+export function claddingKit(topY) {
+  const z0 = L.pierZ, hx = L.towerHalfX, hz = L.towerHalfZ
+  const arch = new THREE.ExtrudeGeometry(archShape(), { depth: 2 * hz, bevelEnabled: false }).translate(0, 0, z0 - hz)
+  const stone = [box(2 * hx, L.bodyTop - 14, 2 * hz, 0, (L.bodyTop + 14) / 2, z0)]
+  const granite = [14, 28, L.bodyTop].map((y) => box(2 * hx + 1, 0.7, 2 * hz + 1, 0, y, z0))
+  const slate = []
+  const gold = []
+  const glass = []
+  // octagonal corner turrets with spired caps
+  for (const [sx, sz] of corners) {
+    const x = sx * 12, z = z0 + sz * 9
+    stone.push(new THREE.CylinderGeometry(3.2, 3.4, 46, 8).translate(x, 21.5, z))
+    granite.push(new THREE.CylinderGeometry(3.6, 3.6, 0.8, 8).translate(x, 44.4, z))
+    // open arcaded stage above the parapet, then a tall lucarned spire with a gilded finial
+    stone.push(new THREE.CylinderGeometry(2.9, 2.9, 2.4, 8).translate(x, 45.9, z))
+    granite.push(new THREE.CylinderGeometry(3.25, 3.05, 0.45, 8).translate(x, 47.3, z))
+    for (let k = 0; k < 8; k++) {
+      const t = (k * Math.PI) / 4 + Math.PI / 8, s = Math.sin(t), c = Math.cos(t)
+      glass.push(box(0.75, 1.7, 0.2, 0, 0, 0).rotateY(t).translate(x + 2.7 * s, 45.9, z + 2.7 * c)) // arcade openings, recessed in the faces
+      if (k % 2 || LITE) continue // phones: no lucarnes
+      const lx = x + 2.15 * s, lz = z + 2.15 * c // lucarnes on four faces of the spire
+      slate.push(box(0.9, 1.4, 0.9, 0, 0, 0).rotateY(t).translate(lx, 49.3, lz), new THREE.ConeGeometry(0.72, 1.3, 4).rotateY(t + Math.PI / 4).translate(lx, 50.65, lz))
+      glass.push(box(0.5, 0.9, 0.2, 0, 0, 0).rotateY(t).translate(x + 2.62 * s, 49.2, z + 2.62 * c))
+      gold.push(new THREE.SphereGeometry(0.1, 5, 4).translate(lx, 51.4, lz))
+    }
+    slate.push(new THREE.ConeGeometry(3.05, 9, 8).translate(x, 47.5 + 4.5, z)) // tip at ~65 m above high water
+    gold.push(
+      new THREE.CylinderGeometry(0.07, 0.07, 2.6, 5).translate(x, 57.6, z), // finial rod
+      new THREE.SphereGeometry(0.3, 8, 6).translate(x, 56.9, z),
+      new THREE.ConeGeometry(0.22, 0.7, 6).translate(x, 59.1, z),
+      box(0.9, 0.35, 0.04, x + 0.4, 58.3, z), // vane
+    )
+    for (const y of [4, 17, 29, 39]) {
+      const ox = sx * 3.3, oz = sz * 0 // slit windows on the outer faces
+      glass.push(box(0.3, 2.6, 0.9, x + ox, y, z + oz), box(0.9, 2.6, 0.3, x, y, z + sz * 3.3))
+    }
+  }
+  // central roof: a rectangular pyramid, lantern and spire up to the data height
+  slate.push(new THREE.ConeGeometry(1, 7, 4).rotateY(Math.PI / 4).scale(hx / 0.707, 1, hz / 0.707).translate(0, L.bodyTop + 3.5, z0))
+  stone.push(new THREE.CylinderGeometry(1.6, 1.8, 2.5, 8).translate(0, L.bodyTop + 8.25, z0))
+  const spire = Math.max(1, topY - L.bodyTop - 9.5)
+  slate.push(new THREE.ConeGeometry(1.9, spire, 8).translate(0, L.bodyTop + 9.5 + spire / 2, z0))
+  gold.push(
+    new THREE.SphereGeometry(0.45, 8, 6).translate(0, L.bodyTop + 9.5 + spire, z0),
+    new THREE.CylinderGeometry(0.08, 0.08, 3, 5).translate(0, L.bodyTop + 11 + spire, z0),
+    box(1.2, 0.45, 0.05, 0.55, L.bodyTop + 11.6 + spire, z0), // weather vane
+    new THREE.CylinderGeometry(1.75, 1.75, 0.2, 8).translate(0, L.bodyTop + 9.6, z0), // gilded collar at the spire foot
+  )
+  // dormers on the long roof faces
+  for (const sz of [-1, 1]) for (const x of [-5, 5]) {
+    stone.push(box(2.6, 3.6, 2, x, L.bodyTop + 2.2, z0 + sz * (hz - 2.2)))
+    slate.push(new THREE.ConeGeometry(1.9, 2.4, 4).rotateY(Math.PI / 4).translate(x, L.bodyTop + 5.2, z0 + sz * (hz - 2.2)))
+  }
+  // lancet windows
+  for (const y of [17.5, 24, 31.5, 37.5]) {
+    for (const x of [-6, -2, 2, 6]) for (const sz of [-1, 1]) glass.push(box(1.3, 3.4, 0.3, x, y, z0 + sz * (hz + 0.05)))
+    for (const dz of [-4, 0, 4]) for (const sx of [-1, 1]) glass.push(box(0.3, 3.4, 1.3, sx * (hx + 0.05), y, z0 + dz))
+  }
+  // the walkway doors on the river faces
+  for (const sx of [-1, 1]) glass.push(box(2.6, 3.8, 0.3, sx * L.walkX, L.walkY + 2.1, z0 + hz + 0.06))
+  return { stone: [arch, ...stone], granite, slate, gold, glass }
 }
 
 // ---- bascule leaf (rotates about the pivot) ----
@@ -323,17 +322,7 @@ export function Accumulators({ sim }) {
 // ---- high walkways (span between the towers, built once at the root) ----
 export function Walkway({ x, glazed = true, glassFloor = false }) {
   // one mesh per material: the era's frames join the truss steel, its glazing and glass floor share one pane mesh
-  const g = useMemo(() => {
-    const ze = -(L.pierZ + L.towerHalfZ), y0 = L.walkY, y1 = L.walkY + L.walkH
-    const p = walkwayInfill(x, ze, y0, y1), j = walkwayJunctions(x, ze, y0, y1)
-    const pane = [...(glazed ? p.glazing : []), ...(glassFloor ? p.glassFloor : [])]
-    return {
-      steel: merge([walkwayTruss(x, ze, y0, y1, LITE), ...j.steel, ...(glazed ? p.frames : []), ...(glassFloor ? p.glassFrames : [])]),
-      slate: merge([...p.roof, ...j.slate]),
-      timber: merge(glassFloor ? p.floorGap : p.floor),
-      pane: pane.length ? merge(pane) : null,
-    }
-  }, [x, glazed, glassFloor])
+  const g = useMemo(() => Object.fromEntries(Object.entries(walkwayKit(x, glazed, glassFloor)).map(([k, gs]) => [k, gs.length ? merge(gs) : null])), [x, glazed, glassFloor])
   return (
     <>
       <mesh geometry={g.steel} material={M.steel} castShadow />
@@ -343,6 +332,19 @@ export function Walkway({ x, glazed = true, glassFloor = false }) {
     </>
   )
 }
+
+// The walkway as one geometry list per material; LITE joins it with the walkway details.
+export function walkwayKit(x, glazed, glassFloor) {
+  const ze = -(L.pierZ + L.towerHalfZ), y0 = L.walkY, y1 = L.walkY + L.walkH
+  const p = walkwayInfill(x, ze, y0, y1), j = walkwayJunctions(x, ze, y0, y1)
+  return {
+    steel: [walkwayTruss(x, ze, y0, y1, LITE), ...j.steel, ...(glazed ? p.frames : []), ...(glassFloor ? p.glassFrames : [])],
+    slate: [...p.roof, ...j.slate],
+    timber: glassFloor ? p.floorGap : p.floor,
+    pane: [...(glazed ? p.glazing : []), ...(glassFloor ? p.glassFloor : [])],
+  }
+}
+
 
 // ---- suspension chains: stiffened lattice from tower to shore, with hangers to the deck ----
 export function Suspension() {

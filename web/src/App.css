@@ -1,5 +1,5 @@
 .app { position: fixed; inset: 0; }
-.stage { position: absolute !important; inset: 0; }
+.stage { position: absolute !important; inset: 0; z-index: 0; } /* own stacking context: drei <Html> labels stay under the panel and controls */
 .glass { background: var(--glass); backdrop-filter: blur(24px) saturate(160%); -webkit-backdrop-filter: blur(24px) saturate(160%);
   border: 1px solid rgba(238, 232, 218, .12); border-radius: 18px; box-shadow: 0 1px 0 rgba(255, 255, 255, .06) inset, 0 20px 60px rgba(0, 0, 0, .32); }
 .eyebrow { margin: 0 0 6px; font: 600 11px/1.2 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--gold); }
@@ -205,7 +205,9 @@ input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 
 .help .n { grid-row: span 2; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: rgba(218, 183, 104, .18); color: var(--gold); font: 600 var(--t2)/1 var(--sans); }
 .help b { font-weight: 600; font-size: var(--t3); }
 .help .d { color: var(--muted); font-size: var(--t2); line-height: 1.4; }
-.help .primary { width: 100%; justify-content: center; }
+.help .actions { display: flex; gap: 8px; }
+.help .primary { flex: 1; justify-content: center; }
+.help .secondary { flex: none; height: 48px; padding: 0 18px; border-radius: 999px; border: 0; background: rgba(255, 255, 255, .08); font-weight: 500; }
 .help-btn { width: 44px; height: 44px; border-radius: 50% !important; font: 600 var(--t4)/1 var(--sans); color: var(--ink); }
 .no-webgl { position: absolute; left: calc(var(--panel-w) + var(--gap) * 2); right: var(--gap); top: 40%; margin: 0; text-align: center; color: var(--muted); }
 .sheet-handle { display: none; }

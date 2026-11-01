@@ -70,13 +70,13 @@ Everything in this repo was built at the DevDay Community Hackathon London on 1 
 - **The bridge:** a procedural Tower Bridge whose meshes are named by part id, from the towers' parapets, pinnacles and turrets down to the bascule girders, chains and anchor plates. It explodes into its parts, and its cladding x-rays to show the steel frame.
 - **The interiors:** the Victorian stairs and hydraulic lifts inside the towers.
 - **The machine:** bascules driven by a weighted-accumulator hydraulic simulation, with a live readout, power flowing along the hydraulic mains, a drag handle on each leaf that works the operator's lever, road traffic held by gates and signals at each bascule, the 1894 hydraulic engine house on the south bank, and its 1976 electro-hydraulic changeover.
-- **The river:** a vessel that matches the year waits downstream until the leaves are up, then sails through, and era small craft yield to it. Before 1950, lighters and sailing barges lie moored in tiers along the Pool of London.
+- **The river:** the ship changes with the year: a three-masted barque from 1894, a steam tug towing a lighter from 1930, a motor coaster from 1970, and a Thames Clipper from 1999. Each waits downstream until the leaves are up, then sails through. A Clipper is low enough to pass under the closed deck, and era small craft yield to the big vessel. Before 1950, lighters and sailing barges lie moored in tiers along the Pool of London.
 - **The construction stages and works:** the bridge rises from 1886 to 1894 with the period's site works around it: staging, a piling rig, barges, derricks, centring, cradles and scaffold.
 - **Top view:** part callouts with leader lines, a 50 m scale bar, a north arrow and the bascules' swing envelopes.
 - **The look:** a Poly Haven HDRI sky and matched sun, fitted soft shadows, haze, and a post stack with a period colour grade by year.
-- **The history:** 24 bridge parts, 9 places around it pinned on the ground by the years they stood, 14 sourced events, and the people behind it, held in a SurrealDB graph, with a validator that fails any number without a source.
-- **The streaming docent:** answers stream into the chat with citation chips for every fact, and it refuses questions it can't source.
-- **Search:** semantic search over parts, events and sources.
+- **The history:** 24 bridge parts, 9 places around it pinned on the ground by the years they stood, 14 sourced events, and the people behind it, held in a SurrealDB graph served by `GET /api/places/{id}`, with a validator (`scripts/validate.py`) and poison tests that fail any number without a source.
+- **The streaming docent:** `POST /api/ask`. Answers stream into the chat with citation chips for every fact, and it refuses questions it can't source.
+- **Search:** `GET /api/search`, semantic search over parts, events and sources.
 - **Reimagine:** "See it in" a year repaints the 3D view as a period photograph, with cached views for 1894, 1944 and today in a Then and now strip.
 - **Identify:** upload a real photo of the bridge, or pick one of three samples, to have its parts named and boxed, and to see where the photographer stood.
 - **Voice:** talk to the guide out loud.

@@ -585,19 +585,33 @@ console.log('geom materials untextured, all kinded ok')
   for (const tier of ['full', 'lite']) {
     const B = BUDGET[tier]
     setLite(tier === 'lite')
-    const spent = {}
-    tally({ type: TowerBridge, props: {} }, null, spent)
-    const total = [sum(0, spent), sum(1, spent)]
+    // 2026 against the baseline; on full also the period years, whose eras swap and add meshes (1940: sandbags, lamps)
+    const years = tier === 'full' ? [2026, 1894, 1940] : [2026]
+    const spent = years.map((y) => {
+      useStore.getState().setYear(y)
+      const t = {}
+      tally({ type: TowerBridge, props: {} }, null, t)
+      return t
+    })
+    useStore.getState().setYear(2026)
+    const totals = spent.map((t) => [sum(0, t), sum(1, t)])
     const base = [sum(0, B.baseline), sum(1, B.baseline)]
-    console.log(`render budget 2026, ${tier} tier (draw calls, triangles; +/- against budget.json baseline)`)
-    for (const [id, [c, n]] of [...Object.entries(spent).sort((x, y) => y[1][1] - x[1][1]), ['TOTAL', total]]) {
+    const ids = [...new Set(spent.flatMap(Object.keys))].sort((x, y) => (spent[0][y]?.[1] ?? 0) - (spent[0][x]?.[1] ?? 0))
+    console.log(`render budget, ${tier} tier: draw calls, triangles (+/- 2026 against budget.json baseline)${years.length > 1 ? '; then ' + years.slice(1).join(', ') : ''}`)
+    console.log(`  ${''.padEnd(26)}${years.map((y, i) => (i ? `${y}`.padStart(16) : `${y}`.padStart(29))).join('')}`)
+    for (const id of [...ids, 'TOTAL']) {
+      const [c, n] = id === 'TOTAL' ? totals[0] : (spent[0][id] ?? [0, 0])
       const [bc, bn] = id === 'TOTAL' ? base : (B.baseline[id] ?? [0, 0])
-      console.log(`  ${id.padEnd(26)}${String(c).padStart(5)} ${d(c, bc).padStart(5)} ${String(Math.round(n)).padStart(9)} ${d(Math.round(n), bn).padStart(8)}`)
+      const rest = spent.slice(1).map((t, i) => (([rc, rn]) => `${String(rc).padStart(6)} ${String(Math.round(rn)).padStart(9)}`)(id === 'TOTAL' ? totals[i + 1] : (t[id] ?? [0, 0]))).join('')
+      console.log(`  ${id.padEnd(26)}${String(c).padStart(5)} ${d(c, bc).padStart(5)} ${String(Math.round(n)).padStart(9)} ${d(Math.round(n), bn).padStart(8)}${rest}`)
     }
     const hint = tier === 'lite' ? ' Gate geometry-heavy detail on LITE (look/tier.js) instead.' : ' Merge geometry before adding meshes.'
-    assert.ok(total[0] <= B.maxDrawCalls, `${tier}: bridge draws ${total[0]} meshes, over the ${B.maxDrawCalls} budget (budget.json).${hint}`)
-    assert.ok(total[1] <= B.maxTriangles, `${tier}: bridge has ${Math.round(total[1])} triangles, over the ${B.maxTriangles} budget (budget.json).${hint}`)
-    console.log(`render budget ${tier} ok (${total[0]}/${B.maxDrawCalls} draw calls, ${Math.round(total[1])}/${B.maxTriangles} triangles)`)
+    years.forEach((y, i) => {
+      const [c, n] = totals[i]
+      assert.ok(c <= B.maxDrawCalls, `${tier} ${y}: bridge draws ${c} meshes, over the ${B.maxDrawCalls} budget (budget.json).${hint}`)
+      assert.ok(n <= B.maxTriangles, `${tier} ${y}: bridge has ${Math.round(n)} triangles, over the ${B.maxTriangles} budget (budget.json).${hint}`)
+    })
+    console.log(`render budget ${tier} ok (${years.map((y, i) => `${y}: ${totals[i][0]}/${B.maxDrawCalls} calls, ${Math.round(totals[i][1])}/${B.maxTriangles} tris`).join('; ')})`)
   }
   setLite(false)
   // period streets (horse era, interwar with the tram) may spend at most 8 traffic draw calls (2026's 6 when this was set, + 2)

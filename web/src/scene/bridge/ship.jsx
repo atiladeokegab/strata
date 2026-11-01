@@ -433,7 +433,7 @@ export function Ship({ rt, year, maxAngle }) {
         ))}
       </group>
     </group>
-    <RiverCraft year={year} ship={shipState} vessel={vessel} />
+    <RiverCraft year={year} ship={shipState} vessel={vessel} foam={mats.foam.map} />
     </>
   )
 }

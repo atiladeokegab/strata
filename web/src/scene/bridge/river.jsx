@@ -5,7 +5,8 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { beam, box, merge } from './geom.js'
 import { L } from './structures.jsx'
-import { createRiver, stepRiver, eraForYear } from './riverSim.js'
+import { createRiver, stepRiver, eraForYear, CRAFT } from './riverSim.js'
+import { LITE } from '../look/tier.js'
 
 const paint = (g, hex) => {
   g = g.index ? g.toNonIndexed() : g
@@ -103,7 +104,29 @@ function Fleet({ craft, type }) {
   return <instancedMesh ref={ref} args={[geo, mat, mine.length]} castShadow frustumCulled={false} />
 }
 
-export function RiverCraft({ year, ship, vessel }) {
+// Every craft's wake in one instanced draw: a foam streak trailing from the stern, longer with speed.
+// A moored craft gets a zero-scale instance.
+const WAKE = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2)
+const wd = new THREE.Object3D() // its own: Fleet's dummy never resets scale
+function Wakes({ craft, foam }) {
+  const ref = useRef()
+  const mat = useMemo(() => new THREE.MeshBasicMaterial({ map: foam, transparent: true, depthWrite: false, opacity: 0.45 }), [foam])
+  useFrame(() => {
+    craft.forEach((c, i) => {
+      const { len, beam } = CRAFT[c.type]
+      const long = c.speed ? 5 + c.speed * 7 : 0
+      wd.position.set(c.x - c.dir * (len / 2 + long / 2 - 0.5), L.hw + 0.05, c.z)
+      wd.rotation.set(0, c.dir > 0 ? Math.PI : 0, 0) // texture is densest at u=0: keep that end at the stern
+      wd.scale.set(long || 1e-3, 1, beam * 1.5)
+      wd.updateMatrix()
+      ref.current.setMatrixAt(i, wd.matrix)
+    })
+    ref.current.instanceMatrix.needsUpdate = true
+  })
+  return <instancedMesh ref={ref} args={[WAKE, mat, craft.length]} frustumCulled={false} renderOrder={1} />
+}
+
+export function RiverCraft({ year, ship, vessel, foam }) {
   const era = eraForYear(year)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const craft = useMemo(() => createRiver(year), [era])
@@ -113,5 +136,10 @@ export function RiverCraft({ year, ship, vessel }) {
     stepRiver(craft, foot.current, Math.min(dt, 0.1))
   })
   const types = [...new Set(craft.map((c) => c.type))]
-  return types.map((t) => <Fleet key={`${era}-${t}`} craft={craft} type={t} />)
+  return (
+    <>
+      {types.map((t) => <Fleet key={`${era}-${t}`} craft={craft} type={t} />)}
+      {foam && !LITE && <Wakes key={era} craft={craft} foam={foam} />}
+    </>
+  )
 }

@@ -11,46 +11,127 @@
      {
       "id": "south-tower",
       "box": {
-       "x0": 0.288,
-       "y0": 0.095,
-       "x1": 0.415,
-       "y1": 0.747
+       "x0": 0.286,
+       "y0": 0.091,
+       "x1": 0.414,
+       "y1": 0.745
       }
      },
      {
       "id": "north-tower",
       "box": {
        "x0": 0.563,
-       "y0": 0.301,
-       "x1": 0.663,
-       "y1": 0.77
+       "y0": 0.3,
+       "x1": 0.662,
+       "y1": 0.769
+      }
+     },
+     {
+      "id": "pier-south",
+      "box": {
+       "x0": 0.254,
+       "y0": 0.736,
+       "x1": 0.461,
+       "y1": 0.933
+      }
+     },
+     {
+      "id": "pier-north",
+      "box": {
+       "x0": 0.527,
+       "y0": 0.756,
+       "x1": 0.711,
+       "y1": 0.9
+      }
+     },
+     {
+      "id": "walkway-east",
+      "box": {
+       "x0": 0.409,
+       "y0": 0.353,
+       "x1": 0.63,
+       "y1": 0.534
       }
      },
      {
       "id": "bascule-south",
       "box": {
-       "x0": 0.45,
-       "y0": 0.748,
-       "x1": 0.528,
-       "y1": 0.802
+       "x0": 0.451,
+       "y0": 0.752,
+       "x1": 0.531,
+       "y1": 0.8
       }
      },
      {
       "id": "bascule-north",
       "box": {
-       "x0": 0.528,
-       "y0": 0.758,
-       "x1": 0.61,
-       "y1": 0.822
+       "x0": 0.53,
+       "y0": 0.759,
+       "x1": 0.611,
+       "y1": 0.819
+      }
+     },
+     {
+      "id": "suspension-south",
+      "box": {
+       "x0": 0.0,
+       "y0": 0.385,
+       "x1": 0.353,
+       "y1": 0.749
+      }
+     },
+     {
+      "id": "suspension-north",
+      "box": {
+       "x0": 0.657,
+       "y0": 0.53,
+       "x1": 0.833,
+       "y1": 0.808
+      }
+     },
+     {
+      "id": "approach-south",
+      "box": {
+       "x0": 0.0,
+       "y0": 0.725,
+       "x1": 0.333,
+       "y1": 0.781
+      }
+     },
+     {
+      "id": "approach-north",
+      "box": {
+       "x0": 0.661,
+       "y0": 0.75,
+       "x1": 0.812,
+       "y1": 0.815
+      }
+     },
+     {
+      "id": "abutment-north",
+      "box": {
+       "x0": 0.743,
+       "y0": 0.65,
+       "x1": 0.818,
+       "y1": 0.806
+      }
+     },
+     {
+      "id": "pool-of-london",
+      "box": {
+       "x0": 0.0,
+       "y0": 0.835,
+       "x1": 1.0,
+       "y1": 1.0
       }
      }
     ],
     "camera": {
-     "x": 250.0,
-     "y": -7.0,
-     "z": 150.0
+     "x": 300.0,
+     "y": -5.0,
+     "z": 200.0
     },
-    "where": "On the south bank, downstream (east) of the bridge, roughly 250\u2013300 m from the centre, near river level.",
+    "where": "Southeast of the bridge, near the south bank on the downstream side, roughly a few hundred metres away and near river level.",
     "model": "gpt-6.1-terra"
    }
   },
@@ -65,9 +146,9 @@
      {
       "id": "north-tower",
       "box": {
-       "x0": 0.608,
-       "y0": 0.098,
-       "x1": 0.72,
+       "x0": 0.607,
+       "y0": 0.1,
+       "x1": 0.721,
        "y1": 0.541
       }
      },
@@ -81,30 +162,111 @@
       }
      },
      {
-      "id": "bascule-south",
+      "id": "bascule-north",
       "box": {
-       "x0": 0.403,
+       "x0": 0.49,
        "y0": 0.548,
-       "x1": 0.491,
-       "y1": 0.583
+       "x1": 0.578,
+       "y1": 0.584
       }
      },
      {
-      "id": "bascule-north",
+      "id": "bascule-south",
       "box": {
-       "x0": 0.491,
-       "y0": 0.546,
-       "x1": 0.581,
-       "y1": 0.579
+       "x0": 0.405,
+       "y0": 0.548,
+       "x1": 0.49,
+       "y1": 0.587
+      }
+     },
+     {
+      "id": "walkway-east",
+      "box": {
+       "x0": 0.387,
+       "y0": 0.27,
+       "x1": 0.614,
+       "y1": 0.383
+      }
+     },
+     {
+      "id": "pier-north",
+      "box": {
+       "x0": 0.574,
+       "y0": 0.534,
+       "x1": 0.752,
+       "y1": 0.665
+      }
+     },
+     {
+      "id": "pier-south",
+      "box": {
+       "x0": 0.319,
+       "y0": 0.545,
+       "x1": 0.473,
+       "y1": 0.641
+      }
+     },
+     {
+      "id": "suspension-north",
+      "box": {
+       "x0": 0.674,
+       "y0": 0.302,
+       "x1": 1.0,
+       "y1": 0.55
+      }
+     },
+     {
+      "id": "suspension-south",
+      "box": {
+       "x0": 0.189,
+       "y0": 0.379,
+       "x1": 0.358,
+       "y1": 0.571
+      }
+     },
+     {
+      "id": "approach-north",
+      "box": {
+       "x0": 0.698,
+       "y0": 0.531,
+       "x1": 1.0,
+       "y1": 0.567
+      }
+     },
+     {
+      "id": "approach-south",
+      "box": {
+       "x0": 0.19,
+       "y0": 0.551,
+       "x1": 0.354,
+       "y1": 0.587
+      }
+     },
+     {
+      "id": "pool-of-london",
+      "box": {
+       "x0": 0.0,
+       "y0": 0.59,
+       "x1": 1.0,
+       "y1": 1.0
+      }
+     },
+     {
+      "id": "city-hall",
+      "box": {
+       "x0": 0.446,
+       "y0": 0.473,
+       "x1": 0.541,
+       "y1": 0.552
       }
      }
     ],
     "camera": {
-     "x": 220.0,
+     "x": 180.0,
      "y": -5.0,
-     "z": -160.0
+     "z": -120.0
     },
-    "where": "On the north bank, east of the bridge, roughly 250\u2013300 m from its centre, near riverbank level.",
+    "where": "On the north bank, east and downstream of the bridge, near the riverside, roughly 200 m from the centre of the crossing.",
     "model": "gpt-6.1-terra"
    }
   },
@@ -121,7 +283,7 @@
      "y": 0.0,
      "z": 0.0
     },
-    "where": "The photo shows London Bridge, illuminated red over the River Thames at dusk, with Southwark Cathedral visible behind it\u2014not Tower Bridge.",
+    "where": "The photo shows London Bridge illuminated red over the River Thames at dusk, not Tower Bridge. Southwark Cathedral is visible behind it.",
     "model": "gpt-6.1-sol"
    }
   }

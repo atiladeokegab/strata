@@ -53,7 +53,7 @@ function Half({ side, rt, st, towerTop, era, maxAngle }) {
       {st.stage >= 5 && <Cabin side={side} rt={rt} />}
       {shown('abutment', st.stage) && (
         <Part id={id('abutment')} rt={rt} explode={[0, 0, -28]} clipY={rising(st, 0, S.L.hw - 1, towerTop)}>
-          <S.Abutment />
+          <S.Abutment side={side} />
         </Part>
       )}
       {shown('frame', st.stage) && (

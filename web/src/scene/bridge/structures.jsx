@@ -378,21 +378,47 @@ export function Approach() {
   )
 }
 
-// ---- shore abutment towers anchoring the chains ----
-export function Abutment() {
+// ---- shore abutments: a tower each side of the road (the chains anchor into them), the road
+// running through between them and down a short ramp onto the street ----
+// Street level past the ramp, metres below our deck: EA LIDAR DSM along the bridge axis, 150-190 m
+// out (north -2.0..-2.7 towards Tower Hill, south -3.1..-4.2 towards Tooley St). status: inferred.
+export const STREET_DROP = { north: 2.6, south: 4.0 }
+export const RAMP = 35 // m of ramp beyond the abutment
+const ROAD_HALF = 9
+
+// Box of width w, height h, running from z0 down to z1 (z1 < z0), its top falling `drop` along it.
+const slope = (w, h, x, yTop0, z0, z1, drop) => {
+  const len = z0 - z1, a = Math.atan2(drop, len)
+  return box(w, h, Math.hypot(len, drop)).translate(0, -h / 2, 0).rotateX(-a).translate(x, yTop0 - drop / 2, (z0 + z1) / 2)
+}
+
+export function Abutment({ side = 'north' }) {
   const g = useMemo(() => {
-    const z = L.spanEnd - 5, stone = [box(24, 25, 10, 0, L.hw + 12.5, z)], slate = []
-    for (const [sx, sz] of corners) {
-      stone.push(new THREE.CylinderGeometry(1.7, 1.8, 30, 8).translate(sx * 11, L.hw + 15, z + sz * 4))
-      slate.push(new THREE.ConeGeometry(2, 5, 8).translate(sx * 11, L.hw + 32.5, z + sz * 4))
+    const z = L.spanEnd - 5, top = L.hw + 25, drop = STREET_DROP[side]
+    const z0 = z - 5, z1 = z0 - RAMP
+    const stone = [], slate = [], road = []
+    for (const sx of [-1, 1]) {
+      const xc = sx * 13 // 6 m wide tower, inner face at |x| 10, clear of the 18 m road
+      stone.push(box(6, 25, 10, xc, L.hw + 12.5, z))
+      for (const sz of [-1, 1]) {
+        stone.push(new THREE.CylinderGeometry(1.3, 1.4, 30, 8).translate(sx * 15.2, L.hw + 15, z + sz * 4))
+        slate.push(new THREE.ConeGeometry(1.6, 4, 8).translate(sx * 15.2, L.hw + 32, z + sz * 4))
+      }
+      slate.push(new THREE.ConeGeometry(1, 5, 4).rotateY(Math.PI / 4).scale(6 / 1.414, 1, 10 / 1.414).translate(xc, top + 2.5, z))
+      // ramp parapets: stone walls down to below the street, 1.1 m above the road
+      stone.push(slope(0.6, 1.1 + 14, sx * (ROAD_HALF + 0.3), 1.1, z0, z1, drop))
     }
-    slate.push(new THREE.ConeGeometry(1, 5, 4).rotateY(Math.PI / 4).scale(12 / 0.707, 1, 5 / 0.707).translate(0, L.hw + 27.5, z))
-    return { stone: merge(stone), slate: merge(slate) }
-  }, [])
+    road.push(box(2 * ROAD_HALF, 1, 10, 0, -0.5, z)) // through the gap between the towers
+    stone.push(box(2 * ROAD_HALF + 2, -1 - L.hw, 10, 0, (L.hw - 1) / 2, z)) // solid fill under it
+    road.push(slope(2 * ROAD_HALF, 1, 0, 0, z0, z1, drop))
+    stone.push(slope(2 * ROAD_HALF, 13, 0, -1, z0, z1, drop)) // embankment fill under the ramp
+    return { stone: merge(stone), slate: merge(slate), road: merge(road) }
+  }, [side])
   return (
     <>
       <mesh geometry={g.stone} material={M.stone} castShadow receiveShadow />
       <mesh geometry={g.slate} material={M.slate} castShadow />
+      <mesh geometry={g.road} material={M.road} receiveShadow />
     </>
   )
 }

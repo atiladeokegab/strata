@@ -40,7 +40,7 @@ const dim = (place, id, key, fallback) => place?.parts?.find((p) => p.id === id)
 // Height a rising part has reached this year (scene-local y), or null when not rising.
 const rising = (st, stage, from, to) => (st.stage === stage ? from + (to - from) * st.progress : null)
 
-function Half({ side, rt, st, towerTop, era, maxAngle }) {
+function Half({ side, rt, st, towerTop, era, maxAngle, disc }) {
   const n = side === 'north'
   const id = (base) => `${base}-${side}`
   const towerId = n ? 'north-tower' : 'south-tower'
@@ -62,8 +62,24 @@ function Half({ side, rt, st, towerTop, era, maxAngle }) {
       {st.stage >= 5 && <Cabin side={side} rt={rt} />}
       {shown('abutment', st.stage) && (
         <Part id={id('abutment')} rt={rt} explode={[0, 0, -28]} clipY={rising(st, 0, S.L.hw - 1, towerTop)}>
-          <S.Abutment side={side} {...approachWorks(st)} />
-          {approachWorks(st).road && <A.RampDetails side={side} era={era} />}
+          {LITE && approachWorks(st).road ? (
+            // phones, once the ramp is finished: abutment and ramp furniture as one mesh per material, with the bank,
+            // granite trim and kerbs folded into the stone and the lamp crowns into the column steel
+            <D.Meshes
+              deps={[side, disc, era.blackout, era.gasLamps, era.woodBlocks]}
+              materials={D.lanternFor(era)}
+              build={() => {
+                const abut = { ...S.abutmentKit(side, disc), gold: [] } // LITE drops the gilt finials, as Abutment does
+                const { bank, granite, gold, ...k } = D.join(abut, A.rampKit(side, era, disc))
+                return { ...k, stone: [...k.stone, ...bank, ...granite], steel: [...(k.steel ?? []), ...gold] }
+              }}
+            />
+          ) : (
+            <>
+              <S.Abutment side={side} {...approachWorks(st)} />
+              {approachWorks(st).road && <A.RampDetails side={side} era={era} />}
+            </>
+          )}
         </Part>
       )}
       {shown('frame', st.stage) && (
@@ -214,8 +230,8 @@ export function TowerBridge(props) {
 
   return (
     <group ref={root} name="tower-bridge" {...props}>
-      <Half side="north" rt={rt} st={st} towerTop={towerTop} era={era} maxAngle={maxAngle} />
-      <Half side="south" rt={rt} st={st} towerTop={towerTop} era={era} maxAngle={maxAngle} />
+      <Half side="north" rt={rt} st={st} towerTop={towerTop} era={era} maxAngle={maxAngle} disc={disc} />
+      <Half side="south" rt={rt} st={st} towerTop={towerTop} era={era} maxAngle={maxAngle} disc={disc} />
       {/* opening day, 30 June 1894: flags and bunting; rides no part, so hidden when exploded */}
       {year === 1894 && (
         <group visible={!exploded}>

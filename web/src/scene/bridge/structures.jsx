@@ -408,24 +408,10 @@ const slope = (w, h, x, yTop0, z0, z1, drop) => {
 export function Abutment({ side = 'north', ramp = 1, road = true }) {
   const disc = useHomeDisc() // Home plinth: the ramp would hang off its edge, so the bridge ends at the abutment
   const g = useMemo(() => {
-    const z = L.spanEnd - 5, drop = STREET_DROP[side]
-    const z0 = z - 5, z1 = z0 - RAMP
-    const stone = [], slate = [], road = [], bank = []
-    const t = { stone, slate, granite: [], gold: [], iron: [], windows: [], doors: [] }
-    for (const sx of [-1, 1]) {
-      // 6 m towers at x=±13 (outer faces at |x| 16); the south's local -x is world east, where the accumulator tower stands
-      abutmentTower(sx, z, t, L, { blind: side === 'south' && sx < 0 })
-      // ramp parapets: stone walls down to below the street, 1.1 m above the road
-      if (!disc) bank.push(slope(0.6, 1.1 + 14, sx * (ROAD_HALF + 0.3), 1.1, z0, z1, drop))
-    }
-    abutmentArch(z, t)
-    road.push(box(2 * ROAD_HALF, 1, 10, 0, -0.5, z)) // under the arch
-    stone.push(box(2 * ROAD_HALF + 2, -1 - L.hw, 10, 0, (L.hw - 1) / 2, z)) // solid fill under it
-    if (!disc) road.push(slope(2 * ROAD_HALF, 1, 0, 0, z0, z1, drop))
-    if (!disc) bank.push(slope(2 * ROAD_HALF, 13, 0, -1, z0, z1, drop)) // embankment fill under the ramp
+    const k = abutmentKit(side, disc)
     // openings read as dark iron: one call. LITE: granite trim into the stone, no gilt finials
-    const trim = LITE ? { stone: merge([...stone, ...t.granite]) } : { stone: merge(stone), granite: merge(t.granite), gold: merge(t.gold) }
-    return { ...trim, slate: merge(slate), road: merge(road), iron: merge([...t.iron, ...t.windows, ...t.doors]), bank: bank.length ? merge(bank) : null }
+    const trim = LITE ? { stone: merge([...k.stone, ...k.granite]) } : { stone: merge(k.stone), granite: merge(k.granite), gold: merge(k.gold) }
+    return { ...trim, slate: merge(k.slate), road: merge(k.road), iron: merge(k.iron), bank: k.bank.length ? merge(k.bank) : null }
   }, [side, disc])
   const foot = -STREET_DROP[side] // street level: the bank shows above it in step with the works
   return (
@@ -444,4 +430,24 @@ export function Abutment({ side = 'north', ramp = 1, road = true }) {
       {road && <mesh geometry={g.road} material={M.road} receiveShadow />}
     </>
   )
+}
+
+// The shore abutment as geometry lists per key (bank: the ramp's embankment, scaled while it is built; empty on the Home disc).
+export function abutmentKit(side, disc) {
+  const z = L.spanEnd - 5, drop = STREET_DROP[side]
+  const z0 = z - 5, z1 = z0 - RAMP
+  const stone = [], slate = [], road = [], bank = []
+  const t = { stone, slate, granite: [], gold: [], iron: [], windows: [], doors: [] }
+  for (const sx of [-1, 1]) {
+    // 6 m towers at x=±13 (outer faces at |x| 16); the south's local -x is world east, where the accumulator tower stands
+    abutmentTower(sx, z, t, L, { blind: side === 'south' && sx < 0 })
+    // ramp parapets: stone walls down to below the street, 1.1 m above the road
+    if (!disc) bank.push(slope(0.6, 1.1 + 14, sx * (ROAD_HALF + 0.3), 1.1, z0, z1, drop))
+  }
+  abutmentArch(z, t)
+  road.push(box(2 * ROAD_HALF, 1, 10, 0, -0.5, z)) // under the arch
+  stone.push(box(2 * ROAD_HALF + 2, -1 - L.hw, 10, 0, (L.hw - 1) / 2, z)) // solid fill under it
+  if (!disc) road.push(slope(2 * ROAD_HALF, 1, 0, 0, z0, z1, drop))
+  if (!disc) bank.push(slope(2 * ROAD_HALF, 13, 0, -1, z0, z1, drop)) // embankment fill under the ramp
+  return { stone, slate, road, bank, granite: t.granite, gold: t.gold, iron: [...t.iron, ...t.windows, ...t.doors] }
 }

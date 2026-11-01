@@ -48,8 +48,8 @@
     "baseline": {
       "EngineRoom": [2, 3468],
       "Ship": [6, 886],
-      "abutment-north": [10, 5360],
-      "abutment-south": [10, 4724],
+      "abutment-north": [6, 5360],
+      "abutment-south": [6, 4724],
       "approach-north": [8, 2984],
       "approach-south": [8, 2984],
       "barrier-north": [4, 412],

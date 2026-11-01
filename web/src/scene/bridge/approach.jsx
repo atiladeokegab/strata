@@ -28,35 +28,37 @@ export function RampDetails({ side = 'north', era }) {
     <Meshes
       deps={[side, era?.blackout, era?.gasLamps, disc]}
       materials={lanternFor(era)}
-      build={() => {
-        const o = kit(), drop = STREET_DROP[side]
-        const z0 = L.spanEnd - 10, z1 = z0 - RAMP, w = RAMP_PARAPET - KERB_X - KERB_W
-        const roadY = (z) => (-drop * (z0 - z)) / RAMP
-        footways(o, z0, L.spanEnd, era) // through the gap between the abutment towers
-        if (disc) return o
-        for (const sx of [-1, 1]) {
-          const kx = sx * (KERB_X + KERB_W / 2)
-          o.granite.push(onRamp(KERB_W, FOOTWAY_H, kx, z0, z1, drop))
-          o.stone.push(onRamp(w, FOOTWAY_H, sx * (KERB_X + KERB_W + w / 2), z0, z1, drop))
-          // granite coping along the parapet top, a little proud of the wall each side
-          o.granite.push(onRamp(0.8, 0.12, sx * (RAMP_PARAPET + 0.3), z0, z1, drop, WALL_TOP))
-          for (let z = z0 - 6; z > z1 + 3; z -= LAMP_EVERY) lamp(o, sx * (RAMP_PARAPET + 0.3), roadY(z) + WALL_TOP + 0.12, z, era)
-          if (era?.blackout)
-            for (let z = z0; z - 1 >= z1; z -= 2) o.white.push(onRamp(KERB_W + 0.02, FOOTWAY_H + 0.01, kx, z, z - 1, drop / RAMP, roadY(z)))
-        }
-        // North only: the cast-iron chimney (Durham Bros., 1894) for the guardroom fire below the road,
-        // made to look like a lamp post. Which side and how far along is inferred.
-        if (side === 'north') {
-          const x = RAMP_PARAPET + 0.3, z = z0 - 12, y = roadY(z) + WALL_TOP + 0.12
-          o.steel.push(
-            box(0.7, 1, 0.7, x, y + 0.5, z),
-            new THREE.CylinderGeometry(0.14, 0.18, 4.4, 8).translate(x, y + 3.2, z),
-            new THREE.CylinderGeometry(0.3, 0.16, 0.5, 8).translate(x, y + 5.6, z), // cowl where a lantern would be
-            new THREE.CylinderGeometry(0.34, 0.34, 0.08, 8).translate(x, y + 6.05, z),
-          )
-        }
-        return o
-      }}
+      build={() => rampKit(side, era, disc)}
     />
   )
+}
+
+export function rampKit(side, era, disc) {
+  const o = kit(), drop = STREET_DROP[side]
+  const z0 = L.spanEnd - 10, z1 = z0 - RAMP, w = RAMP_PARAPET - KERB_X - KERB_W
+  const roadY = (z) => (-drop * (z0 - z)) / RAMP
+  footways(o, z0, L.spanEnd, era) // through the gap between the abutment towers
+  if (disc) return o
+  for (const sx of [-1, 1]) {
+    const kx = sx * (KERB_X + KERB_W / 2)
+    o.granite.push(onRamp(KERB_W, FOOTWAY_H, kx, z0, z1, drop))
+    o.stone.push(onRamp(w, FOOTWAY_H, sx * (KERB_X + KERB_W + w / 2), z0, z1, drop))
+    // granite coping along the parapet top, a little proud of the wall each side
+    o.granite.push(onRamp(0.8, 0.12, sx * (RAMP_PARAPET + 0.3), z0, z1, drop, WALL_TOP))
+    for (let z = z0 - 6; z > z1 + 3; z -= LAMP_EVERY) lamp(o, sx * (RAMP_PARAPET + 0.3), roadY(z) + WALL_TOP + 0.12, z, era)
+    if (era?.blackout)
+      for (let z = z0; z - 1 >= z1; z -= 2) o.white.push(onRamp(KERB_W + 0.02, FOOTWAY_H + 0.01, kx, z, z - 1, drop / RAMP, roadY(z)))
+  }
+  // North only: the cast-iron chimney (Durham Bros., 1894) for the guardroom fire below the road,
+  // made to look like a lamp post. Which side and how far along is inferred.
+  if (side === 'north') {
+    const x = RAMP_PARAPET + 0.3, z = z0 - 12, y = roadY(z) + WALL_TOP + 0.12
+    o.steel.push(
+      box(0.7, 1, 0.7, x, y + 0.5, z),
+      new THREE.CylinderGeometry(0.14, 0.18, 4.4, 8).translate(x, y + 3.2, z),
+      new THREE.CylinderGeometry(0.3, 0.16, 0.5, 8).translate(x, y + 5.6, z), // cowl where a lantern would be
+      new THREE.CylinderGeometry(0.34, 0.34, 0.08, 8).translate(x, y + 6.05, z),
+    )
+  }
+  return o
 }

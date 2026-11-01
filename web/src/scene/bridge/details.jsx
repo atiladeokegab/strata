@@ -7,10 +7,11 @@ import { L } from './structures.jsx'
 import { KERB_X, KERB_W, FOOTWAY_H, FOOTWAY_OUT } from './roadway.js'
 
 // Renders { materialKey: [geometries] } as one merged mesh per material.
-export function Meshes({ build, deps = [] }) {
+// materials: optional {key: material} overriding M for some keys (e.g. lantern glass by era)
+export function Meshes({ build, deps = [], materials }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const g = useMemo(() => Object.entries(build()).filter(([, gs]) => gs.length).map(([k, gs]) => [k, merge(gs)]), deps)
-  return g.map(([k, geo]) => <mesh key={k} geometry={geo} material={M[k]} castShadow />)
+  return g.map(([k, geo]) => <mesh key={`${k}-${materials?.[k]?.uuid ?? ''}`} geometry={geo} material={materials?.[k] ?? M[k]} castShadow />)
 }
 
 const cyl = (rt, rb, h, seg, x, y, z) => new THREE.CylinderGeometry(rt, rb, h, seg).translate(x, y, z)
@@ -95,15 +96,26 @@ export function TowerDetails() {
 }
 
 // ---- roadway: lamp standards and centre-line markings ----
-function lamp(out, x, y, z) {
-  out.iron.push(
+// Column and lantern frame are painted with the bridge ironwork (`steel`, tinted by year, so brown
+// before 1977 and light blue after). Lantern glass by era: warm gas, blacked out, clear electric.
+const glass = (props) => Object.assign(new THREE.MeshStandardMaterial(props), { userData: { kind: 'glass' } })
+const LANTERN = {
+  gas: glass({ color: '#e0b665', roughness: 0.2, metalness: 0.1 }),
+  blackout: glass({ color: '#15191f', roughness: 0.6 }),
+  electric: glass({ color: '#e9f0f4', roughness: 0.1, metalness: 0.2 }),
+}
+export const lanternFor = (era) => ({ lantern: era?.blackout ? LANTERN.blackout : era?.gasLamps ? LANTERN.gas : LANTERN.electric })
+
+export function lamp(out, x, y, z, era) {
+  if (era?.blackout) out.white.push(box(0.74, 0.3, 0.74, x, y + 0.35, z)) // white band on the base
+  out.steel.push(
     box(0.7, 1, 0.7, x, y + 0.5, z),
     cyl(0.12, 0.17, 4.2, 8, x, y + 3.1, z),
     cyl(0.26, 0.26, 0.2, 8, x, y + 2, z),
     cyl(0.3, 0.14, 0.3, 8, x, y + 5.3, z),
     box(0.62, 0.08, 0.62, x, y + 5.5, z),
   )
-  out.glass.push(box(0.5, 0.75, 0.5, x, y + 5.9, z))
+  out.lantern.push(box(0.5, 0.75, 0.5, x, y + 5.9, z))
   out.gold.push(cone(0.48, 0.5, 4, x, y + 6.53, z), new THREE.ConeGeometry(0.07, 0.45, 5).translate(x, y + 7, z))
 }
 
@@ -113,24 +125,28 @@ const dashes = (out, z0, z1) => {
 }
 
 // granite kerb and paved footway on both sides, flat, from z0 to z1 (z0 < z1)
-export const footways = (out, z0, z1) => {
+export const footways = (out, z0, z1, era) => {
   const len = z1 - z0, zc = (z0 + z1) / 2, w = FOOTWAY_OUT - KERB_X - KERB_W
   for (const sx of [-1, 1]) {
     out.granite.push(box(KERB_W, FOOTWAY_H, len, sx * (KERB_X + KERB_W / 2), FOOTWAY_H / 2, zc))
     out.stone.push(box(w, FOOTWAY_H, len, sx * (KERB_X + KERB_W + w / 2), FOOTWAY_H / 2, zc))
+    // blackout: kerb painted in white bands, 1 m on, 1 m off
+    if (era?.blackout) for (let z = z0; z + 1 <= z1; z += 2) out.white.push(box(KERB_W + 0.02, FOOTWAY_H + 0.01, 1, sx * (KERB_X + KERB_W / 2), FOOTWAY_H / 2, z + 0.5))
   }
 }
 
-export const kit = () => ({ iron: [], glass: [], gold: [], white: [], stone: [], granite: [] })
+export const kit = () => ({ iron: [], glass: [], gold: [], white: [], stone: [], granite: [], steel: [], lantern: [] })
 
-export function ApproachDetails() {
+export function ApproachDetails({ era }) {
   return (
     <Meshes
+      deps={[era?.blackout]}
+      materials={lanternFor(era)}
       build={() => {
         const o = kit()
-        for (let z = L.spanEnd + 6; z < L.pierZ - L.towerHalfZ - 3; z += 12) for (const x of [-9.4, 9.4]) lamp(o, x, 0.3, z)
+        for (let z = L.spanEnd + 6; z < L.pierZ - L.towerHalfZ - 3; z += 12) for (const x of [-9.4, 9.4]) lamp(o, x, 0.3, z, era)
         dashes(o, L.spanEnd + 1, L.pierZ - L.towerHalfZ - 1)
-        footways(o, L.spanEnd, L.pierZ - L.towerHalfZ)
+        footways(o, L.spanEnd, L.pierZ - L.towerHalfZ, era)
         return o
       }}
     />
@@ -138,19 +154,21 @@ export function ApproachDetails() {
 }
 
 // Fixed deck through the tower arch.
-export function DeckMarkings() {
-  return <Meshes build={() => { const o = kit(); dashes(o, L.pierZ - 9.5, L.pierZ + 9.5); footways(o, L.pierZ - L.towerHalfZ, L.pierZ + L.towerHalfZ); return o }} />
+export function DeckMarkings({ era }) {
+  return <Meshes deps={[era?.blackout]} build={() => { const o = kit(); dashes(o, L.pierZ - 9.5, L.pierZ + 9.5); footways(o, L.pierZ - L.towerHalfZ, L.pierZ + L.towerHalfZ, era); return o }} />
 }
 
 // Built in north-local coordinates, then moved into the leaf frame so it rides on <PivotFrame>.
-export function BasculeDetails() {
+export function BasculeDetails({ era }) {
   return (
     <Meshes
+      deps={[era?.blackout]}
+      materials={lanternFor(era)}
       build={() => {
         const o = kit()
-        for (const z of [-31, -21, -11]) for (const x of [-9, 9]) lamp(o, x, 0.05, z)
+        for (const z of [-31, -21, -11]) for (const x of [-9, 9]) lamp(o, x, 0.05, z, era)
         dashes(o, L.pivotZ + 0.5, -0.5)
-        footways(o, L.pierZ + L.towerHalfZ, 0)
+        footways(o, L.pierZ + L.towerHalfZ, 0, era)
         for (const gs of Object.values(o)) gs.forEach((g) => g.translate(0, -L.pivotY, -L.pivotZ))
         return o
       }}

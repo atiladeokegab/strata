@@ -55,14 +55,14 @@ function Half({ side, rt, st, towerTop, era, maxAngle }) {
       {shown('abutment', st.stage) && (
         <Part id={id('abutment')} rt={rt} explode={[0, 0, -28]} clipY={rising(st, 0, S.L.hw - 1, towerTop)}>
           <S.Abutment side={side} />
-          <A.RampDetails side={side} />
+          <A.RampDetails side={side} era={era} />
         </Part>
       )}
       {shown('frame', st.stage) && (
         <Part id={towerId} rt={rt} explode={[0, 4, -14]} clipY={rising(st, 1, S.L.pierTop, towerTop)}>
           <S.TowerFrame />
           <S.FixedDeck />
-          <D.DeckMarkings />
+          <D.DeckMarkings era={era} />
         </Part>
       )}
       {/* interiors ride with the frame; separate Parts so they are clickable through the x-rayed shell */}
@@ -92,7 +92,7 @@ function Half({ side, rt, st, towerTop, era, maxAngle }) {
             <BasculeDrive sim={sim} side={side} maxAngle={maxAngle}>
               <S.PivotFrame sim={sim}>
                 <S.BasculeLeaf />
-                <D.BasculeDetails />
+                <D.BasculeDetails era={era} />
                 <BasculeLeafDetail sim={sim} />
               </S.PivotFrame>
             </BasculeDrive>
@@ -123,7 +123,7 @@ function Half({ side, rt, st, towerTop, era, maxAngle }) {
         <>
           <Part id={id('approach')} rt={rt} explode={[0, -8, -14]}>
             <S.Approach />
-            <D.ApproachDetails />
+            <D.ApproachDetails era={era} />
           </Part>
           <Part id={id('suspension')} rt={rt} explode={[0, 12, -10]}>
             <S.Suspension />

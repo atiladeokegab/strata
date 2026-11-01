@@ -29,6 +29,7 @@ app = FastAPI(title="Strata", lifespan=lifespan)
 from server.voice import router as voice_router; app.include_router(voice_router)  # noqa: E402
 from server.reimagine import router as reimagine_router; app.include_router(reimagine_router)  # noqa: E402
 from server.identify import router as identify_router; app.include_router(identify_router)  # noqa: E402
+from server.config import router as config_router; app.include_router(config_router)  # noqa: E402
 
 
 @app.get("/api/health")

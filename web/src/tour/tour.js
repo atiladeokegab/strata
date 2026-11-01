@@ -1,6 +1,7 @@
 // The guided tour: a timed script of camera keyframes and store cues. <Tour /> (scene/Tour.jsx) plays it.
 import { create } from 'zustand'
 import { useStore, FIRST_YEAR, THIS_YEAR } from '../store.js'
+import { liftForShip } from '../scene/bridge/liftSequence.js'
 
 export const useTour = create(() => ({ playing: false, startedAt: 0 }))
 export const startTour = () => useTour.setState({ playing: true, startedAt: performance.now() })
@@ -25,20 +26,20 @@ const ease = (u) => 0.5 - 0.5 * Math.cos(Math.PI * Math.min(1, Math.max(0, u)))
 // az 90 = from downstream (east), az -90 = from the City side (west). A 'part' key aims at that mesh and fits its
 // distance to the mesh's bounds (Tour.jsx), keeping target and r here as the fallback while the mesh is missing.
 export const KEYS = [
-  { t: 0, target: [-150, 0, -80], r: 950, az: -122, el: 30 }, // 1. high over the City of London (the opening card)
-  { t: 10, target: [0, 25, 0], r: 290, az: -100, el: 13 }, //    pushed in on the bridge
-  { t: 17, target: [0, 28, 0], r: 230, az: -15, el: 11 }, //    2. golden-hour orbit round to the south bank
-  { t: 19, target: [0, 8, 0], r: 175, az: 72, el: 6 }, //      3. low on the river, downstream
-  { t: 28, target: [0, 12, 0], r: 150, az: 98, el: 9 }, //        drift while the bascules open and close
-  { t: 30.5, part: 'hydraulics', target: [0, -4, -40], r: 80, az: 115, el: 20 }, // 4. the hydraulics
-  { t: 34, part: 'hydraulics', fit: 0.85, target: [0, -4, -40], r: 70, az: 132, el: 22 },
-  { t: 36, target: [0, 20, 0], r: 200, az: 150, el: 22 }, //   5. exploded view
-  { t: 40.5, target: [0, 20, 0], r: 215, az: 178, el: 24 },
-  { t: 50, target: [0, 15, 0], r: 285, az: 235, el: 18 }, //   6. back to 1886, rebuilt to 1894
-  { t: 53, target: [0, 0, 0], r: 650, az: 250, el: 88 }, //    7. top-down topography
-  { t: 56.5, target: [0, 0, 0], r: 540, az: 270, el: 88 },
-  { t: 60, target: [0, 22, 0], r: 330, az: 300, el: 10 }, //   8. calm hero shot
-  { t: 62, target: [0, 22, 0], r: 318, az: 305, el: 9 },
+  { t: 0, target: [-150, 0, -80], r: 950, az: -122, el: 30 }, // high over the City of London (the opening card)
+  { t: 8, target: [0, 25, 0], r: 300, az: -100, el: 14 }, //     pushed in on the bridge
+  { t: 19, target: [0, 22, 0], r: 280, az: -132, el: 16 }, //   timeline: 1886, built to 1894, back to today
+  { t: 20.5, target: [0, 20, 0], r: 210, az: -125, el: 20 }, // exploded view
+  { t: 24, target: [0, 20, 0], r: 220, az: -108, el: 22 },
+  { t: 26, target: [0, 8, 0], r: 190, az: -88, el: 6 }, //       the fast lift, low on the river upstream: the ship comes through
+  { t: 33, target: [0, 12, 0], r: 170, az: -70, el: 9 },
+  { t: 36, target: [0, 0, 0], r: 650, az: -60, el: 88 }, //      top-down LiDAR topography (the lift finishes below)
+  { t: 39, target: [0, 0, 0], r: 560, az: -45, el: 88 },
+  { t: 41.5, part: 'hydraulics', target: [0, -4, -40], r: 80, az: -50, el: 20 }, // tap a part: the inspector
+  { t: 45, part: 'hydraulics', fit: 0.9, target: [0, -4, -40], r: 72, az: -32, el: 22 },
+  { t: 52, part: 'hydraulics', fit: 1.05, target: [0, -4, -40], r: 82, az: -15, el: 20 }, // the docent answers
+  { t: 56.5, target: [0, 22, 0], r: 330, az: -60, el: 10 }, //    hand back: calm hero shot
+  { t: 59.5, target: [0, 22, 0], r: 320, az: -66, el: 9 },
 ]
 export const DURATION = KEYS[KEYS.length - 1].t
 
@@ -46,19 +47,32 @@ export const DURATION = KEYS[KEYS.length - 1].t
 const s = () => useStore.getState()
 const yearAt = (a, b) => (u) => s().setYear(Math.round(a + (b - a) * u))
 export const TRACKS = [
-  { from: 0, to: 0, set: () => { s().setView('orbit'); s().setExploded(false); s().setBascule(0); s().setYear(THIS_YEAR); s().select(null) } },
-  { from: 19.5, to: 23, set: (u) => s().setBascule(u) },
-  { from: 24.5, to: 28, set: (u) => s().setBascule(1 - u) },
-  { from: 29.5, to: 29.5, set: (_, ctx) => s().select(ctx.hydraulics) },
-  { from: 34.5, to: 34.5, set: () => s().select(null) },
-  { from: 36, to: 36, set: () => s().setExploded(true) },
-  { from: 40, to: 40, set: () => s().setExploded(false) },
-  { from: 41, to: 43, set: yearAt(THIS_YEAR, FIRST_YEAR) },
-  { from: 43.5, to: 49.5, set: yearAt(FIRST_YEAR, OPENED), linear: true }, // one construction year every 0.75 s
-  { from: 50.5, to: 50.5, set: () => s().setView('top') },
-  { from: 53, to: 56, set: yearAt(OPENED, THIS_YEAR) },
-  { from: 57, to: 57, set: () => s().setView('orbit') },
+  { from: 0, to: 0, set: () => { s().setView('orbit'); s().setExploded(false); s().setBascule(0); s().setYear(THIS_YEAR); s().select(null); s().setLidar?.(false) } },
+  { from: 8, to: 10, set: yearAt(THIS_YEAR, FIRST_YEAR) },
+  { from: 10.5, to: 16.5, set: yearAt(FIRST_YEAR, OPENED), linear: true }, // one construction year every 0.75 s
+  { from: 17, to: 19, set: yearAt(OPENED, THIS_YEAR) },
+  { from: 20.5, to: 20.5, set: () => s().setExploded(true) },
+  { from: 24, to: 24, set: () => s().setExploded(false) },
+  { from: 25, to: 25, set: () => liftForShip({ fast: true }) }, // Hermes's lift: signals, bascules, the ship, ~17 s
+  { from: 33.5, to: 33.5, set: () => { s().setView('top'); s().setLidar?.(true) } },
+  { from: 39.5, to: 39.5, set: () => { s().setView('orbit'); s().setLidar?.(false) } },
+  { from: 40.5, to: 40.5, set: (_, ctx) => s().select(ctx.hydraulics) },
+  { from: 53, to: 53, set: () => s().select(null) },
 ]
+
+// On-screen captions, one per beat (the stage area, above the dock). The docent beat shows its live answer.
+export const BEATS = [
+  { from: 8, to: 19, label: 'Timeline', text: 'Scrub back to 1886 and watch it being built, stage by stage, then return to today.' },
+  { from: 20.5, to: 24.5, label: 'Exploded view', text: 'Take the machine apart, piece by piece.' },
+  { from: 25.5, to: 33, label: 'Watch it work', text: 'Signals to red, bascules up, a ship through: driven by simulated hydraulics.' },
+  { from: 34, to: 39.5, label: 'Top-down', text: 'The real ground: Environment Agency 1 m LiDAR, shown as a point cloud.' },
+  { from: 41, to: 45, label: 'Tap any part', text: 'Every number has a source and a status.' },
+  { from: 45, to: 53, label: 'Ask the docent', docent: true },
+]
+// The docent's question for the tapped part, asked of the live API when the tour starts.
+export const DOCENT_Q = 'How do the counterweights help the bascules open?'
+// The hand-back: control returns to the viewer.
+export const HANDOFF = { from: 54, label: 'Now you try', text: 'Tap any part.' }
 
 // The part the inspector shows in beat 4: a counterweight or hydraulics part, preferring one the place data
 // describes, then one the scene has (Hermes names meshes by part id), else a bascule.

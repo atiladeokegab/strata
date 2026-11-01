@@ -2,6 +2,7 @@ import { Suspense, use, useEffect, useMemo } from 'react'
 import { useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../store'
+import { bareEarth } from './bareEarth.js'
 import { LITE } from './look/tier'
 
 // Google Photorealistic 3D Tiles own the ground when they are streaming and LiDAR is off; optional, like Buildings.jsx.
@@ -23,7 +24,8 @@ export function loadTerrain() {
     const scale = (meta.max_h - meta.min_h) / 65535
     const heights = new Float32Array(bmp.width * bmp.height)
     for (let i = 0; i < heights.length; i++) heights[i] = meta.min_h + (px[i * 4] * 256 + px[i * 4 + 1]) * scale
-    return { meta, heights, w: bmp.width, h: bmp.height }
+    // before 1950: the DSM without its modern buildings (see bareEarth.js)
+    return { meta, heights, old: bareEarth(heights, bmp.width, bmp.height), w: bmp.width, h: bmp.height }
   })()
   return cache
 }
@@ -31,25 +33,27 @@ export function loadTerrain() {
 export const useTerrain = () => use(loadTerrain())
 
 // Scene frame: metres, origin at the deck centre (meta.origin_osgb, meta.origin_h), x east, y up, z south.
-function grid({ meta, heights, w, h }, step) {
+function grid({ meta, heights, old, w, h }, step) {
   const [minE, , , maxN] = meta.bbox_osgb
   const [oE, oN] = meta.origin_osgb
   const cols = Math.floor((w - 1) / step) + 1
   const rows = Math.floor((h - 1) / step) + 1
   const pos = new Float32Array(cols * rows * 3)
   const uv = new Float32Array(cols * rows * 2)
+  const low = new Float32Array(cols * rows)
   let k = 0
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++, k++) {
       const i = r * step, j = c * step
       pos[k * 3] = minE + 0.5 + j - oE
       pos[k * 3 + 1] = heights[i * w + j] - meta.origin_h
+      low[k] = old[i * w + j] - meta.origin_h
       pos[k * 3 + 2] = oN - (maxN - 0.5 - i)
       uv[k * 2] = (j + 0.5) / w
       uv[k * 2 + 1] = 1 - (i + 0.5) / h
     }
   }
-  return { pos, uv, cols, rows }
+  return { pos, uv, low, cols, rows }
 }
 
 /** Ground height (scene y) at scene x, z, bilinear on the 1 m grid; null outside the tile. */
@@ -95,27 +99,30 @@ function heightfieldRaycast(t) {
 // Invisible stand-in that answers raycasts for both looks (a Points cloud is not a mesh to walk on).
 function Ground() {
   const t = useTerrain()
-  const raycast = useMemo(() => heightfieldRaycast(t), [t])
+  const old = useStore((s) => s.year < 1950)
+  const raycast = useMemo(() => heightfieldRaycast(old ? { ...t, heights: t.old } : t), [t, old])
   return <mesh name="terrain-ground" raycast={raycast} frustumCulled={false}><bufferGeometry /></mesh>
 }
 
 // Aerial imagery only sees roofs, so draped walls smear into streaks. On steep faces, swap to a
 // blurred sample of the imagery (a far mip) toned toward London stone, which reads as a clean facade.
-// The 1890s OS sheet is pale paper with fine ink; under scene light it washes to white. Levels + a
-// curve pull the ink dark, then a sepia wash makes it read as an old map. ERA is 1 while it is draped.
+// The 1890s OS sheet in its own colours with a light sepia. It is pale paper: at full albedo the sun and HDRI
+// wash it to white, so it is drawn at about a third. The grade runs on gamma-encoded colour because the map
+// sample is linear here. ERA is 1 while the old map is draped; then the ground is bare earth (aOld), flat-lit.
 const ERA = { value: 0 }
 const ERA_GRADE = `
   vec3 eraGrade(vec3 c) {
-    vec3 g = pow(clamp((c - 0.10) / 0.72, 0.0, 1.0), vec3(1.6));
-    float l = dot(g, vec3(0.3, 0.59, 0.11));
-    return mix(c, mix(vec3(l), g, 0.5) * vec3(0.92, 0.78, 0.58), uEra);
+    vec3 s = pow(max(c, 0.0), vec3(1.0 / 2.2));
+    vec3 t = mix(s, s * vec3(1.0, 0.9, 0.74), 0.55);
+    return mix(c, pow(t, vec3(2.2)) * 0.32, uEra);
   }`
 
 function facades(shader) {
   shader.uniforms.uEra = ERA
   shader.vertexShader = shader.vertexShader
-    .replace('#include <common>', '#include <common>\nvarying float vUp;')
-    .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\nvUp = normal.y;')
+    .replace('#include <common>', '#include <common>\nvarying float vUp;\nuniform float uEra;\nattribute float aOld;')
+    .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\nif (uEra > 0.5 && position.y - aOld > 0.3) objectNormal = vec3(0.0, 1.0, 0.0);\nvUp = objectNormal.y;')
+    .replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed.y = mix(transformed.y, aOld, uEra);')
   shader.fragmentShader = shader.fragmentShader
     .replace('#include <common>', `#include <common>\nvarying float vUp;\nuniform float uEra;${ERA_GRADE}`)
     .replace(
@@ -133,7 +140,7 @@ function TerrainMesh({ step }) {
   const t = useTerrain()
   const gl = useThree((s) => s.gl)
   const geometry = useMemo(() => {
-    const { pos, uv, cols, rows } = grid(t, step)
+    const { pos, uv, low, cols, rows } = grid(t, step)
     const idx = new Uint32Array((cols - 1) * (rows - 1) * 6)
     let n = 0
     for (let r = 0; r < rows - 1; r++) {
@@ -146,6 +153,7 @@ function TerrainMesh({ step }) {
     const g = new THREE.BufferGeometry()
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3))
     g.setAttribute('uv', new THREE.BufferAttribute(uv, 2))
+    g.setAttribute('aOld', new THREE.BufferAttribute(low, 1))
     g.setIndex(new THREE.BufferAttribute(idx, 1))
     g.computeVertexNormals()
     g.computeBoundingSphere()
@@ -162,7 +170,7 @@ function TerrainMesh({ step }) {
   useEffect(() => { ERA.value = old ? 1 : 0 }, [old])
   useEffect(() => () => geometry.dispose(), [geometry])
   return (
-    <mesh name="terrain" geometry={geometry} raycast={noRaycast} castShadow receiveShadow>
+    <mesh name="terrain" geometry={geometry} raycast={noRaycast} castShadow={!old} receiveShadow>{/* the shadow pass draws the raw DSM */}
       <meshStandardMaterial map={map} roughness={0.92} metalness={0} onBeforeCompile={facades} customProgramCacheKey={() => 'terrain-facades'} />
     </mesh>
   )

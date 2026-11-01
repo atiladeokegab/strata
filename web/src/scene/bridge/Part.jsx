@@ -45,7 +45,9 @@ export function Part({ id, rt, home = [0, 0, 0], explode = [0, 0, 0], xray = fal
       m.emissive.copy(HIGHLIGHT)
       m.emissiveIntensity = glow
       if (m.userData.kind === 'steel') m.color.set(rt.steel.current)
-      m.transparent = fade > 0.01
+      const t = fade > 0.01
+      // three bakes `transparent` into the shader (OPAQUE define), so a flip needs a recompile.
+      if (m.transparent !== t) (m.transparent = t), (m.needsUpdate = true)
       m.opacity = 1 - 0.7 * fade
       m.depthWrite = fade < 0.5
       m.clippingPlanes = clip

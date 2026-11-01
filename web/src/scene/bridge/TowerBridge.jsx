@@ -44,17 +44,17 @@ function Half({ side, rt, st, towerTop }) {
         </Part>
       )}
       {shown('frame', st.stage) && (
-        <Part
-          id={towerId}
-          rt={rt}
-          explode={[0, 4, -14]}
-          clipY={rising(st, 1, S.L.pierTop, towerTop) ?? rising(st, 4, S.L.pierTop, towerTop + 2)}
-        >
+        <Part id={towerId} rt={rt} explode={[0, 4, -14]} clipY={rising(st, 1, S.L.pierTop, towerTop)}>
           {!shown('cladding', st.stage) || st.stage === 4 ? <S.TowerFrame /> : null}
-          {shown('cladding', st.stage) && <S.TowerCladding topY={towerTop} />}
-          {shown('cladding', st.stage) && <D.TowerDetails />}
           <S.FixedDeck />
           <D.DeckMarkings />
+        </Part>
+      )}
+      {/* same part id: cladding rises over the finished frame without clipping the steel */}
+      {shown('cladding', st.stage) && (
+        <Part id={towerId} rt={rt} explode={[0, 4, -14]} clipY={rising(st, 4, S.L.pierTop, towerTop + 2)}>
+          <S.TowerCladding topY={towerTop} />
+          <D.TowerDetails />
         </Part>
       )}
       {shown('bascule', st.stage) && (

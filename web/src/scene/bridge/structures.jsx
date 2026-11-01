@@ -203,7 +203,7 @@ export function BasculeLeaf() {
       new THREE.ExtrudeGeometry(s, { depth: 0.7, bevelEnabled: false }).rotateY(-Math.PI / 2).translate(x + 0.35, -L.pivotY, 0),
     )
     const deck = box(18, 0.45, len, 0, -L.pivotY - 0.225, len / 2)
-    girders.push(box(0.35, 1.3, len, -9, -L.pivotY - 0.6, len / 2), box(0.35, 1.3, len, 9, -L.pivotY - 0.6, len / 2))
+    girders.push(box(0.35, 1.3, len, -9, -L.pivotY - 0.7, len / 2), box(0.35, 1.3, len, 9, -L.pivotY - 0.7, len / 2))
     const rails = []
     for (const x of [-8.8, 8.8]) {
       rails.push(beam([x, -L.pivotY + 1.1, 0.3], [x, -L.pivotY + 1.1, len - 0.2], 0.07, 5))

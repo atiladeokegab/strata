@@ -355,3 +355,12 @@ assert.equal(leverForKey('a', 0.3, M70), null)
 assert.equal(leverLabel('north', 0.256), 'North bascule lever, 26 percent open')
 assert.equal(leverLabel('south', 1), 'South bascule lever, 100 percent open')
 console.log('drive checks ok')
+
+// Look.jsx textures bridge materials by userData.kind and skips any that already have a map, so geom's carry none.
+const { MATERIALS } = await import('./geom.js')
+for (const [k, make] of Object.entries(MATERIALS)) {
+  const m = make()
+  assert.ok(m.userData.kind, `${k} has a kind`)
+  assert.equal(m.map, null, `${k} leaves texturing to Look`)
+}
+console.log('geom materials untextured, all kinded ok')

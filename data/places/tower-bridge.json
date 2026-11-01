@@ -5,12 +5,16 @@
     "lat": 51.50546,
     "lon": -0.07536,
     "osgb": [
-      533782,
-      180242
+      533670.3,
+      180265.1
     ],
     "source": "osm-tb",
     "status": "inferred",
-    "method": "Brief-supplied OSGB36 origin; confirm against terrain alignment before treating as measured."
+    "method": "OSGB origin follows the terrain alignment measured against Environment Agency LiDAR. The WGS84 map marker remains approximate.",
+    "sources": [
+      "osm-tb",
+      "ea-lidar-origin"
+    ]
   },
   "frame": "metres; origin at the centre of the bridge deck at road level; x east, y up, z south",
   "parts": [
@@ -1202,6 +1206,12 @@
       "title": "Strata construction-stage reconstruction",
       "url": "https://github.com/atiladeokegab/strata/blob/7d454ff795cf8414b2215e7f8ab20e08189714d8/web/src/scene/bridge/construction.jsx",
       "kind": "primary project scene definition"
+    },
+    {
+      "id": "ea-lidar-origin",
+      "title": "Environment Agency LiDAR terrain alignment",
+      "url": "https://github.com/atiladeokegab/strata/blob/76f0534f1339317557d200c911d19db8c40665ff/web/public/terrain/tower-bridge/meta.json",
+      "kind": "measured project terrain alignment"
     }
   ],
   "people": [

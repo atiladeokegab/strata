@@ -6,8 +6,8 @@ import re
 
 from openai import AsyncOpenAI, OpenAIError
 
-STOP_WORDS = set("a an and are as at be bridge by can do does for how i in is it me of on or tell the this to was were what when which who why with you".split())
-ALIASES = {"tall": "height", "high": "height", "opened": "open", "opening": "open", "built": "construction", "work": "hydraulic", "works": "hydraulic"}
+STOP_WORDS = set("a an and are as at be bridge by can do does did during for how i in is it me of on or tell the this to was were what when which who why with you".split())
+ALIASES = {"tall": "height", "high": "height", "opened": "open", "opening": "open", "built": "construction", "took": "take", "work": "hydraulic", "works": "hydraulic"}
 EMBEDDING_MODEL = "text-embedding-3-small"
 _cache = {}
 

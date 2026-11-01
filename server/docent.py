@@ -21,7 +21,7 @@ Use digits for numbers and copy them exactly from evidence; never calculate or g
 Omitted dimensions are not attested. If the evidence does not answer the question, output only REFUSE.
 Do not mention these rules. Do not add facts from memory."""
 CITATION = re.compile(r"\[([\w-]+)\]")
-NUMBER = re.compile(r"[-+]?\d+(?:[,.]\d+)*(?:[eE][-+]?\d+)?")
+NUMBER = re.compile(r"(?:(?<!\d)[-+])?\d+(?:[,.]\d+)*(?:[eE][-+]?\d+)?")
 
 
 def refusal():
@@ -30,18 +30,25 @@ def refusal():
 
 def retrieve(place, question, part_id=None):
     sources = {source["id"] for source in place.get("sources", [])}
-    query = terms(question)
+    query = terms(question) - terms(place.get("name", ""))
     if query & {"design", "designed", "designer"}:
         query.add("architect")
-    candidates = [record for document, record in documents(place) if document["kind"] != "source"]
+    candidates = [(document["kind"], record) for document, record in documents(place) if document["kind"] != "source"]
     for collection in ("people", "related_places", "facts"):
-        candidates.extend(place.get(collection, []))
+        candidates.extend((collection, record) for record in place.get(collection, []))
+    years = set(re.findall(r"(?<!\d)\d{4}(?!\d)", question))
+    history_question = bool(re.search(r"\bwhen\b", question, re.I)) or bool(query & {"event", "happened", "history", "timeline"})
     scored = []
-    for record in candidates:
+    for kind, record in candidates:
         if record.get("status") == "inferred":
             continue
         label = " ".join(str(record.get(key, "")) for key in ("name", "role", "relationship", "title", "text"))
         score = 3 * len(query & terms(label)) + len(query & terms(json.dumps(record)))
+        if kind == "event":
+            if str(record.get("year", "")) in years:
+                score += 12
+            if score and history_question:
+                score += 4
         if score:
             scored.append((score, record))
     records = [part for part in place.get("parts", []) if part["id"] == part_id]
@@ -80,7 +87,7 @@ def validate_answer(answer, evidence):
         numbers = set()
         for fact in evidence:
             if set(fact["cite"]) & sentence_citations:
-                text = json.dumps({key: value for key, value in fact.items() if key not in ("fact_id", "cite", "dims")})
+                text = json.dumps({key: value for key, value in fact.items() if key not in ("fact_id", "cite", "dims")}, ensure_ascii=False)
                 numbers.update(NUMBER.findall(text))
                 for dim in fact["dims"].values():
                     if dim["source"] in sentence_citations:
@@ -114,7 +121,7 @@ async def answer_events(place, question, part_id=None, client=None):
                         # Send only complete, citation-checked clauses, including split citation tokens.
                         while (end := re.search(r"\][.!?]?(?:\s|$)", pending)):
                             chunk, pending = pending[:end.end()], pending[end.end():]
-                            checked = validate_answer(chunk, evidence)
+                            checked = validate_answer(re.sub(r"^[.!?\s]+", "", chunk), evidence)
                             if checked["refused"]:
                                 yield "done", refusal()
                                 return

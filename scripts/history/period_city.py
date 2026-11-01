@@ -5,7 +5,8 @@ uv run --with pyproj --with pillow --with numpy --with scipy --with scikit-image
 
 Footprints: the town plan shades every building (solid grey on the Southwark sheets, hatching north of the river).
 Shaded land is traced into blocks, split along a 22 m grid turned to the bridge axis so long terraces read as
-separate houses, and extruded. Buildings dated by OSM to 1894 or earlier (the Tower, a few churches) are cut out:
+separate houses, and extruded. Buildings dated to 1894 or earlier (OSM start_date, or modern_dates.py: the Tower of
+London precinct) are cut out:
 Buildings.jsx already draws those from OSM, so nothing overlaps.
 Heights (status inferred): there are no surveyed 1890s heights, so each block gets a period height by use:
 riverside and dock warehouses (within 70 m of the water) 18-24 m, large inland blocks (breweries, works) 14-18 m,
@@ -33,6 +34,7 @@ from fetch_1890s import BBOX, osgb_mosaic  # noqa: E402
 ROOT = Path(__file__).resolve().parents[2]
 TERRAIN = ROOT / "web/public/terrain/tower-bridge"
 OSM = ROOT / "web/public/buildings/tower-bridge.json"
+DATES = ROOT / "web/public/buildings/tower-bridge-dates.json"  # modern_dates.py: the Tower of London precinct, etc.
 OUT = ROOT / "web/public/buildings/tower-bridge-1890s.json"
 PX = 0.5  # m per pixel of the traced plan
 PLOT = 22.0  # m: party-wall grid
@@ -90,10 +92,12 @@ def main():
 
     # OSM buildings already dated to the period are drawn from OSM: cut them out (1 m clear)
     osm = json.loads(OSM.read_text())
+    dates = json.loads(DATES.read_text())["dates"]
     keep = Image.new("1", (W, H), 0)
     d = ImageDraw.Draw(keep)
     for b in osm["buildings"]:
-        if b.get("s") is not None and b["s"] <= BUILT_BY:
+        s = dates.get(b["id"].split("-")[0], {}).get("s", b.get("s"))
+        if s is not None and s <= BUILT_BY:
             o = b["o"]
             d.polygon([((o[i] + oE - minE) / PX, (maxN - (oN - o[i + 1])) / PX) for i in range(0, len(o), 2)], fill=1)
     shaded &= ~ndi.binary_dilation(np.asarray(keep), iterations=2)

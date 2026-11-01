@@ -1,8 +1,10 @@
 // <Buildings />: the real buildings around Tower Bridge (Tower of London, City Hall, the Shard, Shad Thames,
 // St Katharine Docks, the City towers), OpenStreetMap footprints extruded to LiDAR heights. Baked by
 // scripts/buildings/bake.py. The always-works ground truth: shown whenever Google's photoreal tiles are not.
-// Era: before 1950 only buildings with an OSM start_date of 1894 or earlier show; from 1950 a building shows once
-// its start year has passed. Hidden ones collapse in the vertex shader, so scrubbing costs nothing.
+// Era: before 1950 only buildings dated to 1894 or earlier show; from 1950 a building shows once its start year has
+// passed, until Google's tiles take over (GOOGLE_FROM). Dates: OSM start_date, else tower-bridge-dates.json (Wikidata,
+// the Tower of London precinct, HMS Belfast: scripts/history/modern_dates.py); an undated building over 40 m (bake.py's
+// 1950 guess) waits for the tiles. Hidden ones collapse in the vertex shader, so scrubbing costs nothing.
 import { useEffect, useMemo, useState } from 'react'
 import * as THREE from 'three'
 import { useStore } from '../store'
@@ -10,13 +12,16 @@ import { useStore } from '../store'
 const URL = '/buildings/tower-bridge.json'
 // the 1890s riverside, traced from the OS Town Plan 1893-96 (scripts/history/period_city.py); shown before 1950
 const PERIOD_URL = '/buildings/tower-bridge-1890s.json'
+const DATES_URL = '/buildings/tower-bridge-dates.json'
 // optional: Google's tile status, when build-google's files are in the build
 const google = Object.values(import.meta.glob('./google/state.js', { eager: true }))[0]
 const useGoogleShown = google?.useGoogleShown ?? (() => false)
+const GOOGLE_FROM = google?.GOOGLE_FROM ?? 1e4
 
 let cache
 const get = (u) => fetch(u).then((r) => (r.ok ? r.json() : Promise.reject(new Error(`${u}: ${r.status}`))))
-const load = () => (cache ??= Promise.all([get(URL), get(PERIOD_URL).catch(() => null)]).then(([data, period]) => ({ ...data, period })))
+const load = () => (cache ??= Promise.all([get(URL), get(PERIOD_URL).catch(() => null), get(DATES_URL).catch(() => null)])
+  .then(([data, period, dates]) => ({ ...data, period, dates: dates?.dates ?? {} })))
 
 function useBuildingsShown() {
   const lidar = useStore((s) => s.lidar)
@@ -61,6 +66,7 @@ const LOOK = {
 const TERRAIN = '/terrain/tower-bridge/'
 const HISTORIC_BEFORE = 1950 // the timeline's historic years, as in google/state.js
 const BUILT_BY = 1894 // the bridge opened: a building dated after this has no place in the historic scene
+const TALL_GUESS = 1950 // bake.py's start for an undated building over 40 m
 
 // Era cut and contact shadow, injected into a stock material (and its shadow depth twin).
 function eraPatch(uniforms, shade) {
@@ -88,8 +94,11 @@ function build(data) {
   const tileUv = (x, z) => [(x + oE - minE) / (maxE - minE), 1 - (z - oN + maxN) / (maxN - minN)]
   for (const bd of data.buildings) {
     const geo = extrude(bd)
-    // before 1950 only buildings with evidence of standing by 1894 (OSM start_date) show; the LiDAR relief carries the rest
-    const start = bd.s != null && bd.s <= BUILT_BY ? bd.s : Math.max(bd.s ?? HISTORIC_BEFORE, HISTORIC_BEFORE)
+    // before 1950 only buildings with evidence of standing by 1894 show; the period city (below) carries the rest
+    const dated = data.dates[bd.id.split('-')[0]]?.s
+    const s = dated ?? bd.s
+    // shortcut: a real OSM start_date of exactly 1950 on a building over 40 m also waits; none is known here
+    const start = s != null && s <= BUILT_BY ? s : dated == null && s === TALL_GUESS && bd.t - bd.b > 40 ? GOOGLE_FROM : Math.max(s ?? HISTORIC_BEFORE, HISTORIC_BEFORE)
     for (const grp of geo.groups) {
       if (grp.materialIndex !== 0) push(out[bd.k] || out.b, geo, grp, start, bd.b)
       else if (bd.l) push(out.drape, geo, grp, start, bd.b, tileUv)

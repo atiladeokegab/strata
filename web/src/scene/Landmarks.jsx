@@ -1,5 +1,5 @@
 // The places around the bridge, and the river's period moorings before 1950: parts with group "surroundings" in the place data, pinned where they stand
-// (osgb -> scene frame from the terrain meta) and shown only in the years they exist. Tap a pin: select(id).
+// (osgb -> scene frame from the terrain meta) and shown only in the years they exist. Tap a label: select(id). No pole: it read as a post in the river.
 import { useEffect, useState } from 'react'
 import { Html } from '@react-three/drei'
 import { useStore } from '../store'
@@ -31,10 +31,6 @@ export function Landmarks() {
         const x = p.osgb[0] - oE, z = -(p.osgb[1] - oN)
         return (
           <group key={p.id} name={p.id} position={[x, (terrain && heightAt(terrain, x, z)) ?? GROUND, z]}>
-            <mesh position={[0, h / 2, 0]}>
-              <cylinderGeometry args={[0.35, 0.35, h, 6]} />
-              <meshBasicMaterial color={on ? '#ffd27a' : '#ffffff'} transparent opacity={on ? 0.95 : 0.55} depthWrite={false} />
-            </mesh>
             <Html position={[0, h, 0]} center zIndexRange={[20, 0]}>
               <button type="button" onClick={(e) => { e.stopPropagation(); select(p.id) }}
                 style={{

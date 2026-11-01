@@ -3,8 +3,13 @@
 // machine palettes for Tower Bridge's materials and adds masonry coursing; the idle-slice warmup follows
 // Mechanica's geometryWarmup (small time slices so the first frames never stall).
 //
-// Use:  <meshStandardMaterial {...pbr('stone:portland', 4)} />   (4 = texture repeats across the UVs)
+// Strata adds photographed sets (Poly Haven, CC0): 2K, 1K on the lite tier, swapped in over the procedural
+// placeholder once decoded, so nothing waits or flashes black.
+//
+// Use:  <meshStandardMaterial {...pbr('stone:portland', 4)} />   (4 = texture repeats per UV unit)
+//       <meshStandardMaterial {...pbr('stone:portland')} />      (metre UVs: the photo's real-world size)
 import * as THREE from 'three'
+import { LITE } from './tier'
 
 const MAP_SIZE = 512
 const SURFACE_SIZE = 256
@@ -18,9 +23,50 @@ const PALETTES = {
   'iron:cast': { low: [42, 46, 49], high: [78, 84, 88], metalness: 0.8, normalScale: 0.28, roughness: [0.48, 0.68], course: 0, seed: 5003 },
   'slate:roof': { low: [52, 58, 64], high: [86, 94, 102], metalness: 0.05, normalScale: 0.6, roughness: [0.45, 0.75], course: [32, 16], seed: 3371 },
   'wood:dark': { low: [42, 25, 17], high: [90, 57, 37], metalness: 0.08, normalScale: 0.42, roughness: [0.58, 0.86], course: 0, seed: 1103, grain: true },
+  'brick:london': { low: [150, 118, 74], high: [196, 164, 112], metalness: 0, normalScale: 0.5, roughness: [0.7, 0.95], course: [32, 16], seed: 2903, speckle: true },
   'asphalt': { low: [48, 48, 50], high: [78, 77, 76], metalness: 0, normalScale: 0.35, roughness: [0.78, 0.96], course: 0, seed: 4129, speckle: true },
 }
 export const MATERIAL_TEXTURE_VARIANTS = Object.keys(PALETTES)
+
+// Photographed sets in public/textures/<id>/ (how they were made: public/textures/LICENSE.txt).
+// m: the photo's real-world tile size in metres (Poly Haven's dimensions); grey: albedo is a neutral grey
+// so material.color sets the paint (Part recolours the steel by year).
+const PHOTO = {
+  'stone:portland': { id: 'white_sandstone_blocks_02', m: 2 },
+  'granite:cornish': { id: 'medieval_blocks_03', m: 2 },
+  'steel:blue': { id: 'green_metal_rust', m: 1, grey: true },
+  'steel:white': { id: 'green_metal_rust', m: 1, grey: true },
+  'slate:roof': { id: 'roof_slates_03', m: 3 },
+  'wood:dark': { id: 'weathered_planks', m: 2 },
+  'brick:london': { id: 'yellow_brick', m: 2 },
+  'asphalt': { id: 'asphalt_02', m: 3 },
+}
+/** Real-world size of one texture tile, in metres (for metre-UV geometry). */
+export const tileMetres = (variant) => PHOTO[variant]?.m ?? 4
+const RES = LITE ? '1k' : '2k'
+const photos = new Map() // url -> { source, waiting: [textures] }
+
+// Every clone of one photo shares one THREE.Source, so the GPU holds each image once whatever the repeats.
+function photo(tex, url) {
+  let p = photos.get(url)
+  if (!p) {
+    photos.set(url, (p = { source: null, waiting: [] }))
+    new THREE.ImageBitmapLoader()
+      .setOptions({ imageOrientation: 'flipY', premultiplyAlpha: 'none', colorSpaceConversion: 'none' })
+      .load(url, (bitmap) => {
+        p.source = new THREE.Source(bitmap)
+        p.waiting.splice(0).forEach((t) => swap(t, p.source))
+      }, undefined, () => { p.waiting.length = 0 }) // keep the procedural placeholder if the photo fails
+  }
+  if (p.source) swap(tex, p.source)
+  else p.waiting.push(tex)
+}
+function swap(t, source) {
+  t.source = source
+  t.flipY = false // the bitmap is already flipped
+  t.anisotropy = LITE ? 4 : 16
+  t.needsUpdate = true
+}
 
 const cache = new Map()
 
@@ -150,18 +196,22 @@ export function getMaterialTextureSet(variant) {
 // which share the one uploaded image (three's Source), so this costs no extra GPU memory.
 const repeated = new Map()
 // detail = true gives a grey map, so the material keeps its own colour (and any recolour by year).
-export function pbr(variant, repeat = 1, detail = false) {
+export function pbr(variant, repeat = 1 / tileMetres(variant), detail = false) {
   const key = `${variant}@${repeat}${detail ? 'd' : ''}`
   if (!repeated.has(key)) {
     const s = getMaterialTextureSet(variant)
-    const [map, normalMap, roughnessMap] = [detail ? s.detail : s.map, s.normalMap, s.roughnessMap].map((t) => {
+    const ph = PHOTO[variant]
+    const files = [(detail || ph?.grey) ? 'grey' : 'diff', 'nor', 'rough']
+    const [map, normalMap, roughnessMap] = [detail ? s.detail : s.map, s.normalMap, s.roughnessMap].map((t, i) => {
       const c = t.clone()
       c.repeat.set(repeat, repeat)
+      if (ph) photo(c, `/textures/${ph.id}/${RES}_${files[i]}.jpg`)
       return c
     })
+    const ns = ph ? 1 : s.normalScale
     repeated.set(key, {
       map, normalMap, roughnessMap,
-      normalScale: new THREE.Vector2(s.normalScale, s.normalScale),
+      normalScale: new THREE.Vector2(ns, ns),
       roughness: 1,
       metalness: s.metalness,
     })

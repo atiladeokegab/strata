@@ -80,15 +80,17 @@ function Sun({ mapSize }) {
 
 // Bridge materials (tagged by userData.kind in bridge/geom.js) get world-scale texture detail: a grey map
 // that keeps the material's own colour, plus normal and roughness maps. tile = metres per texture repeat.
+// tile omitted: the photo's real-world size (look/textures.js tileMetres), on our metre UVs
 const KINDS = {
-  stone: { variant: 'stone:portland', tile: 3.6 },
-  granite: { variant: 'granite:cornish', tile: 5 },
-  slate: { variant: 'slate:roof', tile: 3 },
-  steel: { variant: 'steel:blue', tile: 4, metalness: 0.05 }, // paint is a dielectric
-  trim: { variant: 'steel:white', tile: 4, metalness: 0.05 },
+  stone: { variant: 'stone:portland' },
+  granite: { variant: 'granite:cornish' },
+  slate: { variant: 'slate:roof' },
+  steel: { variant: 'steel:blue', metalness: 0.05 }, // paint is a dielectric
+  trim: { variant: 'steel:white', metalness: 0.05 },
   iron: { variant: 'iron:cast', tile: 3 },
-  road: { variant: 'asphalt', tile: 6 },
-  timber: { variant: 'wood:dark', tile: 2 },
+  road: { variant: 'asphalt' },
+  timber: { variant: 'wood:dark' },
+  brick: { variant: 'brick:london' },
 }
 const _scale = new THREE.Vector3()
 const _c = new THREE.Color()
@@ -130,7 +132,7 @@ function texture(mesh) {
     const k = kindOf(m)
     if (!k) continue
     uv = true
-    const { map, normalMap, normalScale, roughnessMap } = pbr(k.variant, 1 / k.tile, true)
+    const { map, normalMap, normalScale, roughnessMap } = pbr(k.variant, k.tile && 1 / k.tile, true)
     _c.copy(m.color)
     Object.assign(m, { map, normalMap, normalScale, roughnessMap, roughness: 1 })
     if (k.metalness !== undefined) m.metalness = k.metalness

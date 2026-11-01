@@ -1,0 +1,5 @@
+PBR texture sets from Poly Haven (https://polyhaven.com), CC0 1.0 (public domain), no attribution required; credited anyway.
+white_sandstone_blocks_02, medieval_blocks_03, green_metal_rust, yellow_brick, roof_slates_03, asphalt_02: Rob Tuytel.
+weathered_planks: Dimitrios Savva (photography), Dario Barresi (processing).
+Files: Poly Haven's 2K JPGs (diff, nor_gl, rough) re-encoded; 1k_* are Lanczos downscales; *_grey.jpg is the albedo's
+luminance scaled to a mean of 0.8, for materials whose colour comes from material.color.

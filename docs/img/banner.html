@@ -1,70 +1,16 @@
 <!doctype html><html><head><meta charset="utf-8">
-<style>html,body{margin:0;background:#07090d}canvas{display:block}</style></head><body>
-<canvas id="c" width="1600" height="520"></canvas>
-<script>
-const c=document.getElementById('c'),g=c.getContext('2d'),W=1600,H=520;
-// background
-const bg=g.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#05070b');bg.addColorStop(1,'#0b1018');g.fillStyle=bg;g.fillRect(0,0,W,H);
-// turbo-ish ramp by height 0..1
-function ramp(t){t=Math.max(0,Math.min(1,t));const s=[[0,[48,18,59]],[.15,[65,69,171]],[.3,[34,151,226]],[.45,[26,228,182]],[.6,[114,254,94]],[.75,[200,239,52]],[.87,[251,185,56]],[1,[240,80,30]]];
- for(let i=1;i<s.length;i++)if(t<=s[i][0]){const[a,ca]=s[i-1],[b,cb]=s[i],k=(t-a)/(b-a);return ca.map((v,j)=>Math.round(v+(cb[j]-v)*k));}return s[s.length-1][1];}
-const WATER=430; // y of water line (px); heights measured up from here
-let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
-// background city blocks
-const blocks=[];for(let x=0;x<W;){const w=18+rnd()*46,h=30+rnd()*110;blocks.push([x,w,h]);x+=w+2+rnd()*6;}
-blocks.push([170,40,300]); // a tall tower on the skyline
-function cityH(x){for(const[b,w,h]of blocks)if(x>=b&&x<b+w)return h;return 0;}
-function shardH(x){const cx=230,hw=55;const d=Math.abs(x-cx);return d<hw?360*(1-d/hw)**1.1:0;}
-// bridge geometry (px)
-const T1=820,T2=1100,TW=70,TH=310,WALK=268,DECK=40;
-function inTower(x,y,cx){const l=cx-TW/2,r=cx+TW/2;if(x<l||x>r)return false;
- if(y<=TH)return true;
- // pinnacles and central spire
- const corners=[l+6,r-6];for(const p of corners)if(Math.abs(x-p)<6&&y<TH+40-Math.abs(x-p)*3)return true;
- if(Math.abs(x-cx)<TW/2&&y<TH+70-Math.abs(x-cx)*2.6)return true;return false;}
-function inBridge(x,y){
- if(inTower(x,y,T1)||inTower(x,y,T2))return true;
- // high walkways
- if(x>T1&&x<T2&&((y>WALK&&y<WALK+16)||(y>WALK+30&&y<WALK+38)))return true;
- if(x>T1&&x<T2&&y>WALK&&y<WALK+38&&((x-T1)%22<3))return true;
- // bascule deck
- if(x>T1&&x<T2&&y>DECK-6&&y<DECK+6)return true;
- // piers
- if((Math.abs(x-T1)<TW/2+14||Math.abs(x-T2)<TW/2+14)&&y<DECK-6)return true;
- // side spans with suspension chains
- const spans=[[T1-260,T1-TW/2],[T2+TW/2,T2+260]];
- for(const[a,b]of spans){if(x<a||x>b)continue;
-  if(y>DECK-6&&y<DECK+6)return true;
-  const left=a<T1; const u=left?(x-a)/(b-a):(b-x)/(b-a); // 0 at shore, 1 at tower
-  const chain=DECK+30+u*u*(WALK-DECK-10);
-  if(Math.abs(y-chain)<5)return true;
-  if((x%18)<2&&y>DECK&&y<chain)return true;}
- return false;}
-// draw point cloud
-const step=5;
-for(let x=0;x<W;x+=step)for(let y=0;y<H;y+=step){
- const hgt=WATER-y; if(hgt<0)continue;
- let hit=false,val=0;
- if(inBridge(x,hgt)){hit=true;val=hgt/380;}
- else if(hgt<cityH(x)&&rnd()<.55){hit=true;val=hgt/380*.8;}
- else if(hgt<shardH(x)){hit=true;val=hgt/380;}
- if(!hit)continue;
- const [r,gg,b]=ramp(val);g.fillStyle=`rgba(${r},${gg},${b},${.55+.45*rnd()})`;
- g.fillRect(x+(rnd()-.5)*1.4,y+(rnd()-.5)*1.4,2.2,2.2);}
-// river: reflected faint points
-for(let x=0;x<W;x+=step)for(let y=WATER+step;y<H;y+=step){
- const d=y-WATER;if(rnd()>.35)continue;const [r,gg,b]=ramp(.18+.05*Math.sin(x/40));
- g.fillStyle=`rgba(${r},${gg},${b},${.25*(1-d/90)})`;g.fillRect(x,y,2,1.5);}
-// left fade for title legibility
-const fade=g.createLinearGradient(0,0,760,0);fade.addColorStop(0,'rgba(7,9,13,.95)');fade.addColorStop(.75,'rgba(7,9,13,.55)');fade.addColorStop(1,'rgba(7,9,13,0)');
-g.fillStyle=fade;g.fillRect(0,0,760,H);
-// title
-g.fillStyle='#f4f4f5';g.font='600 132px "Inter","Helvetica Neue",Arial,sans-serif';g.textBaseline='alphabetic';g.fillText('Strata',72,230);
-g.fillStyle='#a1a1aa';g.font='400 30px "Inter","Helvetica Neue",Arial,sans-serif';
-g.fillText('Famous places rebuilt from real LiDAR',76,286);g.fillText('and their own history',76,326);
-g.fillStyle='#71717a';g.font='500 17px "JetBrains Mono","DejaVu Sans Mono",monospace';
-g.fillText('TOWER BRIDGE · LONDON · E 533782 N 180242',76,388);
-// height legend
-for(let i=0;i<200;i++){const[r,gg,b]=ramp(i/200);g.fillStyle=`rgb(${r},${gg},${b})`;g.fillRect(1390+i,488,1,8);}
-g.fillStyle='#71717a';g.font='500 13px "DejaVu Sans Mono",monospace';g.fillText('low',1390,480);g.fillText('height',1468,480);g.fillText('high',1558,480);
-</script></body></html>
+<!-- Banner source: a real headless render of Strata's LiDAR point-cloud view (lidar-render.jpg) with the title over it.
+     Re-render: google-chrome --headless=new --window-size=1600,520 --screenshot=banner.png banner.html -->
+<style>
+html,body{margin:0;background:#07090d;width:1600px;height:520px;overflow:hidden;font-family:"Inter","Helvetica Neue",Arial,sans-serif}
+.shot{position:absolute;right:0;top:0;height:520px;width:1000px;background:url(lidar-render.jpg) center/cover}
+.fade{position:absolute;inset:0;background:linear-gradient(90deg,#07090d 0,#07090d 600px,rgba(7,9,13,.75) 680px,rgba(7,9,13,0) 860px)}
+h1{position:absolute;left:72px;top:98px;margin:0;color:#f4f4f5;font-weight:600;font-size:132px;letter-spacing:-2px}
+p{position:absolute;left:76px;top:262px;margin:0;color:#a1a1aa;font-size:30px;line-height:40px}
+small{position:absolute;left:76px;top:372px;color:#71717a;font:500 17px "DejaVu Sans Mono",monospace;letter-spacing:.5px}
+</style></head><body>
+<div class="shot"></div><div class="fade"></div>
+<h1>Strata</h1>
+<p>Famous places rebuilt from real LiDAR<br>and their own history</p>
+<small>TOWER BRIDGE · EA LIDAR 1 m DSM, LIVE RENDER</small>
+</body></html>

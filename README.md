@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/img/banner.png" alt="Strata: an illustration of Tower Bridge in the style of a point cloud, coloured by height" width="100%">
+  <img src="docs/img/banner.png" alt="Strata: a live render of Tower Bridge over the Environment Agency LiDAR point cloud, coloured by height" width="100%">
 </p>
 
 <p align="center">
@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/img/hero.png" alt="Strata in the browser: Tower Bridge over the Thames, with the glass side panel, the parts list, the docent and the timeline" width="100%">
+  <img src="docs/img/hero.jpg" alt="Strata in the browser: Tower Bridge on the Thames over the LiDAR point cloud, with the glass side panel, the parts list and the timeline" width="100%">
 </p>
 
 <!-- TODO(demo): record the demo and drop it at docs/img/demo.gif, then uncomment.
@@ -41,7 +41,7 @@ First exhibit: **Tower Bridge**, London.
 
 1. You land in a museum of places, with Tower Bridge turning under a spotlight. Press **Enter Tower Bridge**.
 2. Press **Play the story** for the guided tour from 1886 to today. Add `?tour=1` to the link to start it straight away.
-3. Drag to orbit and scroll to zoom, or switch to **Top** or **Walk** at the top right.
+3. Drag to orbit and scroll to zoom, or switch to **Top** or **Walk** at the top right. Press **LiDAR** to see the ground as the raw Environment Agency point cloud, coloured by height.
 4. Tap any part of the bridge, or pick one from the panel. The camera flies to it and the inspector shows each figure with its source and status.
 5. Press **Exploded** to take the bridge apart and look inside the towers. Raise the **Bascules**, or drag a leaf, and watch the traffic stop at the gates and the ship downstream wait, then sail through.
 6. Drag the timeline. The site works, rigs, barges and scaffold come and go stage by stage, real archive photographs from 1892 to 1940 appear for the year, and the ticks on the timeline open the story of each event.
@@ -65,6 +65,7 @@ First exhibit: **Tower Bridge**, London.
 
 Everything in this repo was built at the DevDay Community Hackathon London on 1 November 2026, by one person working with a team of AI coding agents.
 
+- **The terrain:** 1.5 km square of real Environment Agency 1 m LiDAR around the bridge, draped with aerial imagery, with a raw point-cloud view and the Thames at its surveyed level.
 - **The app shell:** a museum-of-places Home stage, a full-screen 3D stage, a calm glass panel with the place card, search, part inspector and docent, orbit, top-down and walk views, fly-to-part, a phone move pad, and a timeline with story markers and sourced story cards.
 - **The bridge:** a procedural Tower Bridge whose meshes are named by part id, from the towers' parapets, pinnacles and turrets down to the bascule girders, chains and anchor plates. It explodes into its parts, and its cladding x-rays to show the steel frame.
 - **The interiors:** the Victorian stairs and hydraulic lifts inside the towers.
@@ -135,14 +136,13 @@ flowchart LR
   T -->|static files| W
 ```
 
-- **Scene frame:** metres, origin at the centre of the bridge deck at road level, x east, y up, z south. The origin sits at OSGB36 E 533782, N 180242.
+- **Scene frame:** metres, origin at the centre of the bridge deck at road level, x east, y up, z south. Measured from the LiDAR, the origin sits at OSGB36 E 533670.3, N 180265.1, and the bridge axis runs 20.95 degrees off grid north.
 - **Part ids are the shared key.** Scene meshes are named by part id, and clicking a mesh selects that part in the inspector and the docent.
 - **Place data** follows one shape everywhere: `{id, name, location, parts, events, sources}`, served from SurrealDB when `SURREAL_URL` is set, with the validated JSON file as the fallback.
 - **Mechanisms run on state, not keyframes.** The bascule angle comes from the hydraulic simulation, and the traffic and the ship read it.
 
 ## Coming next
 
-- LiDAR terrain and the raw point-cloud view. The ground and river are placeholders until the terrain assets land.
 - The surrounding city: buildings and Google 3D tiles. The slots and the on-screen Google credit are in the app.
 - Historic maps draped on the ground before 1950.
 - More places. The Home stage already lists Stonehenge, Hadrian's Wall and the Tower of London.
@@ -173,15 +173,15 @@ Checks: `make smoke` runs the Python tests, and `uv run python scripts/validate.
 Existing code, data and ideas this project stands on. File-by-file detail and licence texts are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 - **[Mechanica](https://github.com/Caleb0796/mechanica)** (MIT, commit `27b5f8b`): the idea that data is law, sourced numbers with a status, and mechanisms driven by simulated state. Adapted code: the scene look (light rig, ACES grade, haze), the procedural PBR textures, the museum Home stage, the tour's part close-up, the bascule drag handle, box-projected UVs, and the docent's sourcing and refusal contract.
-- **Environment Agency LiDAR:** LiDAR Composite DSM, 1 m. © Environment Agency copyright and/or database right. [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/). For the terrain, which is coming next.
+- **Environment Agency LiDAR:** LiDAR Composite DSM, 1 m. © Environment Agency copyright and/or database right. [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/). For the terrain and the point cloud.
 - **OpenStreetMap:** © OpenStreetMap contributors, [Open Database Licence (ODbL)](https://opendatacommons.org/licenses/odbl/), for the surrounding buildings, which are coming next.
 - **Google Photorealistic 3D Tiles:** © Google and its data providers. The attribution shows on screen whenever the tiles do. The tiles layer is coming next.
-- **Imagery and historic maps:** credited as the terrain builder records them in `web/public/terrain/tower-bridge/meta.json`.
+- **Aerial imagery:** Esri World Imagery, © Esri, Maxar, Earthstar Geographics and the GIS User Community, under the Esri World Imagery terms of use.
 - **Archive photographs:** 10 photographs from Wikimedia Commons (public domain, CC0 and CC BY-SA 3.0), credited on screen and in THIRD_PARTY_NOTICES.md.
 - **History and dimensions:** each figure cites its own source in `data/places/tower-bridge.json`.
 - **3D:** [three.js](https://threejs.org/) (MIT), [React Three Fiber](https://github.com/pmndrs/react-three-fiber) (MIT) and [drei](https://github.com/pmndrs/drei) (MIT).
 - **Web and server:** [React](https://react.dev/), [Vite](https://vite.dev/), [zustand](https://github.com/pmndrs/zustand), [FastAPI](https://fastapi.tiangolo.com/), [SurrealDB](https://surrealdb.com/) and the [OpenAI Python SDK](https://github.com/openai/openai-python).
-- **Banner:** an illustration drawn in code (`docs/img/banner.html`), not a render of the survey data.
+- **Banner and screenshots:** headless renders of the live app. The banner's title is laid over the render in `docs/img/banner.html`.
 
 ---
 

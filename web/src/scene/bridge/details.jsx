@@ -131,10 +131,14 @@ const LANTERN = {
   blackout: glass({ color: '#15191f', roughness: 0.6 }),
   electric: glass({ color: '#e9f0f4', roughness: 0.1, metalness: 0.2 }),
 }
-export const lanternFor = (era) => ({ lantern: era?.blackout ? LANTERN.blackout : era?.gasLamps ? LANTERN.gas : LANTERN.electric })
+// Blackout white paint: brighter than lit white (colour > 1) and untextured (no kind), so the bands still read at
+// 640x360. Not emissive: Part owns emissive for the selection glow.
+const BAND = new THREE.MeshStandardMaterial({ color: new THREE.Color(1.6, 1.6, 1.6), roughness: 1, metalness: 0 })
+export const lanternFor = (era) => ({ lantern: era?.blackout ? LANTERN.blackout : era?.gasLamps ? LANTERN.gas : LANTERN.electric, ...(era?.blackout && { white: BAND }) })
 
 export function lamp(out, x, y, z, era) {
-  if (era?.blackout) out.white.push(box(0.74, 0.3, 0.74, x, y + 0.35, z), cyl(0.16, 0.16, 0.4, 8, x, y + 1.6, z)) // white bands on the base and column
+  // blackout: base painted white, then three 0.6 m white bands up the column, wide enough to read from afar
+  if (era?.blackout) out.white.push(box(0.74, 0.6, 0.74, x, y + 0.5, z), ...[1.6, 2.8, 4.0].map((h) => cyl(0.2, 0.21, 0.6, 8, x, y + h, z)))
   out.steel.push(
     box(0.7, 1, 0.7, x, y + 0.5, z),
     cyl(0.12, 0.17, 4.2, 8, x, y + 3.1, z),
@@ -221,7 +225,7 @@ export function DeckMarkings({ era }) {
   return (
     <Meshes
       deps={[era?.blackout, era?.woodBlocks, era?.gasLamps]}
-      materials={{ sand: SAND }}
+      materials={{ sand: SAND, ...lanternFor(era) }}
       build={() => {
         const o = kit()
         if (!era?.woodBlocks) dashes(o, L.pierZ - 9.5, L.pierZ + 9.5)

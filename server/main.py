@@ -1,5 +1,6 @@
 """Strata API: place data, the docent, and the built web app."""
 import json
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
@@ -8,6 +9,8 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from httpx import HTTPError
+from openai import AsyncOpenAI, OpenAIError
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.concurrency import run_in_threadpool
 
@@ -21,8 +24,25 @@ load_dotenv(ROOT / ".env")
 
 @asynccontextmanager
 async def lifespan(app):
-    await warm_search(place("tower-bridge"))
-    yield
+    client = AsyncOpenAI(timeout=15, max_retries=0) if os.getenv("OPENAI_API_KEY") else None
+    app.state.openai = client
+    try:
+        data = await run_in_threadpool(place, "tower-bridge")
+        await warm_search(data, client=client)
+        if client is not None:
+            try:
+                # Pay the first inference cost before accepting a visitor's question.
+                await client.responses.create(
+                    model=os.getenv("OPENAI_DOCENT_MODEL", docent.DEFAULT_MODEL),
+                    input="Reply ready.", max_output_tokens=16, store=False, timeout=8,
+                )
+            except (OpenAIError, HTTPError, TimeoutError):
+                pass
+        yield
+    finally:
+        if client is not None:
+            await client.close()
+        app.state.openai = None
 
 
 app = FastAPI(title="Strata", lifespan=lifespan)
@@ -54,20 +74,21 @@ class AskRequest(BaseModel):
 @app.post("/api/ask")
 async def ask(body: AskRequest, request: Request, stream: bool = False):
     data = await run_in_threadpool(place, body.place)
+    client = getattr(request.app.state, "openai", None)
     if body.part and not any(part["id"] == body.part for part in data["parts"]):
         raise HTTPException(404, "no such part")
     if stream or "text/event-stream" in request.headers.get("accept", ""):
         async def events():
-            async for event, payload in docent.answer_events(data, body.question, body.part):
+            async for event, payload in docent.answer_events(data, body.question, body.part, client=client):
                 yield f"event: {event}\ndata: {json.dumps(payload)}\n\n"
         return StreamingResponse(events(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
-    return await docent.ask(data, body.question, body.part)
+    return await docent.ask(data, body.question, body.part, client=client)
 
 
 @app.get("/api/search")
-async def find(q: Annotated[str, Query(min_length=1, max_length=200)], place_id: str = "tower-bridge"):
+async def find(request: Request, q: Annotated[str, Query(min_length=1, max_length=200)], place_id: str = "tower-bridge"):
     data = await run_in_threadpool(place, place_id)
-    return await semantic_search(data, q)
+    return await semantic_search(data, q, client=getattr(request.app.state, "openai", None))
 
 
 dist = ROOT / "web" / "dist"

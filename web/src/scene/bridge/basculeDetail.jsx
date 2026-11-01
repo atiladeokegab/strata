@@ -6,8 +6,7 @@
 import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { beam, box, merge } from './geom.js'
-import { pbr } from '../look/textures.js'
+import { beam, box, merge, M } from './geom.js'
 import { L } from './structures.jsx'
 
 const LEN = -L.pivotZ
@@ -17,17 +16,8 @@ const GIRDERS = [-7.5, -3, 3, 7.5]
 // Main girder bottom, tapering 4.4 m deep at the pivot to 1 m at the tip (structures.jsx shape).
 const bottom = (z) => TOP - 0.06 - 4.4 + (3.4 * Math.max(0, z)) / LEN
 
-// repeat is tiles per metre (geom.js merge gives metre UVs)
-const mat = (kind, variant, repeat, props) =>
-  Object.assign(new THREE.MeshStandardMaterial({ ...pbr(variant, repeat), ...props }), { userData: { kind } })
-let MATS
-// steel:white map tinted by the 'steel' kind, so Part's year colour shows true rather than doubly blue.
-const mats = () =>
-  (MATS ??= {
-    soffit: mat('trim', 'steel:white', 1 / 6),
-    fascia: mat('steel', 'steel:white', 1 / 6),
-    iron: mat('iron', 'iron:cast', 1 / 3),
-  })
+// The shared kinded materials; Look.jsx textures them, and Part tints the 'steel' fascia by year.
+const mats = () => ({ soffit: M.white, fascia: M.steel, iron: M.iron })
 
 function build() {
   const soffit = [], fascia = [], iron = [], bolts = [], tailBars = []

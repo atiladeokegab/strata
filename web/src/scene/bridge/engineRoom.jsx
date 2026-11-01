@@ -18,11 +18,12 @@ const mat = (kind, variant, repeat, props) =>
 let MATS
 const mats = () =>
   (MATS ??= {
+    // shortcut: brick keeps its own map so Look skips it (as stone it would read as granite); swap to a 'brick' kind once Look has one
     brick: mat('stone', 'stone:portland', 0.5, { color: '#b5654c' }),
-    stone: mat('stone', 'stone:portland', 0.25),
-    granite: mat('stone', 'granite:cornish', 3),
-    slate: mat('slate', 'slate:roof', 0.33),
-    iron: mat('iron', 'iron:cast', 0.33),
+    stone: M.stone,
+    granite: M.granite,
+    slate: M.slate,
+    iron: M.iron,
   })
 
 // House footprint and the machinery layout inside it.

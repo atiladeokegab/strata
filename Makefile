@@ -3,9 +3,9 @@ comma := ,
 smoke:
 	uv run pytest -q
 	$(MAKE) check-web
-# The web self-checks: docent stream parsing, bare-earth ground, and the bridge logic incl. the road-corridor guard (~40 s).
+# The web self-checks: docent stream parsing, bare-earth ground, and the bridge logic incl. the road-corridor guard, and the metre UVs.
 check-web:
-	cd web && node --test src/lib/docentStream.test.js && node src/scene/bareEarth.check.mjs && node src/scene/bridge/check.mjs
+	cd web && node --test src/lib/docentStream.test.js && node src/scene/bareEarth.check.mjs && node src/scene/bridge/check.mjs && node src/scene/look/uvs.check.mjs
 web:
 	cd web && npm run build
 dev:

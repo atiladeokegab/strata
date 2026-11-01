@@ -15,6 +15,7 @@ Strata includes code adapted from the projects below. Each keeps its own licence
 | `web/src/ui/home/Home.jsx` | `src/ui/HomeCarouselHero.tsx` | Museum light rig, light pool, plinth and turntable drift |
 | `web/src/scene/Tour.jsx` | `src/ui/viewer/DemoFocusRig.tsx` | Part close-up and the controls hand-off |
 | `web/src/scene/bridge/BasculeDrive.jsx` | `src/ui/viewer/DriveHandle.tsx`, `src/ui/viewer/DriveGizmo.tsx` | Drag handle on a bascule leaf, cut down to one joint |
+| `web/src/scene/bridge/geom.js` | `src/core/geometryUvs.ts` (`ensureBoxProjectedUvs`) | Box-projected UVs at 1 UV unit per metre, so textures keep one scale across merged parts |
 | `server/docent.py` | `api/docent.ts` (`DOCENT_PROMPT_CORE`) | Sourcing, numeric fidelity and refusal contract |
 
 
@@ -77,6 +78,7 @@ The resized CC BY-SA copies are shared under the same licence.
 | `web/public/terrain/tower-bridge/color.jpg` | Esri World Imagery. Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community. | Esri World Imagery terms of use |
 | `web/public/terrain/tower-bridge/color-1890s.jpg` | OS London Town Plan, five feet to the mile, 1893 to 1896. Reproduced with the permission of the [National Library of Scotland](https://maps.nls.uk/). | [CC BY](https://maps.nls.uk/copyright.html) |
 | `web/public/buildings/tower-bridge.json` | Building footprints © OpenStreetMap contributors; heights from the Environment Agency LiDAR above. | [ODbL 1.0](https://www.openstreetmap.org/copyright); heights OGL v3 |
+| `web/public/textures/` | PBR texture sets from [Poly Haven](https://polyhaven.com): `white_sandstone_blocks_02`, `medieval_blocks_03`, `green_metal_rust`, `yellow_brick`, `roof_slates_03` and `asphalt_02` by Rob Tuytel; `weathered_planks` by Dimitrios Savva (photography) and Dario Barresi (processing). Re-encoded and downscaled; see `web/public/textures/LICENSE.txt`. | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
 | `web/public/hdri/` | `evening_road_01_puresky` by [Poly Haven](https://polyhaven.com/a/evening_road_01_puresky). | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
 | Google Photorealistic 3D Tiles (streamed, not stored) | © Google and its data providers, shown on screen while the tiles are. | Google Map Tiles API terms |
 

@@ -200,6 +200,7 @@ Existing code, data and ideas this project stands on. File-by-file detail and li
 - **Google Photorealistic 3D Tiles:** © Google and its data providers. The attribution shows on screen whenever the tiles do.
 - **Aerial imagery:** Esri World Imagery, © Esri, Maxar, Earthstar Geographics and the GIS User Community, under the Esri World Imagery terms of use.
 - **Sky and light:** [Poly Haven](https://polyhaven.com/a/evening_road_01_puresky) `evening_road_01_puresky`, CC0.
+- **Textures:** PBR sets from [Poly Haven](https://polyhaven.com) by Rob Tuytel, Dimitrios Savva and Dario Barresi, CC0; listed in THIRD_PARTY_NOTICES.md.
 - **Historic map:** OS London Town Plan, five feet to the mile, 1893 to 1896. Reproduced with the permission of the [National Library of Scotland](https://maps.nls.uk/) (CC BY), draped on the bare-earth ground before 1950.
 - **Archive photographs:** 10 photographs from Wikimedia Commons (public domain, CC0 and CC BY-SA 3.0), credited on screen and in THIRD_PARTY_NOTICES.md.
 - **History and dimensions:** each figure cites its own source in `data/places/tower-bridge.json`.

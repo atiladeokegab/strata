@@ -6,6 +6,7 @@
   <a href="https://platform.openai.com/"><img alt="OpenAI" src="https://img.shields.io/badge/OpenAI-gpt--6.1--sol-412991?logo=openai&logoColor=white"></a>
   <a href="https://threejs.org/"><img alt="three.js" src="https://img.shields.io/badge/three.js-R3F-000000?logo=threedotjs&logoColor=white"></a>
   <a href="https://platform.openai.com/docs/guides/images"><img alt="OpenAI image" src="https://img.shields.io/badge/OpenAI-gpt--image--2.5--flare-412991?logo=openai&logoColor=white"></a>
+  <a href="https://platform.openai.com/docs/guides/realtime"><img alt="OpenAI realtime" src="https://img.shields.io/badge/OpenAI-gpt--realtime-412991?logo=openai&logoColor=white"></a>
   <a href="https://surrealdb.com/"><img alt="SurrealDB" src="https://img.shields.io/badge/SurrealDB-graph-FF00A0?logo=surrealdb&logoColor=white"></a>
   <a href="https://fastapi.tiangolo.com/"><img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-API-009688?logo=fastapi&logoColor=white"></a>
   <a href="https://environment.data.gov.uk/survey"><img alt="Environment Agency LiDAR" src="https://img.shields.io/badge/LiDAR-Environment%20Agency%201%20m-00703C"></a>
@@ -38,12 +39,14 @@ First exhibit: **Tower Bridge**, with the Tower of London, the Thames and Shad T
 
 **Live demo:** [strata-901257379404.europe-west2.run.app](https://strata-901257379404.europe-west2.run.app)
 
-1. Open the link and let the terrain load. You start in orbit view over Tower Bridge.
-2. Drag to orbit, scroll to zoom, or switch to top-down or walk with the view switcher.
-3. Click any part of the bridge to open it in the inspector, with the source and status of every figure.
-4. Toggle exploded view to take the bridge apart, and use the bascule control to open the roadway.
-5. Drag the timeline from 1886 to today.
-6. Ask the docent in the side panel, for example "How long did it take to build?"
+1. Open the link. You land in a museum of places, with Tower Bridge turning under a spotlight. Enter it.
+2. Press **Play the story** for the guided tour, or add `?tour=1` to the link to start it straight away.
+3. Drag to orbit and scroll to zoom, or switch to top-down or walk.
+4. Click any part of the bridge. The camera flies to it and the inspector shows the source and status of every figure.
+5. Explode the bridge, then raise the bascules and watch the live hydraulics readout. A barque downstream waits until the leaves are up, then sails through.
+6. Drag the timeline from 1886 to today. The site works, piling rigs, barges and scaffold come and go stage by stage, and the light takes on the period's grade.
+7. Press **See it in** a year to have the view repainted as a period photograph.
+8. Upload your own photo of the bridge. Strata names the parts in it and places you where you stood.
 
 ## What you can do
 
@@ -55,10 +58,14 @@ First exhibit: **Tower Bridge**, with the Tower of London, the Thames and Shad T
 
 ### On `main` today
 
-- **The app:** a full-screen 3D stage with a glass side panel (search, part inspector, docent chat), orbit, top-down and walk views, a timeline, and bascule, exploded and LiDAR controls. Live at the link under [Try it](#try-it).
-- **The bridge:** a procedural Tower Bridge with every mesh named by its part id. Click a part to select it, explode the structure, open the bascules on a weighted-accumulator hydraulic simulation, and watch construction rise stage by stage from 1886 to 1894.
-- **Place data:** Tower Bridge parts with sourced dimensions and dated events, served by FastAPI at `GET /api/places/{id}`.
-- **Reimagine (server side):** `POST /api/reimagine` uses OpenAI's image model to turn a capture of the 3D view into a period photograph of the chosen year. Its panel is built but not yet wired into the app.
+- **Home:** a museum-of-places landing stage.
+- **The app:** a full-screen 3D stage with a calm glass panel (place card, search, part inspector, docent chat), orbit, top-down and walk views, fly-to-part, a timeline, bascule and exploded controls, and the guided story.
+- **The bridge:** a procedural Tower Bridge with every mesh named by its part id: towers with their parapets, pinnacles and turrets, bascules, high walkways, chains and anchorages, lamps and road markings, and the 1894 hydraulic power house on the south bank. The bascules run on a weighted-accumulator hydraulic simulation, and construction rises from 1886 to 1894 with the period's site works around it.
+- **The look:** physical sky and sun, fitted soft shadows, haze, and a post stack with a period grade by year.
+- **Reimagine:** `POST /api/reimagine` repaints a capture of the 3D view as a photograph of the chosen year with OpenAI's image model, plus instant cached views for 1894, 1944 and today in a Then and now strip.
+- **Identify:** `POST /api/identify` names the parts in a real photo, boxes them and places the photographer. A fast model and a careful model race, and the fast answer wins when it agrees with the towers.
+- **Voice:** `POST /api/voice/session` opens a spoken conversation through OpenAI's realtime model.
+- **Place data:** Tower Bridge parts with sourced dimensions and dated events at `GET /api/places/{id}`. Search runs over this data in the browser until `/api/search` lands.
 - **Deploy:** a multi-stage Dockerfile that builds the web app, and `make deploy` to Cloud Run.
 
 ### Coming next
@@ -66,8 +73,7 @@ First exhibit: **Tower Bridge**, with the Tower of London, the Thames and Shad T
 - LiDAR terrain and the point-cloud view. The ground and river are placeholders until the terrain assets land.
 - Historic maps draped on the ground before 1950.
 - The SurrealDB history graph.
-- The search and docent endpoints, `/api/search` and `/api/ask`. Their panels are in the app.
-- Reimagine in the app: "See it in 1894".
+- The docent and search endpoints, `/api/ask` and `/api/search`. The chat already streams answers with citations and handles refusals; it waits for the endpoint.
 
 ## What we built today
 
@@ -126,7 +132,7 @@ Existing code, data and ideas this project stands on:
 - **Terrain height:** Environment Agency LiDAR Composite DSM, 1 m. © Environment Agency copyright and/or database right. Licensed under the [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/).
 - **Imagery and historic maps:** credited here as the terrain builder records them in `web/public/terrain/tower-bridge/meta.json`.
 - **History and dimensions:** each figure cites its own source in `data/places/tower-bridge.json`.
-- **Idea and code:** [Mechanica](https://github.com/Caleb0796/mechanica), MIT licence: data is law, sourced numbers with a status, mechanisms driven by simulated state. Parts of Strata's code are adapted from Mechanica (commit `27b5f8b`); they are listed, with Mechanica's licence, in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+- **Idea and code:** [Mechanica](https://github.com/Caleb0796/mechanica), MIT licence: data is law, sourced numbers with a status, mechanisms driven by simulated state. Adapted from Mechanica (commit `27b5f8b`): the scene look (light rig, ACES grade, haze), the procedural PBR textures, the museum Home stage, and the tour's part close-up. The file-by-file list and Mechanica's licence are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 - **3D:** [three.js](https://threejs.org/) (MIT), [React Three Fiber](https://github.com/pmndrs/react-three-fiber) (MIT) and [drei](https://github.com/pmndrs/drei) (MIT).
 - **Web and server:** [React](https://react.dev/), [Vite](https://vite.dev/), [zustand](https://github.com/pmndrs/zustand), [FastAPI](https://fastapi.tiangolo.com/) and [SurrealDB](https://surrealdb.com/).
 - **Banner:** an illustration drawn in code (`docs/img/banner.html`), not a render of the survey data.

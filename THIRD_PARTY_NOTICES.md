@@ -7,8 +7,14 @@ Strata includes code adapted from the projects below. Each keeps its own licence
 - Source: https://github.com/Caleb0796/mechanica, commit `27b5f8b`
 - Licence: MIT
 - Adapted in Strata:
-  <!-- TODO(mechanica): list each file adapted from Mechanica and the Mechanica file it came from. -->
-  - To be listed as the adapted code lands on `main`.
+
+| Strata file | Adapted from (Mechanica) | What |
+|---|---|---|
+| `web/src/scene/Look.jsx` | its scene environment and "dusk-west" light rig | Light rig, ACES grade and haze |
+| `web/src/scene/look/textures.js` | `src/core/textures.ts` and its geometry warmup | Seeded procedural PBR texture sets, idle-slice warmup |
+| `web/src/ui/home/Home.jsx` | `src/ui/HomeCarouselHero.tsx` | Museum light rig, light pool, plinth and turntable drift |
+| `web/src/scene/Tour.jsx` | `src/ui/viewer/DemoFocusRig.tsx` | Part close-up and the controls hand-off |
+
 
 ```
 MIT License

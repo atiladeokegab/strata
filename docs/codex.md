@@ -30,3 +30,5 @@
 | **gpt-5.4-nano** | **3/3** | **0.421 s** | **0.715 s** |
 
 Selected `gpt-5.4-nano`, overridable with `OPENAI_DOCENT_MODEL`. A separate run through the actual citation-checking stream emitted its first validated text in 1.414 s, 0.776 s and 0.753 s (median 0.776 s). Cold requests can exceed one second; these small measurements are not a latency guarantee for the expanded corpus or deployed service.
+
+**Latency follow-up:** Parallel builders reused one app-lifetime OpenAI client for embeddings and docent answers. A bounded startup inference moves model warm-up ahead of the first visitor request; failure still permits startup, and shutdown closes the shared connection. On the same original scaffold, the three citation-checked answers then began in **0.557 s, 0.534 s and 0.492 s** (median **0.534 s**). Startup warm-up took 3.384 s. The integrated suite passed 61 tests, including shared-client ownership, cleanup, routing and warm-up failure. These timings are a small sample, not a service-level guarantee.

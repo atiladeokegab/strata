@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from server.docent import answer_events, refusal, retrieve, validate_answer
+from server.docent import answer_events, ask, refusal, retrieve, validate_answer
 from server.main import app
 
 
@@ -107,3 +107,33 @@ def test_answer_stream_never_yields_unsupported_number(monkeypatch, place):
         return [item async for item in answer_events(place, "tower height")]
     events = asyncio.run(collect())
     assert events == [("done", refusal())]
+
+
+def test_supplied_client_is_reused_and_not_closed(monkeypatch, place):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    answer = "The north tower is 65 m tall [bridge-guide]."
+
+    class Stream:
+        async def __aenter__(self): return self
+        async def __aexit__(self, *args): pass
+        def __aiter__(self): return self.events()
+        async def events(self):
+            yield SimpleNamespace(type="response.output_text.delta", delta=answer)
+
+    class Client:
+        def __init__(self):
+            self.closed = False
+            self.responses = self
+        async def create(self, **kwargs):
+            assert kwargs["model"] == "gpt-5.4-nano"
+            return Stream()
+        async def __aexit__(self, *args):
+            self.closed = True
+        async def close(self):
+            self.closed = True
+
+    client = Client()
+    monkeypatch.setattr("server.docent.AsyncOpenAI", lambda **kwargs: pytest.fail("unexpected client construction"))
+    result = asyncio.run(ask(place, "tower height", client=client))
+    assert result["answer"] == answer and not result["refused"]
+    assert not client.closed

@@ -30,7 +30,11 @@
   .home { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; padding: var(--s5) var(--s4); overflow-y: auto; }
   .home-copy { grid-row: 1; align-self: start; }
   .home-next { grid-row: 3; }
-  .home-next ul { grid-template-columns: 1fr; }
+  /* phones: the coming places shrink to name pills so the bridge stays in view between the copy and them */
+  .home-next ul { display: flex; flex-wrap: wrap; gap: var(--s2); }
+  .home-card { padding: var(--s1) var(--s3); border-radius: var(--pill); }
+  .home-card > span { display: none; }
+  .home-next-label { margin-bottom: var(--s2); }
   .home-actions { flex-wrap: wrap; }
   .home-next-label { display: inline-block; padding: var(--s1) var(--s3); border-radius: var(--pill); background: var(--surface); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); }
 }

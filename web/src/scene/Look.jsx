@@ -12,6 +12,7 @@ import { useStore } from '../store'
 import { ENV_ROTATION, HAZE, HDRI, SKY_JPG, SUN_COLOR, SUN_DIR, periodGrade } from './look/sun'
 import { pbr, warmMaterialTextures } from './look/textures'
 import { LITE } from './look/tier'
+import { worldUVs } from './look/uvs'
 
 // The sky: Poly Haven's tonemapped 4k JPG (sharp clouds), rotated with the HDRI so the sun lines up.
 function SkyBackground() {
@@ -92,7 +93,6 @@ const KINDS = {
   timber: { variant: 'wood:dark' },
   brick: { variant: 'brick:london' },
 }
-const _scale = new THREE.Vector3()
 const _c = new THREE.Color()
 
 function kindOf(m) {
@@ -100,29 +100,6 @@ function kindOf(m) {
   if (!KINDS[k] || m.map || m.metalness >= 0.9) return null // keep gold, brass and anything already textured
   if (k === 'stone' && m.color.getHSL({}).l < 0.7) return KINDS.granite
   return KINDS[k]
-}
-
-// Box-projected UVs in metres, so one texture scale holds on every part whatever its size.
-function worldUVs(mesh) {
-  const g = mesh.geometry
-  if (g.userData.lookUV || !g.attributes.normal) return
-  g.userData.lookUV = true
-  mesh.getWorldScale(_scale)
-  const p = g.attributes.position
-  const n = g.attributes.normal
-  const uv = new Float32Array(p.count * 2)
-  for (let i = 0; i < p.count; i++) {
-    const x = p.getX(i) * _scale.x
-    const y = p.getY(i) * _scale.y
-    const z = p.getZ(i) * _scale.z
-    const ax = Math.abs(n.getX(i))
-    const ay = Math.abs(n.getY(i))
-    const az = Math.abs(n.getZ(i))
-    if (ax >= ay && ax >= az) (uv[i * 2] = z), (uv[i * 2 + 1] = y)
-    else if (ay >= az) (uv[i * 2] = x), (uv[i * 2 + 1] = z)
-    else (uv[i * 2] = x), (uv[i * 2 + 1] = y)
-  }
-  g.setAttribute('uv', new THREE.BufferAttribute(uv, 2))
 }
 
 function texture(mesh) {

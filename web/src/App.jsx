@@ -9,6 +9,7 @@ const Identify = lazy(() => import('./ui/Identify'))
 import Home from './ui/home/Home'
 import { Guard, makeSlot } from './ui/slots'
 import { Help, HelpButton, StoryButton, helpSeen } from './ui/Help'
+import { SceneLoading } from './ui/SceneLoading'
 import './App.css'
 
 const PLACE = 'tower-bridge'
@@ -129,9 +130,10 @@ export default function App() {
     return (
       <div className="app embed">
         {noGL ? <NoWebGL /> : <Guard name="Stage" fallback={<NoWebGL />}><Stage /></Guard>}
+        {!noGL && !error && <SceneLoading />}
         <a className="embed-open glass" href={full.toString()} target="_blank" rel="noreferrer">Open the full app <span aria-hidden="true">↗</span></a>
         <Credit />
-        {(!place || error) && <Loading error={error} retry={load} />}
+        {error && <Loading error retry={load} />}
       </div>
     )
   }
@@ -140,6 +142,7 @@ export default function App() {
   return (
     <div className={`app view-${view}${sheet ? ' sheet-open' : ''}`}>
       {noGL ? <NoWebGL /> : <Guard name="Stage" fallback={<NoWebGL />}><Stage /></Guard>}
+      {!noGL && !error && <SceneLoading />}{/* before the panel and controls, so they paint over it and stay usable */}
       <Panel />
       <Dock />
       <Controls>
@@ -154,7 +157,7 @@ export default function App() {
       <Credit />
       {view === 'walk' && <p className="walk-hint glass">W A S D to walk · drag to look · Shift to run</p>}
       {view === 'walk' && <MovePad />}
-      {(!place || error) && <Loading error={error} retry={load} />}
+      {(noGL ? !place || error : error) && <Loading error={error} retry={load} />}
     </div>
   )
 }

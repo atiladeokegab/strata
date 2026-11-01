@@ -236,3 +236,20 @@ input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 
 @media (max-width: 480px) { .app.embed .credit { right: 8px; max-width: none; } .embed-open { top: auto; bottom: 8px; } }
 /* drags over the scene never select label text (the labels' inline all:unset needs !important) */
 .stage, .stage button { -webkit-user-select: none !important; user-select: none !important; }
+/* loading card over the canvas until the first settled frame; painted under the panel, dock and controls (DOM order) */
+.scene-loading { position: absolute; inset: 0; display: grid; background: var(--bg); animation: scene-in .2s ease-out; }
+.scene-loading-card { position: absolute; left: calc(50% + var(--panel-w) / 2 + var(--gap) / 2); top: 50%; transform: translate(-50%, -50%);
+  width: min(360px, calc(100% - 32px)); padding: var(--s5); display: grid; gap: var(--s2); }
+.scene-loading p { margin: 0; }
+.scene-loading .word { display: flex; align-items: center; gap: var(--s2); font: 600 var(--t4)/1 var(--sans); letter-spacing: -.02em; }
+.scene-loading .what { color: var(--muted); font-size: var(--t2); }
+.scene-loading .bar { height: 3px; margin-top: var(--s2); border-radius: var(--pill); background: var(--fill-on); overflow: hidden; }
+.scene-loading .bar span { display: block; height: 100%; background: var(--ink); transform-origin: left; transition: transform .4s ease-out; }
+.scene-loading .now { font-size: var(--t1); color: var(--ink); }
+.scene-loading .steps { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 2px var(--s3); font-size: var(--t1); color: var(--muted); }
+.scene-loading .steps li.done { color: var(--ink); } .scene-loading .steps li.done::before { content: '✓ '; }
+.scene-loading button { justify-self: start; margin-top: var(--s2); min-height: 44px; padding: 0 var(--s4); border: 1px solid var(--line-strong); border-radius: var(--pill); background: var(--surface-solid); color: var(--ink); font: 500 var(--t2)/1 var(--sans); }
+.app.embed .scene-loading-card { left: 50%; }
+@media (max-width: 900px) { .scene-loading-card { left: 50%; top: 40%; } }
+@keyframes scene-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .scene-loading, .scene-loading .bar span { animation: none; transition: none; } }

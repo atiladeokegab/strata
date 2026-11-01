@@ -6,6 +6,7 @@ import { Sky } from '@react-three/drei'
 import { useStore, TILES, EMBED } from '../store'
 import { CameraRig } from './CameraRig'
 import { makeSlot } from './slots'
+import { ReadyProbe } from './SceneLoading'
 import { BridgeStandIn, GroundStandIn, WaterStandIn } from './StandIns'
 
 export const WORLD_TURN = (20.95 * Math.PI) / 180 // meta.json bridge_axis_deg
@@ -120,6 +121,7 @@ export function Stage() {
       <Tour />
       <CameraRig />
       <LabelGuard />
+      <ReadyProbe />
       {TILES && <GoogleTiles />}{/* outside the click group: Google meshes and OSM buildings are never parts */}
       <Buildings />
       <group

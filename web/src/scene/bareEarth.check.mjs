@@ -16,8 +16,11 @@ assert.ok(out.every((v, i) => v <= hs[i]), 'never above the DSM')
 const meta = { bridge_axis_deg: 0, bbox_osgb: [0, 0, 400, 400], origin_osgb: [200, 200] }, W = 400
 const dsm = new Float32Array(W * W).fill(0), at = (along, across) => (200 - along) * W + 200 + across
 for (let a = 100; a < 200; a++) for (let c = -8; c <= 8; c++) dsm[at(a, c)] = 7 // viaduct, 17 m wide
+for (let a = 150; a < 170; a++) for (let c = 12; c < 30; c++) dsm[at(a, c)] = 25 // a roadside building, part in the corridor
 const kept = keepApproaches(bareEarth(dsm, W, W, 30), dsm, W, meta)
 assert.equal(kept[at(150, 0)], 7, 'approach road keeps its DSM height')
 assert.ok(kept[at(150, 30)] <= 0, 'beside the corridor is still bare earth')
+assert.equal(kept[at(160, 15)], 7, 'a roadside roof in the corridor is cut to the road')
+assert.ok(kept[at(160, 25)] <= LIFT, 'and outside it is opened away')
 assert.ok(kept[at(50, 0)] <= LIFT, 'inside the bridge cut is untouched')
 console.log('bareEarth ok')

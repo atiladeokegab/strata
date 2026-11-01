@@ -33,17 +33,29 @@ export function bareEarth(heights, w, h, r = 30) {
 }
 
 // The approach roads are raised on viaducts and embankments (1894 onwards), which the opening above takes for
-// buildings and sinks ~7 m, leaving the bridge's ramp ends in mid-air. Keep the DSM along both approaches.
+// buildings and sinks ~7 m, leaving the bridge's ramp ends in mid-air. Keep the DSM along both approaches, but no
+// higher than the road itself (the lowest point within 6 m of the centre line, metre by metre): roadside roofs inside
+// the corridor would otherwise stand as cliffs draped with the old map.
 export const APPROACH = { from: 133, to: 320, half: 20 } // m along / either side of the bridge axis
-
+const CENTRE = 6 // m either side of the axis that is roadway
 export function keepApproaches(old, heights, w, meta) {
   const t = (meta.bridge_axis_deg * Math.PI) / 180, ae = Math.sin(t), an = Math.cos(t)
   const [minE, , , maxN] = meta.bbox_osgb, [oE, oN] = meta.origin_osgb
   const res = (meta.bbox_osgb[2] - minE) / w
+  const road = new Float32Array(2 * APPROACH.to).fill(Infinity) // per signed metre along: north ramp, then south
+  const slot = new Int32Array(old.length).fill(-1), across = new Float32Array(old.length)
   for (let k = 0; k < old.length; k++) {
     const dE = minE + ((k % w) + 0.5) * res - oE, dN = maxN - (Math.floor(k / w) + 0.5) * res - oN
-    const along = Math.abs(dE * ae + dN * an), across = Math.abs(dE * an - dN * ae)
-    if (along >= APPROACH.from && along < APPROACH.to && across < APPROACH.half) old[k] = heights[k]
+    const a = dE * ae + dN * an, along = Math.abs(a)
+    across[k] = Math.abs(dE * an - dN * ae)
+    if (along < APPROACH.from || along >= APPROACH.to || across[k] >= APPROACH.half) continue
+    slot[k] = Math.floor(along) + (a < 0 ? APPROACH.to : 0)
+    if (across[k] < CENTRE) road[slot[k]] = Math.min(road[slot[k]], heights[k])
+  }
+  for (let k = 0; k < old.length; k++) {
+    if (slot[k] < 0) continue
+    const top = Number.isFinite(road[slot[k]]) ? road[slot[k]] : heights[k]
+    old[k] = Math.max(old[k], Math.min(heights[k], top))
   }
   return old
 }

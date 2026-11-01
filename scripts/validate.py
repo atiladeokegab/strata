@@ -4,6 +4,7 @@ import math
 from pathlib import Path
 import re
 import sys
+from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 STATUSES = {"text-attested", "measured", "inferred"}
@@ -22,13 +23,21 @@ def validate(place: dict) -> list[str]:
     sources = place.get("sources", [])
     if not isinstance(sources, list) or any(not isinstance(s, dict) for s in sources):
         return errors + ["sources must be a list of source objects"]
-    source_ids = {s.get("id") for s in sources}
+    source_ids = {s.get("id") for s in sources if isinstance(s.get("id"), str)}
     if len(source_ids) != len(sources):
         errors.append("duplicate source id")
     for source in sources:
         if not all(source.get(k) for k in ("id", "title", "url", "kind")):
             errors.append("source needs id, title, url and kind")
-        if not str(source.get("url", "")).startswith(("https://", "http://")):
+        if any(not isinstance(source.get(k), str) or not source[k].strip()
+               for k in ("id", "title", "url", "kind")):
+            errors.append("source id, title, URL and kind must be strings")
+        url = source.get("url")
+        try:
+            parsed_url = urlsplit(url) if isinstance(url, str) else None
+        except ValueError:
+            parsed_url = None
+        if not parsed_url or parsed_url.scheme not in ("https", "http") or not parsed_url.netloc:
             errors.append("source URL must use HTTP(S)")
 
     def walk(value, path, refs=()):
@@ -45,7 +54,7 @@ def validate(place: dict) -> list[str]:
                 if not isinstance(ref, str) or ref not in source_ids:
                     errors.append(f"{path}: unknown source {ref!r}")
             refs = own_refs or refs
-            if "status" in value and value["status"] not in STATUSES:
+            if "status" in value and (not isinstance(value["status"], str) or value["status"] not in STATUSES):
                 errors.append(f"{path}: invalid status")
             for key, child in value.items():
                 if key not in ("sources", "source", "id", "url"):
@@ -67,10 +76,13 @@ def validate(place: dict) -> list[str]:
         if not isinstance(items, list) or any(not isinstance(i, dict) for i in items):
             errors.append(f"{collection} must be a list of objects")
             continue
-        ids = [i.get("id") for i in items if "id" in i]
+        ids = [i.get("id") for i in items if isinstance(i.get("id"), str)]
         if len(ids) != len(set(ids)):
             errors.append(f"duplicate {collection} id")
         for item in items:
+            if ((collection == "parts" or "id" in item) and
+                    (not isinstance(item.get("id"), str) or not SLUG.fullmatch(item["id"]))):
+                errors.append(f"{collection}: id must be a valid string")
             if not item.get("sources"):
                 errors.append(f"{collection}: missing sources")
             if collection == "parts":
@@ -87,11 +99,15 @@ def validate(place: dict) -> list[str]:
                         continue
                     if not isinstance(dim.get("value"), (int, float)) or isinstance(dim.get("value"), bool):
                         errors.append(f"{name}: dimension value must be numeric")
-                    if not dim.get("unit") or dim.get("source") not in source_ids:
+                    if not isinstance(dim.get("unit"), str) or not dim["unit"].strip():
+                        errors.append(f"{name}: dimension unit must be a non-empty string")
+                    dim_source = dim.get("source")
+                    if not isinstance(dim_source, str) or dim_source not in source_ids:
                         errors.append(f"{name}: dimension needs unit and known source")
-                    if dim.get("status") not in STATUSES:
+                    status = dim.get("status")
+                    if not isinstance(status, str) or status not in STATUSES:
                         errors.append(f"{name}: dimension needs valid status")
-                    if dim.get("status") == "inferred" and not dim.get("method"):
+                    if status == "inferred" and (not isinstance(dim.get("method"), str) or not dim["method"].strip()):
                         errors.append(f"{name}: inferred dimension needs method")
             elif collection == "events":
                 if type(item.get("year")) is not int or type(item.get("stage")) is not int:

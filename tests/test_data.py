@@ -46,6 +46,40 @@ def test_poison_facts_fail_validation(place, mutate, expected):
     assert any(expected in error for error in validate(place))
 
 
+@pytest.mark.parametrize("mutate, expected", [
+    (lambda p: p["sources"][0].update(id=[]), "source id, title, URL and kind must be strings"),
+    (lambda p: p["parts"][0].update(id=[]), "parts: id must be a valid string"),
+    (lambda p: p["parts"][0]["dims"][next(iter(p["parts"][0]["dims"]))].update(status=[]), "invalid status"),
+    (lambda p: p["parts"][0]["dims"][next(iter(p["parts"][0]["dims"]))].update(source=[]), "dimension needs unit and known source"),
+    (lambda p: p["parts"][0]["dims"][next(iter(p["parts"][0]["dims"]))].update(unit=[]), "dimension unit must be a non-empty string"),
+    (lambda p: poison_inferred_method(p), "inferred dimension needs method"),
+    (lambda p: p["sources"][0].update(url=7), "source URL must use HTTP(S)"),
+])
+def test_malformed_evidence_types_return_validation_errors(place, mutate, expected):
+    mutate(place)
+    assert any(expected in error for error in validate(place))
+    with pytest.raises(ValueError):
+        assert_valid(place)
+
+
+def poison_inferred_method(place):
+    for part in place["parts"]:
+        for dim in part["dims"].values():
+            if dim["status"] == "inferred":
+                dim["method"] = {}
+                return
+    pytest.fail("fixture should contain at least one inferred dimension")
+
+
+@pytest.mark.parametrize("fact", [
+    {"id": "unsourced-number", "text": "Bridge height was 42 metres."},
+    {"id": "unsourced-value", "value": 42, "unit": "m", "status": "measured"},
+])
+def test_unsourced_fact_numbers_and_numbered_text_are_rejected(place, fact):
+    place["facts"].append(fact)
+    assert any("without a source" in error for error in validate(place))
+
+
 def test_missing_part_source_fails(place):
     place["parts"][0]["sources"] = []
     assert any("missing sources" in error for error in validate(place))

@@ -15,7 +15,7 @@ import { createShip, stepShip, WAIT_X, HOLD_X, CRUISE } from './shipSim.js'
 import { leverAfter, leverForKey, leverLabel, KEY_STEP } from './drive.js'
 import { vesselForYear, needsLift, leafInput, CLEARANCE } from './vessels.js'
 import { createRiver, stepRiver, gap, CRAFT, CLEAR } from './riverSim.js'
-import { createTraffic, stepTraffic, onLeaves, roadY, streetProfile, RAMP_FOOT, TYPES, STOP_U, BASCULE_U, START_U, END_U, ABUT_Z, RAMP_LEN, POST_X, POST_Z, POST_W, GATE_U } from './trafficSim.js'
+import { createTraffic, stepTraffic, onLeaves, roadY, streetProfile, RAMP_FOOT, TYPES, STOP_U, BASCULE_U, START_U, END_U, ABUT_Z, RAMP_LEN, POST_X, POST_Z, POST_W, GATE_U, tramZ, TRAM_STOP, TRAM_OUT, TRAM_CYCLE } from './trafficSim.js'
 import { createLift, liftForShip, stepLift, liftSpeed, setLiftTimeScale, applyShipWarp, gatesClosed, heldLever, PASSED_X, FILM_SCALE } from './liftSequence.js'
 
 const MAX = (86 * Math.PI) / 180
@@ -113,7 +113,7 @@ for (const l of createTraffic(1900, 7).lanes) {
   else assert.ok(x + 1.25 < KERB_X, `road lane ${l.x} inside the kerbs`)
 }
 // traffic: gates hold the queue, spacing holds, the bascules clear, the queue moves on green
-for (const year of [1900, 2026]) {
+for (const year of [1900, 1940, 2026]) {
   const t = createTraffic(year, 7)
   const behind = new Set(t.lanes.flatMap((l) => l.list.filter((v) => v.u <= STOP_U).map((v) => v.id)))
   const spaced = () =>
@@ -136,6 +136,24 @@ for (const year of [1900, 2026]) {
 }
 assert.ok(createTraffic(1900).lanes[0].list.every((v) => v.type === 'cart' || v.type === 'hansom'), 'horse era')
 assert.ok(createTraffic(2026).lanes[0].list.every((v) => ['car', 'taxi', 'bus'].includes(v.type)), 'motor era')
+// street eras: period dress and the last horse carts between the wars; the LCC tram only on the south street
+{
+  const kinds = (y) => new Set(createTraffic(y, 5).lanes.flatMap((l) => l.kinds))
+  assert.ok(kinds(1894).has('lady') && kinds(1940).has('lady') && !kinds(2026).has('lady'), 'period dress before 1960 only')
+  assert.ok(kinds(1940).has('cart') && kinds(1940).has('bus') && !kinds(2026).has('cart'), 'interwar street mixes horse and motor')
+  assert.ok(createTraffic(1940).tram && !createTraffic(1894).tram && !createTraffic(2026).tram, 'tram years')
+  assert.ok(TRAM_STOP > RAMP_FOOT && TRAM_OUT > END_U, 'tram stop on the street, depot past the spawn point')
+  let last = tramZ(0), vmax = 0, dwell = 0
+  for (let s = 0.1; s <= 2 * TRAM_CYCLE; s += 0.1) {
+    const z = tramZ(s)
+    assert.ok(z >= TRAM_STOP - 1e-9 && z <= TRAM_OUT + 1e-9, `tram at ${z} leaves the south street`)
+    vmax = Math.max(vmax, Math.abs(z - last) / 0.1)
+    if (z === TRAM_STOP) dwell += 0.1
+    last = z
+  }
+  assert.ok(vmax <= TYPES.tram.vmax && dwell > 40, `tram tops ${vmax.toFixed(1)} m/s, dwells ${dwell.toFixed(0)} s in two cycles`)
+  console.log(`street era checks ok (tram ${vmax.toFixed(1)} m/s max, stop at z ${TRAM_STOP})`)
+}
 assert.deepEqual(containersOf('lift-north'), ['north-tower'])
 assert.deepEqual(containersOf('stairs-south'), ['south-tower'])
 assert.deepEqual(containersOf('hydraulic-engine-south'), ['pier-south'])
@@ -551,6 +569,14 @@ console.log('geom materials untextured, all kinded ok')
   assert.ok(total[0] <= BUDGET.maxDrawCalls, `bridge draws ${total[0]} meshes, over the ${BUDGET.maxDrawCalls} budget (budget.json)`)
   assert.ok(total[1] <= BUDGET.maxTriangles, `bridge has ${Math.round(total[1])} triangles, over the ${BUDGET.maxTriangles} budget (budget.json)`)
   console.log(`render budget ok (${total[0]}/${BUDGET.maxDrawCalls} draw calls, ${Math.round(total[1])}/${BUDGET.maxTriangles} triangles)`)
+  // period streets (horse era, interwar with the tram) may spend at most 2 more traffic draw calls than 2026's baseline
+  for (const y of [1894, 1940]) {
+    useStore.getState().setYear(y)
+    const p = {}
+    tally({ type: TowerBridge, props: {} }, null, p)
+    assert.ok(p.traffic[0] <= BUDGET.baseline.traffic[0] + 2, `${y} traffic draws ${p.traffic[0]} calls`)
+    console.log(`  traffic ${y}: ${p.traffic[0]} draw calls, ${Math.round(p.traffic[1])} triangles`)
+  }
 }
 // Lite tier (phones): the approach balustrade drops the turned balusters, under ~2k vertices per half.
 {

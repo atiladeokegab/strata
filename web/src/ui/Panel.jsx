@@ -172,7 +172,7 @@ function Docent() {
   const [busy, setBusy] = useState(false)
   const [talk, setTalk] = useState(false)
   const end = useRef(null)
-  useEffect(() => { end.current?.scrollIntoView({ block: 'nearest' }) }, [log, busy])
+  useEffect(() => { if (log.length) end.current?.scrollIntoView({ block: 'nearest' }) }, [log, busy]) // not on mount: the place card stays in view
   const ask = async (e) => {
     e.preventDefault()
     const question = q.trim()

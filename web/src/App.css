@@ -89,7 +89,7 @@ a.chip.source:hover { border-color: var(--gold); }
 /* dock */
 .dock { position: absolute; left: calc(var(--panel-w) + var(--gap) * 2); right: var(--gap); bottom: var(--gap); max-width: 760px; margin-left: auto; display: flex; align-items: center; gap: 24px; padding: 10px 20px 12px; }
 .controls { position: absolute; top: var(--gap); right: var(--gap); display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
-.controls .rm-open { height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid rgba(238, 232, 218, .12); background: var(--glass); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); color: var(--ink); font-weight: 500; box-shadow: 0 10px 30px rgba(0, 0, 0, .3); }
+.controls .rm-open { position: static; display: inline-flex; align-items: center; height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid rgba(238, 232, 218, .12); background: var(--glass); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); color: var(--ink); font-weight: 500; box-shadow: 0 10px 30px rgba(0, 0, 0, .3); }
 .controls .rm-open:hover { border-color: var(--gold); }
 .seg { display: flex; padding: 4px; border-radius: 999px; flex: none; }
 .seg button { height: 34px; padding: 0 16px; border: 0; border-radius: 999px; background: none; color: var(--muted); font-weight: 500; }
@@ -139,6 +139,7 @@ input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 
   .bascule { width: 110px; }
   .controls { top: 52px; gap: 6px; }
   .seg button, .toggles button { height: 30px; padding: 0 11px; font-size: 13px; }
+  .controls .rm-open { height: 34px; padding: 0 13px; font-size: 13px; }
   .credit { left: 8px; top: 8px; max-width: calc(100% - 16px); }
   .walk-hint { left: 50%; top: auto; bottom: calc(40vh + 90px); }
 }

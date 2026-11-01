@@ -35,6 +35,22 @@ HINT = (533782, 180242)  # brief's guess; refined from the towers below
 HALF = 750  # metres either side of the origin
 IMG_PX = 4096  # imagery is fetched as 2x2 tiles of 2048, the export's working limit
 BRIDGE_CUT = {"length": 270.0, "width": 64.0}  # metres, along / across the bridge axis
+ABUTMENT_END = 153.0  # m along the axis: the shore abutments stand just outside the cut, ending about here
+
+
+def fill_abutments(a, along, across, axis):
+    """The DSM sees the shore abutments' roofs as an 18 m wall across the road (|along| 135-143). Our procedural
+    abutments replace them, so fill that band from the street just beyond, keeping the road open. Mutates a."""
+    L = BRIDGE_CUT["length"] / 2
+    band = (np.abs(along) >= L - 2) & (np.abs(along) < ABUTMENT_END) & (np.abs(across) < 20)
+    ys, xs = np.nonzero(band)
+    street = []
+    for k in (3, 6, 9):  # step out along the axis to the street; the lowest of three skips lamp posts and railings
+        d = np.sign(along[ys, xs]) * (ABUTMENT_END + k) - along[ys, xs]
+        sy = np.clip(np.round(ys - d * axis[1]).astype(int), 0, a.shape[0] - 1)  # rows run south
+        sx = np.clip(np.round(xs + d * axis[0]).astype(int), 0, a.shape[1] - 1)
+        street.append(a[sy, sx])
+    a[ys, xs] = np.minimum.reduce(street)
 
 
 def get(url, params, name):
@@ -138,6 +154,7 @@ def main():
         sx = np.clip(np.round(xs + d * axis[1]).astype(int), 0, a.shape[1] - 1)
         sides.append(a[sy, sx])
     a[ys, xs] = np.minimum(*sides)
+    fill_abutments(a, along, across, axis)
 
     min_h, max_h = float(np.floor(a.min())), float(np.ceil(a.max()))
     v = np.round((a - min_h) / (max_h - min_h) * 65535).astype(np.uint16)

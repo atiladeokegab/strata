@@ -9,6 +9,8 @@ import * as THREE from 'three'
 import { beam, box, merge, M } from './geom.js'
 import { pbr } from '../look/textures.js'
 import { Part } from './Part.jsx'
+import { L } from './structures.jsx'
+import { OPEN_TIME_S } from './hydraulics.js'
 
 const mat = (kind, variant, repeat, props) =>
   Object.assign(new THREE.MeshStandardMaterial({ ...pbr(variant, repeat), ...props }), { userData: { kind } })
@@ -172,6 +174,86 @@ function Smoke({ sim }) {
   )
 }
 
+// ---- power flow: dashes run along the mains while water moves ----
+// Supply = pumps -> accumulators (both piers; the north pier is fed by mains along the riverbed).
+// Drive = accumulators -> hydraulic engines -> pinions on the rack quadrants.
+const OMEGA_MAX = (86 * Math.PI) / 180 / OPEN_TIME_S
+const DASH_M = 3 // metres per dash cycle
+const toWorld = (sx) => ([x, y, z]) => [x * sx, y, z * sx] // north-local -> world (south half is rotated 180°)
+const HDR = [0, -12, L.pierZ - 6] // pier header under the accumulators, north-local
+
+function halfPaths(sx) {
+  const w = (pts) => pts.map(toWorld(sx))
+  const supply = [-1, 1].map((s) => w([HDR, [s * 15.9, -12, HDR[2]]]))
+  const drive = [-1, 1].map((s) =>
+    w([[s * 17, -12, HDR[2] + 1.2], [s * 17, -7.9, -45], [s * 8, -7.9, -45], [s * 8, -7.9, L.pivotZ - 0.5], [s * 8, L.pivotY - L.rackR - 0.6, L.pivotZ], [s * 5.4, L.pivotY - L.rackR - 0.6, L.pivotZ]]),
+  )
+  return { supply, drive }
+}
+
+const PATHS = (() => {
+  const n = halfPaths(1), s = halfPaths(-1)
+  const southHdr = toWorld(-1)(HDR)
+  // house pumps along the approach main (x 7.4) into the south pier header
+  const feed = [[37, 0.6, ENGINES[0]], [37, 0.6, 151], [7.4, 0.6, 151], [7.4, -2, 146], [7.4, -2, 56], [7.4, -10, southHdr[2]], southHdr]
+  // under the river along the bed to the north pier header (status: inferred route)
+  const river = [southHdr, [0, L.bed + 0.6, 30], [0, L.bed + 0.6, -30], HDR]
+  return { supply: [feed, ...s.supply, ...n.supply], drive: [...s.drive, ...n.drive], river }
+})()
+
+function tube(pts, r) {
+  const path = new THREE.CurvePath()
+  for (let i = 1; i < pts.length; i++) path.add(new THREE.LineCurve3(new THREE.Vector3(...pts[i - 1]), new THREE.Vector3(...pts[i])))
+  const g = new THREE.TubeGeometry(path, Math.max(8, Math.ceil(path.getLength() / 1.5)), r, 6)
+  const uv = g.attributes.uv, k = path.getLength() / DASH_M
+  for (let i = 0; i < uv.count; i++) uv.setX(i, uv.getX(i) * k) // u in dash cycles, so one texture fits every length
+  return g
+}
+
+let DASH
+const dashTexture = () => {
+  if (!DASH) {
+    const c = Object.assign(document.createElement('canvas'), { width: 64, height: 4 })
+    const x = c.getContext('2d'), grad = x.createLinearGradient(0, 0, 64, 0)
+    grad.addColorStop(0, '#000'); grad.addColorStop(0.35, '#fff'); grad.addColorStop(0.55, '#fff'); grad.addColorStop(0.7, '#000')
+    x.fillStyle = grad
+    x.fillRect(0, 0, 64, 4)
+    DASH = new THREE.CanvasTexture(c)
+    DASH.wrapS = THREE.RepeatWrapping
+  }
+  const t = DASH.clone() // own offset, shared image
+  t.needsUpdate = true
+  return t
+}
+
+function Flow({ rt }) {
+  const sim = rt.sim
+  const ref = useRef()
+  const m = useMemo(() => {
+    const mk = (base) => new THREE.MeshStandardMaterial({ color: '#26333a', roughness: 0.5, metalness: 0.6, emissive: '#5fd4ff', emissiveMap: dashTexture(), emissiveIntensity: base })
+    return { supply: mk(0), drive: mk(0), river: mk(0.15) }
+  }, [])
+  const geo = useMemo(
+    () => ({ supply: merge(PATHS.supply.map((p) => tube(p, 0.26))), drive: merge(PATHS.drive.map((p) => tube(p, 0.26))), river: tube(PATHS.river, 0.3) }),
+    [],
+  )
+  useFrame((_, dt) => {
+    ref.current.visible = rt.explode.current < 0.05 // the mains don't follow exploded parts
+    const drive = Math.min(1, Math.abs(sim.omega) / OMEGA_MAX)
+    const supply = Math.min(1, drive + (sim.pumping ? 0.35 : 0))
+    for (const [k, level, base] of [['drive', drive, 0], ['supply', supply, 0], ['river', supply, 0.15]]) {
+      const mat = m[k]
+      mat.emissiveIntensity = base + level * 2.5
+      mat.emissiveMap.offset.x -= level * 1.2 * Math.min(dt, 0.1) // dashes run start -> end of each path
+    }
+  })
+  return (
+    <group ref={ref}>
+      {Object.keys(geo).map((k) => <mesh key={k} geometry={geo[k]} material={m[k]} />)}
+    </group>
+  )
+}
+
 export function EngineRoom({ rt, explode = [14, 6, 20] }) {
   return (
     <>
@@ -182,6 +264,7 @@ export function EngineRoom({ rt, explode = [14, 6, 20] }) {
         <Machinery sim={rt.sim} />
       </Part>
       <Smoke sim={rt.sim} />
+      <Flow rt={rt} />
     </>
   )
 }

@@ -15,7 +15,7 @@ import { createShip, stepShip, WAIT_X, HOLD_X, CRUISE } from './shipSim.js'
 import { leverAfter, leverForKey, leverLabel, KEY_STEP } from './drive.js'
 import { vesselForYear, needsLift, leafInput, CLEARANCE } from './vessels.js'
 import { createRiver, stepRiver, gap, CRAFT, CLEAR } from './riverSim.js'
-import { createTraffic, stepTraffic, onLeaves, roadY, TYPES, STOP_U, BASCULE_U, START_U, END_U, ABUT_Z, RAMP_LEN } from './trafficSim.js'
+import { createTraffic, stepTraffic, onLeaves, roadY, TYPES, STOP_U, BASCULE_U, START_U, END_U, ABUT_Z, RAMP_LEN, POST_X, POST_Z, POST_W, GATE_U } from './trafficSim.js'
 import { createLift, liftForShip, stepLift, liftSpeed, setLiftTimeScale, applyShipWarp, gatesClosed, heldLever, PASSED_X, FILM_SCALE } from './liftSequence.js'
 
 const MAX = (86 * Math.PI) / 180
@@ -509,4 +509,15 @@ console.log('geom materials untextured, all kinded ok')
         }
   }
   console.log('road corridor ok (clear at 0.5/1.7/3 m, road underfoot every 2 m, 1886-2026)')
+// Gate posts and signals vs the deck section and the tower arch: no clash with the masonry.
+{
+  const src = readFileSync(new URL('structures.jsx', import.meta.url), 'utf8')
+  const arch = Number(src.match(/archHalf: ([\d.]+)/)[1]), pierZ = Number(src.match(/pierZ: (-?[\d.]+)/)[1])
+  const colZ = pierZ + 9 // inner arch column nearest the river, 1 m square at x = ±archHalf
+  const sig = { x0: POST_X - 0.6, x1: POST_X + 0.125 } // signal head (0.6 wide at POST_X - 0.3) and its 0.25 post
+  assert.ok(POST_X + POST_W / 2 < arch && sig.x1 < arch, `gate post and signal inside the road arch (${POST_X + POST_W / 2}, ${sig.x1} < ${arch})`)
+  assert.ok(createTraffic(2026).lanes.every((l) => Math.abs(l.x) + 0.25 < POST_X - POST_W / 2), 'gate post clear of the walkers')
+  assert.ok(POST_Z + POST_W / 2 < colZ - 0.5, `gate post clear of the arch column (${POST_Z + POST_W / 2} < ${colZ - 0.5})`)
+  assert.ok(POST_Z + POST_W / 2 < -GATE_U + 0.5 && POST_Z > STOP_U, 'barrier sits between the stop line and the gate')
+  console.log('gate post checks ok')
 }

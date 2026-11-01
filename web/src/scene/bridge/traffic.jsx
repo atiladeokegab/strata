@@ -9,7 +9,7 @@ import * as THREE from 'three'
 import { useStore } from '../../store.js'
 import { Part } from './Part.jsx'
 import { box, merge, M } from './geom.js'
-import { createTraffic, stepTraffic, onLeaves, roadY, TYPES, GATE_U } from './trafficSim.js'
+import { createTraffic, stepTraffic, onLeaves, roadY, TYPES, GATE_U, POST_X, POST_Z, POST_W } from './trafficSim.js'
 import { STREET_DROP } from './structures.jsx'
 import { FOOTWAY_H } from './roadway.js'
 import { lift, stepLift, liftSpeed, gatesClosed } from './liftSequence.js'
@@ -138,8 +138,7 @@ export function Traffic({ rt, year, sim, maxAngle }) {
   )
 }
 
-// North-local: the gate across the southbound (east) lane and footway at z = -GATE_U.
-const POST_X = 9.6
+// North-local: the gate across the southbound (east) lane and footway, just short of z = -GATE_U.
 const ARM = POST_X - 0.2
 const RED_ON = new THREE.Color('#ff2a1a'), RED_OFF = new THREE.Color('#3a0d0a')
 const GREEN_ON = new THREE.Color('#30ff60'), GREEN_OFF = new THREE.Color('#0b2a12')
@@ -150,7 +149,7 @@ function Barrier({ gate }) {
   const green = useRef()
   const geo = useMemo(
     () => ({
-      posts: merge([box(0.5, 1.6, 0.5, POST_X, 0.8, -GATE_U), box(0.25, 4.2, 0.25, POST_X, 2.1, -GATE_U - 1.2), box(0.6, 1.4, 0.4, POST_X - 0.3, 4.2, -GATE_U - 1.2)]),
+      posts: merge([box(POST_W, 1.6, POST_W, POST_X, 0.8, POST_Z), box(0.25, 4.2, 0.25, POST_X, 2.1, -GATE_U - 1.2), box(0.6, 1.4, 0.4, POST_X - 0.3, 4.2, -GATE_U - 1.2)]),
       // arm hinged at the post; open it lies along the kerb, closed it swings across to the centre line
       bars: merge([box(0.18, 0.18, ARM, 0, 1.25, -ARM / 2), box(0.18, 0.18, ARM, 0, 0.55, -ARM / 2), ...Array.from({ length: 6 }, (_, i) => box(0.1, 0.7, 0.1, 0, 0.9, -0.6 - i * 1.5))]),
     }),
@@ -165,7 +164,7 @@ function Barrier({ gate }) {
   return (
     <>
       <mesh geometry={geo.posts} material={M.iron} castShadow />
-      <group ref={arm} position={[POST_X, 0, -GATE_U]}>
+      <group ref={arm} position={[POST_X, 0, POST_Z]}>
         <mesh geometry={geo.bars} material={M.white} castShadow />
       </group>
       <mesh ref={red} position={[POST_X - 0.62, 4.5, -GATE_U - 1.2]} material={M.white}>

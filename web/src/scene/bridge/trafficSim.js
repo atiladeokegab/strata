@@ -5,6 +5,11 @@
 
 export const GATE_U = 37 // barrier line on the fixed deck, just outside each bascule pivot
 export const STOP_U = -GATE_U - 1 // vehicles stop 1 m short of the gate
+// Barrier post (north-local x, z centre and width): on the footway edge, inside the tower's road arch
+// (|x| < L.archHalf 9.5) and clear of the arch's inner column at z -37..-36 (check.mjs asserts both).
+export const POST_X = 9.25
+export const POST_Z = -GATE_U - 0.4
+export const POST_W = 0.4
 export const BASCULE_U = 35 // |z| < 35 is on a bascule leaf
 // Past each shore abutment a ramp falls to the street (structures.jsx RAMP, STREET_DROP); road users
 // arrive and leave out on the level street beyond it, not at the abutment.

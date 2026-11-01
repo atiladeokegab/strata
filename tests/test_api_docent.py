@@ -47,6 +47,46 @@ def test_citation_required_for_each_sentence(place):
     assert validate_answer("It is 65 m tall [bridge-guide]. It is made of gold.", evidence)["refused"]
 
 
+@pytest.fixture
+def sourced_graph():
+    return {
+        "sources": [{"id": "guide", "title": "Guide"}, {"id": "archive", "title": "Archive"}],
+        "parts": [], "events": [],
+        "people": [{"name": "Horace Jones", "role": "architect", "sources": ["guide"]}],
+        "related_places": [{"name": "Tower of London", "relationship": "nearby historic landmark", "sources": ["archive"]}],
+        "facts": [
+            {"id": "tower-materials", "text": "North tower materials: granite and steel.", "source": "guide", "status": "text-attested"},
+            {"id": "unverified-span", "text": "The span is 400 metres.", "source": "guide", "status": "inferred", "value": 400},
+        ],
+    }
+
+
+def test_retrieves_person_role_with_source_citation(sourced_graph):
+    evidence = retrieve(sourced_graph, "Who designed the bridge?")
+    architect = next(fact for fact in evidence if fact.get("name") == "Horace Jones")
+    assert architect["role"] == "architect" and architect["cite"] == ["guide"]
+    assert not validate_answer("Horace Jones was the architect [guide].", [architect])["refused"]
+
+
+def test_retrieves_single_source_material_fact(sourced_graph):
+    sourced_graph["parts"] = [
+        {"id": f"north-tower-{i}", "name": "North tower", "summary": "A tower on the north side.", "sources": ["guide"]}
+        for i in range(5)
+    ]
+    evidence = retrieve(sourced_graph, "What materials are used in the north tower?")
+    materials = next(fact for fact in evidence if fact.get("fact_id") == "tower-materials")
+    assert materials["cite"] == ["guide"]
+    assert not validate_answer("The record lists granite and steel [guide].", [materials])["refused"]
+    selected = retrieve(sourced_graph, "What materials are used in the north tower?", "north-tower-0")
+    assert selected[0]["fact_id"] == "north-tower-0"
+    assert any(fact["fact_id"] == "tower-materials" for fact in selected)
+
+
+def test_inferred_fact_is_excluded(sourced_graph):
+    evidence = retrieve(sourced_graph, "What is the inferred span length?")
+    assert all(fact.get("fact_id") != "unverified-span" for fact in evidence)
+
+
 def test_answer_stream_never_yields_unsupported_number(monkeypatch, place):
     monkeypatch.setenv("OPENAI_API_KEY", "fake")
     class Stream:

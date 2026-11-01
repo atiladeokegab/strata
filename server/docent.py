@@ -7,7 +7,7 @@ import re
 from httpx import HTTPError
 from openai import AsyncOpenAI, OpenAIError
 
-from .search import ranked
+from .search import documents, terms
 
 REFUSAL = "I don't have a cited fact for that in this exhibit. Try asking about a bridge part or a historical event."
 INSTRUCTIONS = """You are Strata's Tower Bridge docent. Answer the question using ONLY the evidence below.
@@ -28,15 +28,32 @@ def refusal():
 
 def retrieve(place, question, part_id=None):
     sources = {source["id"] for source in place.get("sources", [])}
-    records = []
-    if part_id:
-        records.extend(part for part in place.get("parts", []) if part["id"] == part_id)
-    records.extend(record for document, record in ranked(place, question) if document["kind"] != "source")
+    query = terms(question)
+    if query & {"design", "designed", "designer"}:
+        query.add("architect")
+    candidates = [record for document, record in documents(place) if document["kind"] != "source"]
+    for collection in ("people", "related_places", "facts"):
+        candidates.extend(place.get(collection, []))
+    scored = []
+    for record in candidates:
+        if record.get("status") == "inferred":
+            continue
+        label = " ".join(str(record.get(key, "")) for key in ("name", "role", "relationship", "title", "text"))
+        score = 3 * len(query & terms(label)) + len(query & terms(json.dumps(record)))
+        if score:
+            scored.append((score, record))
+    records = [part for part in place.get("parts", []) if part["id"] == part_id]
+    records.extend(record for _, record in sorted(scored, key=lambda item: -item[0]))
     evidence = []
     for record in records:
-        fact = {key: record[key] for key in ("name", "summary", "year", "title", "text") if key in record}
-        fact["fact_id"] = record.get("id")
-        fact["cite"] = [source for source in record.get("sources", []) if source in sources]
+        fact = {key: record[key] for key in ("name", "summary", "year", "title", "text", "role", "relationship", "value", "status") if key in record}
+        fact["fact_id"] = record.get("id") or record.get("name") or record.get("title") or record.get("year")
+        cited = record.get("sources", [])
+        if isinstance(cited, str):
+            cited = [cited]
+        if record.get("source"):
+            cited = [*cited, record["source"]]
+        fact["cite"] = [source for source in cited if source in sources]
         fact["dims"] = {key: dim for key, dim in record.get("dims", {}).items()
                         if dim.get("status") in ("text-attested", "measured") and dim.get("source") in sources}
         fact["cite"] = sorted(set(fact["cite"]) | {dim["source"] for dim in fact["dims"].values()})

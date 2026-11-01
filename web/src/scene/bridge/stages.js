@@ -44,6 +44,7 @@ export const ERAS = {
   walkwaysClosed: 1910, // closed to the public for lack of use
   asphalt: 1930, // carriageway wood blocks -> asphalt, and painted markings; inferred, no dated source yet
   blackout: 1939, // wartime: lamps dark, kerbs and lamp posts banded white, sandbags (blackout from 1 Sept 1939)
+  thirdEngine: 1942, // a third steam pumping engine added (Wikipedia, citing Milne, The Thames at War, 2020, p.153)
   blackoutEnd: 1945,
   electricLamps: 1950, // approach lanterns gas -> electric; inferred, no dated source yet
   electricDrive: 1976, // steam pumping engines replaced by electro-hydraulic drive
@@ -103,6 +104,7 @@ export function eraFor(year, eras = FALLBACK) {
     gasLamps: year < y('electricLamps'),
     woodBlocks: year < y('asphalt'),
     glazed: year >= y('walkwaysReopened'),
+    thirdEngine: year >= y('thirdEngine'),
     steam: year < y('electricDrive'),
     nightLighting: year >= y('nightLighting'),
     olympics: year === y('olympics'),

@@ -67,12 +67,12 @@ export default function Identify() {
   const res = state?.result
   return (
     <>
-      <button className="rm-open id-open" onClick={() => setState({ status: 'pick' })}>Your own eyes</button>
+      <button className="rm-open id-open" onClick={() => setState({ status: 'pick' })}>Identify a photo</button>
       {state && (
         <div className="rm-backdrop" onClick={() => setState(null)}>
           <div className="rm-modal" role="dialog" aria-modal="true" aria-label="Your photo of the bridge" onClick={(e) => e.stopPropagation()}>
             <header className="rm-head">
-              <h2>Through your own eyes</h2>
+              <h2>Identify the parts in a photo</h2>
               <button className="rm-close" onClick={() => setState(null)} aria-label="Close">×</button>
             </header>
 

@@ -124,8 +124,8 @@ export default function Home({ onEnter }) {
           onCreated={({ camera }) => camera.lookAt(-70, 10, 0)}
           gl={{ antialias: true, powerPreference: 'high-performance', toneMapping: ACESFilmicToneMapping, toneMappingExposure: 1.05 }}
         >
-          <color attach="background" args={['#0b0b09']} />
-          <fog attach="fog" args={['#0b0b09', 900, 1700]} />
+          <color attach="background" args={['#0a0a0b']} />
+          <fog attach="fog" args={['#0a0a0b', 900, 1700]} />
           <WarmLightRig />
           <LightPool />
           <Turntable still={still} />

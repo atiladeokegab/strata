@@ -1,8 +1,8 @@
 // <Buildings />: the real buildings around Tower Bridge (Tower of London, City Hall, the Shard, Shad Thames,
 // St Katharine Docks, the City towers), OpenStreetMap footprints extruded to LiDAR heights. Baked by
 // scripts/buildings/bake.py. The always-works ground truth: shown whenever Google's photoreal tiles are not.
-// Era: a building whose start year (OSM start_date, or 1950 for an undated tower over 40 m) is after the
-// timeline year is collapsed in the vertex shader, so scrubbing costs nothing.
+// Era: before 1950 only buildings with an OSM start_date of 1894 or earlier show; from 1950 a building shows once
+// its start year has passed. Hidden ones collapse in the vertex shader, so scrubbing costs nothing.
 import { useEffect, useMemo, useState } from 'react'
 import * as THREE from 'three'
 import { useStore } from '../store'
@@ -51,6 +51,8 @@ const LOOK = {
   drape: { color: '#ffffff', roughness: 0.95 }, // roofs inside the LiDAR tile wear the terrain's aerial photo (or 1890s map)
 }
 const TERRAIN = '/terrain/tower-bridge/'
+const HISTORIC_BEFORE = 1950 // the timeline's historic years, as in google/state.js
+const BUILT_BY = 1894 // the bridge opened: a building dated after this has no place in the historic scene
 
 // Era cut and contact shadow, injected into a stock material (and its shadow depth twin).
 function eraPatch(uniforms, shade) {
@@ -83,7 +85,8 @@ function build(data) {
     const geo = new THREE.ExtrudeGeometry(shape, { depth: bd.t - bd.b, bevelEnabled: false })
     geo.rotateX(-Math.PI / 2) // shape (x, -z) extruded along +y
     geo.translate(0, bd.b, 0)
-    const start = bd.s ?? -1e4
+    // before 1950 only buildings with evidence of standing by 1894 (OSM start_date) show; the LiDAR relief carries the rest
+    const start = bd.s != null && bd.s <= BUILT_BY ? bd.s : Math.max(bd.s ?? HISTORIC_BEFORE, HISTORIC_BEFORE)
     for (const grp of geo.groups) {
       if (grp.materialIndex !== 0) push(out[bd.k] || out.b, geo, grp, start, bd.b)
       else if (bd.l) push(out.drape, geo, grp, start, bd.b, tileUv)

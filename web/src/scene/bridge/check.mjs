@@ -121,3 +121,14 @@ for (const y of [1900, 1940, 1960, 1985, 2026]) {
   assert.ok(moved, `${y}: the ${v.kind} actually passed the craft`)
 }
 console.log('ship checks ok')
+
+import { placeLabels, labelSize, CALLOUTS } from './callouts.js'
+const lab = (id, x, y) => ({ id, x, y, ...labelSize('North tower') })
+const pl = placeLabels([lab('a', 500, 400), lab('b', 502, 401), lab('c', 900, 400), lab('off', -5, 400)], 1400, 900)
+assert.ok(pl.a && pl.b && pl.c && !pl.off, 'labels for on-screen anchors, none for off-screen')
+const box = (id) => ({ x: (id === 'c' ? 900 : id === 'b' ? 502 : 500) + pl[id].dx, y: 400 + pl[id].dy })
+assert.ok(Math.abs(box('a').x - box('b').x) >= labelSize('North tower').w || Math.abs(box('a').y - box('b').y) >= 22, 'overlapping anchors get separate label spots')
+const crowd = placeLabels(Array.from({ length: 20 }, (_, i) => lab(`k${i}`, 700, 450)), 1400, 900)
+assert.ok(Object.keys(crowd).length <= 8 && Object.keys(crowd).length >= 3, 'a crowd keeps only labels that fit')
+assert.equal(new Set(CALLOUTS.map((c) => c.id)).size, CALLOUTS.length)
+console.log('callout checks ok')

@@ -12,6 +12,7 @@ import { createShip, stepShip, CRUISE } from './shipSim.js'
 import { lift, liftSpeed, applyShipWarp } from './liftSequence.js'
 import { vesselForYear, leafInput } from './vessels.js'
 import { RiverCraft } from './river.jsx'
+import { LITE } from '../look/tier.js'
 
 
 // Hull plan outline in (x, z): transom stern at +x, pointed bow at -x.
@@ -40,7 +41,7 @@ function hullGeo(y0, h, grow = 1) {
     const t = THREE.MathUtils.clamp((y + 2.5) / 6.5, 0, 1)
     p.setZ(i, p.getZ(i) * (0.35 + 0.65 * Math.sqrt(t)) * grow)
     p.setX(i, x * grow)
-    p.setY(i, y + Math.max(0, -x - 14) * 0.09 * t)
+    p.setY(i, y + (Math.max(0, -x - 14) * 0.09 + Math.max(0, x - 14) * 0.05) * t) // sheer: bow and quarter rise
   }
   g.computeVertexNormals()
   return g
@@ -68,11 +69,13 @@ const tri = (a, b, c) => {
   return g
 }
 
-// x, mast top, and yards [height, width] bottom to top. Heights above the waterline.
+// x, mast top, tops/crosstrees heights (where each mast section ends), and yards [height, width]
+// bottom to top. Heights above the waterline. A barque: square sails on fore and main, the mizzen
+// carries only fore-and-aft canvas (spanker and gaff topsail).
 const MASTS = [
-  { x: -13, top: 38, yards: [[13, 19], [20.5, 16], [27, 12.5], [32.5, 9]] },
-  { x: 1, top: 40, yards: [[13, 20], [21, 17], [28, 13], [34, 9.5]] },
-  { x: 14, top: 35, yards: [[14, 15], [21, 12.5], [27, 9.5]] },
+  { x: -13, top: 38, cross: [18.8, 30.6], yards: [[13, 19], [20.5, 16], [27, 12.5], [32.5, 9]] },
+  { x: 1, top: 40, cross: [19.4, 32], yards: [[13, 20], [21, 17], [28, 13], [34, 9.5]] },
+  { x: 14, top: 35, cross: [20], yards: [] },
 ]
 const DECK = 4
 const BOWSPRIT = [-42, 9, 0]
@@ -83,8 +86,14 @@ function buildShip() {
   const lines = []
   const seg = (a, b) => lines.push(...a, ...b)
   for (const m of MASTS) {
-    spars.push(beam([m.x, DECK - 1, 0], [m.x, m.top, 0], 0.45, 8))
-    spars.push(box(1.6, 0.5, 2.6, m.x, m.yards[1][0] - 1.2, 0)) // top platform
+    // lower mast, topmast, topgallant: each section thinner, stepped forward of the one below
+    const ends = [DECK - 1, ...m.cross, m.top]
+    for (let k = 0; k + 1 < ends.length; k++) {
+      const x = m.x - k * 0.45
+      spars.push(beam([x, ends[k] - (k ? 1.6 : 0), 0], [x, ends[k + 1] + (k + 2 < ends.length ? 1 : 0), 0], 0.45 - k * 0.12, 8))
+    }
+    spars.push(box(2, 0.4, 3.2, m.x - 0.2, m.cross[0], 0)) // top platform
+    if (m.cross[1]) spars.push(box(0.9, 0.25, 2.4, m.x - 0.6, m.cross[1], 0)) // crosstrees
     m.yards.forEach(([y, w], i) => {
       spars.push(beam([m.x, y, -w / 2], [m.x, y, w / 2], 0.2, 6))
       const below = i ? m.yards[i - 1] : [DECK + 2.5, w * 0.9]
@@ -92,16 +101,22 @@ function buildShip() {
       seg([m.x, y, -w / 2], [m.x - 0.6, below[0], -below[1] * 0.45]) // sheets
       seg([m.x, y, w / 2], [m.x - 0.6, below[0], below[1] * 0.45])
     })
-    // shrouds and ratlines-ish backstays, port and starboard
+    // shrouds with ratlines, and backstays, port and starboard
     for (const z of [-1, 1]) {
-      const head = [m.x, m.yards[1][0] - 1, 0]
-      for (const dx of [-1.5, 0, 1.5]) seg(head, [m.x + dx + 2, DECK + 0.6, z * 4.4])
+      const head = [m.x, m.cross[0] - 0.4, z * 1.2]
+      const feet = [-1.5, 0, 1.5].map((dx) => [m.x + dx + 1.5, DECK + 0.6, z * 4.4])
+      for (const f of feet) seg(head, f)
+      if (!LITE)
+        for (let f = 0.06; f < 0.85; f += 0.055) {
+          const at = (q) => head.map((h, j) => q[j] + (h - q[j]) * f)
+          seg(at(feet[0]), at(feet[2]))
+        }
       seg([m.x, m.top - 0.5, 0], [m.x + 9, DECK + 0.6, z * 4.2])
     }
   }
   // fore-and-aft stays: mast heads to the next mast's foot, and the forestays to the bowsprit
-  seg([MASTS[1].x, MASTS[1].top - 1, 0], [MASTS[0].x, MASTS[0].yards[1][0], 0])
-  seg([MASTS[2].x, MASTS[2].top - 1, 0], [MASTS[1].x, MASTS[1].yards[1][0], 0])
+  seg([MASTS[1].x, MASTS[1].top - 1, 0], [MASTS[0].x, MASTS[0].cross[0], 0])
+  seg([MASTS[2].x, MASTS[2].top - 1, 0], [MASTS[1].x, MASTS[1].cross[0], 0])
   seg([MASTS[0].x, MASTS[0].top - 1, 0], BOWSPRIT)
   seg([MASTS[0].x, MASTS[0].yards[2][0], 0], [-34, 7.2, 0])
   seg(BOWSPRIT, [-27, 1, 0]) // bobstay
@@ -109,13 +124,17 @@ function buildShip() {
   // jibs on the forestays
   sails.push(tri([MASTS[0].x - 1, 30, 0], [-38, 8.6, 0], [-22, 8.5, 0]))
   sails.push(tri([MASTS[0].x - 1, 22, 0.2], [-32, 7.4, 0.2], [-19, 7.5, 0.2]))
-  // spanker gaff and boom on the mizzen
-  spars.push(beam([MASTS[2].x, 12, 0], [MASTS[2].x + 11, 14.5, 0], 0.18))
-  spars.push(beam([MASTS[2].x, DECK + 2.5, 0], [MASTS[2].x + 12, DECK + 2.5, 0], 0.2))
+  // spanker (gaff and boom) and a gaff topsail above it on the mizzen
+  const mz = MASTS[2].x
+  const peak = [mz + 11, 18, 0]
+  spars.push(beam([mz, 15.5, 0], peak, 0.18))
+  spars.push(beam([mz, DECK + 2.5, 0], [mz + 12, DECK + 2.5, 0], 0.2))
   sails.push(
-    tri([MASTS[2].x + 0.4, 12, 0], [MASTS[2].x + 11, 14.5, 0], [MASTS[2].x + 12, DECK + 2.7, 0]),
-    tri([MASTS[2].x + 0.4, 12, 0], [MASTS[2].x + 12, DECK + 2.7, 0], [MASTS[2].x + 0.4, DECK + 2.7, 0]),
+    tri([mz + 0.4, 15.5, 0], peak, [mz + 12, DECK + 2.7, 0]),
+    tri([mz + 0.4, 15.5, 0], [mz + 12, DECK + 2.7, 0], [mz + 0.4, DECK + 2.7, 0]),
+    tri([mz + 0.3, 28, 0], [mz + 0.4, 16.2, 0], [peak[0] - 0.5, peak[1] + 0.3, 0]),
   )
+  seg([mz, MASTS[2].top - 0.3, 0], peak) // peak halyard
   // ensign staff at the transom
   spars.push(beam([24.5, DECK, 0], [26.5, DECK + 7, 0], 0.12))
   const rig = new THREE.BufferGeometry()
@@ -123,11 +142,14 @@ function buildShip() {
   const deck = new THREE.ShapeGeometry(hullShape(), 10).rotateX(Math.PI / 2)
   deck.attributes.position.array.forEach((_, i, a) => i % 3 === 1 && (a[i] = DECK + 0.02))
   deck.scale(0.97, 1, 0.94)
+  // painted ports along the white band, the merchantman's habit of the period
+  const ports = []
+  for (let x = -11; x <= 7; x += 2.6) for (const z of [-1, 1]) ports.push(box(0.75, 0.42, 0.12, x, 2.78, z * 4.42))
   return {
-    hull: hullGeo(-2.5, 6.5),
+    hull: merge([hullGeo(-2.5, 6.5), ...ports]),
     band: hullGeo(2.4, 0.7, 1.025),
-    deck,
-    works: merge([box(7, 2.2, 4.5, 18, DECK + 1.1, 0), box(5, 1.6, 3.6, -5, DECK + 0.8, 0), box(2, 1.4, 2, 20, DECK + 2.9, 0)]),
+    // deck and deckhouses share the deck timber: one draw
+    deck: merge([deck, box(7, 2.2, 4.5, 18, DECK + 1.1, 0), box(5, 1.6, 3.6, -5, DECK + 0.8, 0), box(2, 1.4, 2, 20, DECK + 2.9, 0)]),
     spars: merge(spars),
     sails: merge(sails),
     rig,
@@ -189,8 +211,7 @@ function Barque({ mats }) {
     <>
       <mesh geometry={geo.hull} material={mats.hull} castShadow receiveShadow />
       <mesh geometry={geo.band} material={mats.band} />
-      <mesh geometry={geo.deck} material={mats.deck} receiveShadow />
-      <mesh geometry={geo.works} material={mats.deck} castShadow />
+      <mesh geometry={geo.deck} material={mats.deck} castShadow receiveShadow />
       <mesh geometry={geo.spars} material={mats.spars} castShadow />
       <mesh geometry={geo.sails} material={mats.sails} castShadow />
       <lineSegments geometry={geo.rig} material={mats.rig} />
@@ -281,6 +302,7 @@ function Clipper({ mats }) {
 
 const MESH = { barque: Barque, tug: Tug, coaster: Coaster, clipper: Clipper }
 const FLAG_AT = { barque: [26.4, DECK + 6.2, 0], tug: [12.2, 4.6, 0], coaster: [21, 6, 0], clipper: [15, 3.8, 0] }
+const FLAG_SIZE = { barque: 0.8, tug: 0.5, coaster: 0.6, clipper: 0.45 } // ensign scale against a 3.2 m flag
 const PUFFS = 7
 const PUFF = new THREE.IcosahedronGeometry(1, 1) // shared by every puff
 
@@ -346,7 +368,7 @@ export function Ship({ rt, year, maxAngle }) {
       <group ref={bob}>
         <Part id="ship" rt={rt}>
           <Mesh mats={mats} />
-          <group ref={flag} position={FLAG_AT[vessel.kind]}>
+          <group ref={flag} position={FLAG_AT[vessel.kind]} scale={FLAG_SIZE[vessel.kind]}>
             <mesh position={[1.6, 0, 0]} material={mats.flag}>
               <planeGeometry args={[3.2, 1.6]} />
             </mesh>

@@ -15,25 +15,65 @@ const paint = (g, hex) => {
 }
 const part = (hex, ...gs) => gs.map((g) => paint(g, hex))
 
+// Hull in plan with a pointed bow at -x (nose metres long) and a transom at +x, extruded from y0 up h;
+// the bottom is pinched (vee) so it reads as a boat, not a box.
+function pointed(len, beamW, h, y0 = -0.4, nose = len * 0.35, x0 = 0) {
+  const a = x0 - len / 2, b = x0 + len / 2, w = beamW / 2
+  const s = new THREE.Shape()
+  s.moveTo(b, -w * 0.85)
+  s.lineTo(a + nose, -w)
+  s.quadraticCurveTo(a + nose * 0.25, -w * 0.8, a, 0)
+  s.quadraticCurveTo(a + nose * 0.25, w * 0.8, a + nose, w)
+  s.lineTo(b, w * 0.85)
+  s.closePath()
+  const g = new THREE.ExtrudeGeometry(s, { depth: h, bevelEnabled: false, curveSegments: 6 })
+  g.rotateX(Math.PI / 2).translate(0, y0 + h, 0)
+  const p = g.attributes.position
+  for (let i = 0; i < p.count; i++) if (p.getY(i) < y0 + h / 2) p.setZ(i, p.getZ(i) * 0.45)
+  g.computeVertexNormals()
+  return g
+}
+// Thames lighter in side profile: flat bottom, overhanging raked 'swim' at both ends.
+function swim(len, beamW, y0, h) {
+  const s = new THREE.Shape()
+  s.moveTo(-len / 2 + 3, y0)
+  s.lineTo(len / 2 - 3, y0)
+  s.lineTo(len / 2, y0 + h)
+  s.lineTo(-len / 2, y0 + h)
+  s.closePath()
+  return new THREE.ExtrudeGeometry(s, { depth: beamW, bevelEnabled: false }).translate(0, 0, -beamW / 2)
+}
+const ridge = (len, w, y0, h) => {
+  const s = new THREE.Shape()
+  s.moveTo(-w / 2, y0)
+  s.lineTo(w / 2, y0)
+  s.lineTo(0, y0 + h)
+  s.closePath()
+  return new THREE.ExtrudeGeometry(s, { depth: len, bevelEnabled: false }).rotateY(Math.PI / 2).translate(-len / 2, 0, 0)
+}
+
 const MODELS = {
   lighter: () => [
-    ...part('#6e3b22', box(20, 2.2, 6, 0, 0.2, 0), box(2.5, 1.4, 5, -10.2, 0.6, 0)),
-    ...part('#2a2622', box(15, 0.6, 4.6, 0.5, 1.6, 0)),
+    ...part('#6e3b22', swim(20, 6, -0.9, 2.2), box(16, 0.4, 4.8, 0.5, 1.45, 0)),
+    ...part('#2a2622', ridge(15, 4.6, 1.6, 0.7)),
   ],
   skiff: () => [
-    ...part('#a77b4f', box(6, 0.6, 1.3, 0, 0.25, 0), box(1.2, 0.5, 0.6, -3.2, 0.35, 0)),
+    ...part('#a77b4f', pointed(6, 1.3, 0.75, -0.25, 2.2)),
+    ...part('#5b3a22', box(0.25, 0.08, 1.15, -0.8, 0.42, 0), box(0.25, 0.08, 1.15, 1, 0.42, 0)), // thwarts
     ...part('#2b2f3a', box(0.5, 0.9, 0.5, -0.8, 0.95, 0), box(0.5, 0.9, 0.5, 1, 0.95, 0)),
     ...part('#d9c9a3', beam([-0.6, 0.9, -2.4], [-1, 0.6, 2.4], 0.05), beam([1.2, 0.9, -2.4], [0.8, 0.6, 2.4], 0.05)),
   ],
   launch: () => [
-    ...part('#14213d', box(12, 1.6, 3.6, 0, 0.3, 0), box(2, 1, 2.4, -6.6, 0.5, 0)),
+    ...part('#14213d', pointed(12, 3.6, 1.7, -0.6, 4.5)),
     ...part('#f2f2ee', box(4.2, 1.8, 3, 0.5, 2, 0)),
-    ...part('#ffd21f', box(12.05, 0.35, 3.65, 0, 1, 0)),
+    ...part('#1a2430', box(4.25, 0.55, 3.05, 0.5, 2.45, 0)), // wheelhouse windows
+    ...part('#ffd21f', pointed(12.1, 3.7, 0.35, 0.85, 4.5)), // yellow police band
     ...part('#2a6cff', box(0.4, 0.4, 0.4, 0.5, 3.1, 0)),
   ],
   rib: () => [
-    ...part('#3b3f45', beam([-4.5, 0.4, -1.1], [4.5, 0.4, -1.1], 0.45, 8), beam([-4.5, 0.4, 1.1], [4.5, 0.4, 1.1], 0.45, 8)),
-    ...part('#22252a', box(9, 0.4, 2.2, 0, 0.3, 0), box(1, 1.2, 1, 2, 1, 0)),
+    ...part('#3b3f45', beam([4.5, 0.4, -1.1], [-2, 0.4, -1.1], 0.45, 8), beam([4.5, 0.4, 1.1], [-2, 0.4, 1.1], 0.45, 8),
+      beam([-2, 0.4, -1.1], [-4.6, 0.45, 0], 0.42, 8), beam([-2, 0.4, 1.1], [-4.6, 0.45, 0], 0.42, 8)),
+    ...part('#22252a', pointed(9, 2.2, 0.7, -0.4, 3), box(1, 1.2, 1, 2, 1, 0)),
     ...part('#ff6a13', ...[-2.5, -1, 0.5].flatMap((x) => [box(0.6, 0.8, 0.5, x, 1, -0.6), box(0.6, 0.8, 0.5, x, 1, 0.6)])),
   ],
   pontoon: () => [

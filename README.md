@@ -27,7 +27,10 @@
 
 ### Try it in 60 seconds
 
-1. Press **Play the 60 s story**, or **Enter Tower Bridge** to explore on your own.
+1. On a first visit the guided tour opens by itself: **Next** and **Back** step through every feature, each one live.
+   - **Skip tour**, top right of the card, ends it at any step and drops you into the app.
+   - **Esc** does the same from the keyboard.
+   - **?** (top right of the app) then **Take the guided tour** starts it again; **Play the 60 s story** is the hands-off version.
 2. Drag to orbit the bridge.
 3. Scrub the timeline from 1886 to today.
 4. Tap any part, then ask the docent, for example "How do the bascules open?"

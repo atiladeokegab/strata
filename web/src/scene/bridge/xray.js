@@ -11,3 +11,11 @@ export function containersOf(sel) {
   if (sel === 'engine-room' || /^pier-(north|south)$/.test(sel)) return [sel] // a shell selected shows its insides
   return []
 }
+
+const noRaycast = () => {}
+// A faded shell lets clicks through to what it contains; otherwise the mesh keeps its own
+// raycast (InstancedMesh has its own). Part applies this to every mesh each change.
+export function clickThrough(o, faded) {
+  o.userData.raycast ??= o.raycast
+  o.raycast = faded ? noRaycast : o.userData.raycast
+}

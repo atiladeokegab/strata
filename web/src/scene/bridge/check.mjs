@@ -3,7 +3,8 @@ import assert from 'node:assert/strict'
 import { createHydraulics, stepHydraulics, OPEN_TIME_S, SIM_SPEED, BOLT_SETTLE_S, BOLT_TRAVEL_S, DRAW_UP, LIFT_DRAW, createCars, stepCars, carHeight, gaugePsi, PRESSURE_PSI } from './hydraulics.js'
 import { stageForYear, shown, STAGES, ERAS, eraFor, resolveYears } from './stages.js'
 import { readFileSync, readdirSync } from 'node:fs'
-import { containersOf } from './xray.js'
+import { containersOf, clickThrough } from './xray.js'
+import * as THREE from 'three'
 import { PART_IDS } from './parts.js'
 import { createShip, stepShip, WAIT_X, HOLD_X, CRUISE } from './shipSim.js'
 import { vesselForYear, needsLift, leafInput, CLEARANCE } from './vessels.js'
@@ -145,6 +146,26 @@ assert.deepEqual(containersOf('cabin-controls-south'), ['cabin-south'])
 assert.equal(gaugePsi(createHydraulics()), PRESSURE_PSI)
 const sag = gaugePsi({ stored: 0, valve: 1 })
 assert.ok(sag > 0 && sag < PRESSURE_PSI / 2, `empty accumulator sags the gauge, got ${sag}`)
+// negative control for click-through: a shell in front of an inner part catches the ray until faded
+{
+  const box = (z, name) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 0.2), new THREE.MeshBasicMaterial())
+    m.name = name
+    m.position.z = z
+    return m
+  }
+  const scene = new THREE.Scene().add(box(0, 'shell'), box(-3, 'inner'))
+  scene.updateMatrixWorld(true)
+  const ray = new THREE.Raycaster(new THREE.Vector3(0, 0, 10), new THREE.Vector3(0, 0, -1))
+  const first = () => ray.intersectObjects(scene.children, true)[0]?.object.name
+  const shell = scene.getObjectByName('shell')
+  clickThrough(shell, false)
+  assert.equal(first(), 'shell', 'an opaque shell catches the click')
+  clickThrough(shell, true)
+  assert.equal(first(), 'inner', 'a faded shell lets the click through')
+  clickThrough(shell, false)
+  assert.equal(first(), 'shell', 'un-fading restores the shell')
+}
 // every <Part id> rendered in bridge/*.jsx is listed in PART_IDS
 {
   const dir = new URL('.', import.meta.url)

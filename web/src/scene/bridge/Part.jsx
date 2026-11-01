@@ -1,11 +1,11 @@
 import { useLayoutEffect, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
+import { clickThrough } from './xray.js'
 
 const HIGHLIGHT = new THREE.Color('#ffb547')
 const tmp = new THREE.Vector3()
 const DOWN = new THREE.Vector3(0, -1, 0)
-const noRaycast = () => {}
 
 // One clickable part. Every mesh inside is named by the part id (the shared key), gets its own
 // material clones so highlight and x-ray never leak to other parts, and eases towards its
@@ -30,7 +30,6 @@ export function Part({ id, rt, home = [0, 0, 0], explode = [0, 0, 0], xray = fal
         o.material = o.material.clone()
         o.userData.ownMat = true
       }
-      o.userData.raycast ??= o.raycast // InstancedMesh keeps its own raycast
       list.push(o.material)
       ms.push(o)
     })
@@ -57,7 +56,7 @@ export function Part({ id, rt, home = [0, 0, 0], explode = [0, 0, 0], xray = fal
     if (was && was.glow === glow && was.fade === fade && was.shell === shell && was.steel === rt.steel.current && was.clip === clip) return
     last.current = { glow, fade, shell, steel: rt.steel.current, clip }
     // a see-through shell lets clicks through to what it contains; a dimmed part stays clickable
-    for (const o of meshes.current) o.raycast = shell > 0.3 ? noRaycast : o.userData.raycast
+    for (const o of meshes.current) clickThrough(o, shell > 0.3)
     for (const m of mats.current) {
       m.emissive.copy(HIGHLIGHT)
       m.emissiveIntensity = glow

@@ -32,6 +32,16 @@ from server.reimagine import router as reimagine_router; app.include_router(reim
 from server.identify import router as identify_router; app.include_router(identify_router)  # noqa: E402
 from server.config import router as config_router; app.include_router(config_router)  # noqa: E402
 
+# Let the portfolio (atilade.uk and its Vercel previews) iframe the app; no X-Frame-Options, it would block that.
+FRAME_ANCESTORS = "frame-ancestors 'self' https://atilade.uk https://*.atilade.uk https://*.vercel.app"
+
+
+@app.middleware("http")
+async def allow_portfolio_frame(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Content-Security-Policy"] = FRAME_ANCESTORS
+    return response
+
 
 @app.get("/api/health")
 def health():

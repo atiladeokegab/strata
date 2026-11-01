@@ -27,3 +27,11 @@ def test_static_compression_and_cache(tmp_path):
 
     r = c.get("/color.jpg", headers=gz)
     assert "content-encoding" not in r.headers and "cache-control" not in r.headers
+
+
+def test_every_response_allows_only_the_portfolio_to_frame():
+    from server.main import app
+
+    h = TestClient(app).get("/api/health").headers
+    assert "https://atilade.uk" in h["content-security-policy"]
+    assert "x-frame-options" not in h

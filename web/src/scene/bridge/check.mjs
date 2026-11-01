@@ -881,24 +881,27 @@ console.log('geom materials untextured, all kinded ok')
   console.log('abutment checks ok (arch springs at 6 m over |x| < 10)')
 }
 
-// 1939-45 sandbag walls: on the pier ledge in front of the tower's corner turrets (x 15.4), inside the
-// pier (|x| < 21, |z - pierZ| < 15), standing 2 m; LITE draws one slab per course.
+// 1939-45 sandbags: rounded sacks on the pier ledge, clear of the tower's corner turrets (x 15.4) and inside
+// the pier hexagon (corners (±21, ±15), (±28, 0) about pierZ), standing 2 m; LITE uses fewer, longer sacks.
 {
   const { sandbagWalls } = await import('./sandbags.js')
   const src = readFileSync(new URL('structures.jsx', import.meta.url), 'utf8')
   const L = { pierTop: Number(src.match(/pierTop: (-?[\d.]+)/)[1]), pierZ: Number(src.match(/pierZ: (-?[\d.]+)/)[1]) }
+  const counts = []
   for (const lite of [false, true]) {
     const o = { sand: [] }
     sandbagWalls(o, L, lite)
-    if (lite) assert.equal(o.sand.length, 16, 'lite sandbag walls are one slab per course')
+    counts.push(o.sand.length)
     const b = new THREE.Box3()
     o.sand.forEach((g) => (g.computeBoundingBox(), b.union(g.boundingBox)))
     assert.ok(Math.abs(b.min.y - L.pierTop) < 0.01 && b.max.y >= L.pierTop + 1.9, `sandbags stand 2 m on the pier top (${b.min.y.toFixed(2)}..${b.max.y.toFixed(2)})`)
     for (const g of o.sand) {
-      const x = Math.abs(g.boundingBox.min.x + g.boundingBox.max.x) / 2, half = (g.boundingBox.max.x - g.boundingBox.min.x) / 2
-      assert.ok(x - half > 15.4 && x + half < 21, `sandbags clear of the turrets and on the pier (x ${(x - half).toFixed(2)}..${(x + half).toFixed(2)})`)
+      const { min, max } = g.boundingBox, x0 = Math.min(Math.abs(min.x), Math.abs(max.x)), x1 = Math.max(Math.abs(min.x), Math.abs(max.x))
+      const dz = Math.max(Math.abs(min.z - L.pierZ), Math.abs(max.z - L.pierZ)), halfZ = x1 <= 21 ? 15 : (15 * (28 - x1)) / 7
+      assert.ok(x0 > 15.4 && min.x * max.x > 0, `sandbags clear of the turrets (x ${min.x.toFixed(2)}..${max.x.toFixed(2)})`)
+      assert.ok(dz < halfZ, `sandbags on the pier (x ${x1.toFixed(2)}, dz ${dz.toFixed(2)})`)
     }
-    assert.ok(b.min.z > L.pierZ - 15 && b.max.z < L.pierZ + 15, 'sandbags within the pier length')
   }
+  assert.ok(counts[1] < counts[0], `LITE draws fewer sacks (${counts})`)
   console.log('sandbag wall checks ok')
 }

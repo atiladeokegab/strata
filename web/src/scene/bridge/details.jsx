@@ -10,7 +10,7 @@ import { LITE } from '../look/tier.js'
 import { leafKit } from './basculeDetail.jsx'
 import { walkwayKnees, walkwayLamps } from './walkway.js'
 import { POST_X, POST_Z } from './trafficSim.js'
-import { sandbagWalls } from './sandbags.js'
+import { sandbagWalls, sack } from './sandbags.js'
 
 // Renders { materialKey: [geometries] } as one merged mesh per material.
 // materials: optional {key: material} overriding M for some keys (e.g. lantern glass by era)
@@ -195,14 +195,14 @@ export const kit = () => ({ iron: [], glass: [], gold: [], white: [], stone: [],
 
 // Wartime sandbags (inferred: general ARP practice, no Tower Bridge photo of them yet). One merged
 // mesh per tower Part, so 1939-44 costs two draw calls on both tiers; LITE has only the pier walls (sandbags.js).
-const SAND = new THREE.MeshStandardMaterial({ color: '#cdbd92', roughness: 0.95 }) // pale enough to read against the granite from the river
+const SAND = new THREE.MeshStandardMaterial({ color: '#8f7650', roughness: 1 }) // hessian: browner than the granite, so it reads from the river
 function sandbags(out, x, z, w, d, courses) {
   const along = w >= d, len = along ? w : d, n = Math.max(1, Math.round(len / 0.6))
   for (let c = 0; c < courses; c++) {
     const k = n - (c % 2), l = len - (c % 2) * (len / n), cross = (along ? d : w) - c * 0.06 // stagger every other course
     for (let i = 0; i < k; i++) {
       const t = -l / 2 + ((i + 0.5) * l) / k, size = l / k - 0.04
-      out.sand.push(along ? box(size, 0.2, cross, x + t, 0.1 + c * 0.21, z) : box(cross, 0.2, size, x, 0.1 + c * 0.21, z + t))
+      out.sand.push(along ? sack(size * 1.08, 0.26, cross, x + t, 0.13 + c * 0.21, z) : sack(cross, 0.26, size * 1.08, x, 0.13 + c * 0.21, z + t))
     }
   }
 }

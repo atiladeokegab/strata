@@ -671,6 +671,36 @@
       "stage": 8
     },
     {
+      "year": 1940,
+      "title": "Wartime direct hit disables the bridge",
+      "text": "A direct hit in 1940 struck the high-level span and severed the hydraulic mechanism, leaving Tower Bridge out of service.",
+      "sources": [
+        "tb-ww2-milne"
+      ],
+      "stage": 8,
+      "status": "text-attested"
+    },
+    {
+      "year": 1941,
+      "title": "Parachute mine damages Tower Bridge",
+      "text": "In April 1941, a parachute mine blast near Tower Bridge seriously damaged a bascule, the towers and the engine room.",
+      "sources": [
+        "tb-ww2-milne"
+      ],
+      "stage": 8,
+      "status": "text-attested"
+    },
+    {
+      "year": 1942,
+      "title": "Third engine installed as wartime reserve",
+      "text": "A third engine was installed in 1942 as a reserve against enemy damage to the existing engines.",
+      "sources": [
+        "tb-ww2-milne"
+      ],
+      "stage": 8,
+      "status": "text-attested"
+    },
+    {
       "year": 1976,
       "title": "Electric power replaces steam",
       "text": "Electric operation took over from the original steam-powered hydraulic system. The historic steam engines remain in the engine rooms.",
@@ -869,6 +899,13 @@
       "title": "Wikipedia: Barrage balloon",
       "url": "https://en.wikipedia.org/wiki/Barrage_balloon",
       "kind": "encyclopedia"
+    },
+    {
+      "id": "tb-ww2-milne",
+      "title": "Milne, The Thames at War, p. 153 (as cited by Wikipedia)",
+      "url": "https://en.wikipedia.org/wiki/Tower_Bridge#20th_century",
+      "kind": "secondary citation",
+      "locator": "Gustav Milne, The Thames at War: Saving London From the Blitz (Pen and Sword, 2020), p. 153; cited in the Tower Bridge article's 20th century section. Wikipedia was checked; the book was not consulted directly."
     }
   ],
   "people": [

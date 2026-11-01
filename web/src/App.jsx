@@ -6,9 +6,11 @@ import { Controls, Dock } from './ui/Dock'
 import Reimagine from './ui/Reimagine'
 import Identify from './ui/Identify'
 import Home from './ui/home/Home'
+import { makeSlot } from './ui/slots'
 import './App.css'
 
 const PLACE = 'tower-bridge'
+const GoogleCredit = makeSlot('GoogleCredit', ['../scene/GoogleTiles.jsx']) // Google's copyright must show while its tiles do
 
 function Credit() {
   const lidar = useStore((s) => s.lidar)
@@ -20,7 +22,23 @@ function Credit() {
     <p className="credit">
       <span className={`lidar-tag${lidar ? ' on' : ''}`}>LiDAR</span>
       {meta ? `${meta.source}${meta.licence ? ` · ${meta.licence}` : ''}` : 'Environment Agency 1 m LiDAR, terrain loading'}
+      <GoogleCredit />
     </p>
+  )
+}
+
+// phones: hold an arrow to walk; it presses the same keys WalkControls listens for
+const PAD = [['KeyW', '↑', 'Walk forward'], ['KeyA', '←', 'Step left'], ['KeyS', '↓', 'Walk back'], ['KeyD', '→', 'Step right']]
+function MovePad() {
+  const key = (type, code) => () => window.dispatchEvent(new KeyboardEvent(type, { code }))
+  return (
+    <div className="move-pad" aria-label="Walk controls">
+      {PAD.map(([code, glyph, label]) => (
+        <button key={code} type="button" className={`glass ${code}`} aria-label={label}
+          onPointerDown={key('keydown', code)} onPointerUp={key('keyup', code)} onPointerLeave={key('keyup', code)} onPointerCancel={key('keyup', code)}
+          onContextMenu={(e) => e.preventDefault()}>{glyph}</button>
+      ))}
+    </div>
   )
 }
 
@@ -55,6 +73,7 @@ export default function App() {
       </Controls>
       <Credit />
       {view === 'walk' && <p className="walk-hint glass">W A S D to walk · drag to look · Shift to run</p>}
+      {view === 'walk' && <MovePad />}
       {(!place || error) && <Loading error={error} retry={load} />}
     </div>
   )

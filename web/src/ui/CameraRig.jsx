@@ -2,7 +2,7 @@
 import { useEffect, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
-import { Box3, Vector3, MathUtils } from 'three'
+import { Box3, Raycaster, Vector3, MathUtils } from 'three'
 import { useStore } from '../store'
 import { isTourPlaying } from '../tour/tour.js'
 
@@ -83,8 +83,12 @@ export function CameraRig() {
 }
 
 // first person: WASD or arrows to walk (Shift to run), drag to look
+const DOWN = new Vector3(0, -1, 0)
+const ray = new Raycaster()
+ray.far = 60
+
 function WalkControls({ fly }) {
-  const { camera, gl } = useThree()
+  const { camera, gl, scene } = useThree()
   const keys = useRef(new Set())
   const look = useRef({ yaw: 0, pitch: 0 })
 
@@ -121,11 +125,19 @@ function WalkControls({ fly }) {
     const f = (k.has('KeyW') || k.has('ArrowUp') ? 1 : 0) - (k.has('KeyS') || k.has('ArrowDown') ? 1 : 0)
     const s = (k.has('KeyD') || k.has('ArrowRight') ? 1 : 0) - (k.has('KeyA') || k.has('ArrowLeft') ? 1 : 0)
     if (!f && !s) return
+    const prev = camera.position.clone()
     const speed = (k.has('ShiftLeft') || k.has('ShiftRight') ? 14 : 4.5) * Math.min(dt, 0.1)
     const sin = Math.sin(l.yaw), cos = Math.cos(l.yaw)
     camera.position.x += (-sin * f + cos * s) * speed
     camera.position.z += (-cos * f - sin * s) * speed
-    camera.position.y = EYE // shortcut: eye height above the deck plane, not the terrain; follow the ground once terrain exposes heights
+    // stand on whatever is underfoot (deck, bascule, terrain); a ledge more than a metre up blocks the step
+    const world = scene.getObjectByName('world')
+    if (world) {
+      ray.set(new Vector3(camera.position.x, camera.position.y - EYE + 1, camera.position.z), DOWN)
+      const hit = ray.intersectObject(world, true).find((h) => h.object.visible && h.object.isMesh)
+      if (hit) camera.position.y = hit.point.y + EYE
+      else camera.position.copy(prev) // nothing underfoot: the edge of the world
+    } else camera.position.y = EYE
   })
   return null
 }

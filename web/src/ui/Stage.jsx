@@ -11,6 +11,7 @@ const Water = makeSlot('Water', ['../scene/Water.jsx'], WaterStandIn)
 const TowerBridge = makeSlot('TowerBridge', ['../scene/bridge/TowerBridge.jsx', '../scene/bridge/index.jsx'], BridgeStandIn)
 const Look = makeSlot('Look', ['../scene/Look.jsx'], DefaultLook)
 const Tour = makeSlot('Tour', ['../scene/Tour.jsx'])
+const GoogleTiles = makeSlot('GoogleTiles', ['../scene/GoogleTiles.jsx'])
 const SUN = [-320, 260, 420] // late-afternoon light from the south-west
 
 function partOf(object, ids) {
@@ -34,7 +35,9 @@ export function Stage() {
       <Look />
       <Tour />
       <CameraRig />
+      <GoogleTiles />{/* outside the click group: Google meshes are never parts */}
       <group
+        name="world"
         onClick={(e) => { const id = hit(e); if (id) { e.stopPropagation(); select(id) } }}
         onPointerOver={(e) => { if (hit(e)) { e.stopPropagation(); document.body.style.cursor = 'pointer' } }}
         onPointerOut={() => { document.body.style.cursor = '' }}

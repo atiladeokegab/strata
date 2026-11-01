@@ -1,5 +1,6 @@
 // Map controls (top right: view, exploded, LiDAR and the photo tools) and the slim time bar (bottom: timeline, bascules).
 import { useStore, FIRST_YEAR, THIS_YEAR } from '../store'
+import { STAGES } from '../scene/bridge/stages.js'
 
 const VIEWS = [['orbit', 'Orbit'], ['top', 'Top'], ['walk', 'Walk']]
 
@@ -25,12 +26,15 @@ export function Controls({ children }) {
 export function Dock() {
   const { year, setYear, bascule, setBascule, place } = useStore()
   const events = (place?.events || []).filter((e) => e.year <= year).sort((a, b) => a.year - b.year)
-  const now = events.at(-1)
+  // the latest thing that had happened by this year: a construction stage or a dated event, whichever is more recent
+  const stage = STAGES.filter((s) => s.from <= year).at(-1)
+  const ev = events.at(-1)
+  const now = ev && (!stage || ev.year > stage.from) ? ev.title : stage?.label
   const maxAngle = place?.parts.find((p) => p.dims?.max_angle)?.dims.max_angle.value ?? 86
   return (
     <div className="dock glass">
       <label className="timeline">
-        <span className="row"><span className="year num">{year === THIS_YEAR ? 'Today' : year}</span><span className="event">{now ? now.title : 'Before construction'}</span></span>
+        <span className="row"><span className="year num">{year === THIS_YEAR ? 'Today' : year}</span><span className="event">{now || 'Before construction'}</span></span>
         <input type="range" min={FIRST_YEAR} max={THIS_YEAR} step={1} value={year} onChange={(e) => setYear(Number(e.target.value))} aria-label="Year" />
         <span className="ticks" aria-hidden="true">
           {(place?.events || []).map((e) => <i key={e.year + e.title} style={{ left: `${((e.year - FIRST_YEAR) / (THIS_YEAR - FIRST_YEAR)) * 100}%` }} />)}

@@ -142,8 +142,27 @@ export function lamp(out, x, y, z, era) {
     cyl(0.3, 0.14, 0.3, 8, x, y + 5.3, z),
     box(0.62, 0.08, 0.62, x, y + 5.5, z),
   )
-  out.lantern.push(box(0.5, 0.75, 0.5, x, y + 5.9, z))
-  out.gold.push(cone(0.48, 0.5, 4, x, y + 6.53, z), new THREE.ConeGeometry(0.07, 0.45, 5).translate(x, y + 7, z))
+  lampHead(out, x, y + 5.54, z, era?.gasLamps)
+}
+
+// Lantern heads by era. Shapes are inferred: no photo or drawing of the Tower Bridge lanterns found yet.
+// Gas (to 1949): a square lantern flaring to the top, corner glazing bars, a ladder bar for the lamplighter,
+// and a vented crown. Electric: a straight hexagonal lantern under a plain crown, no ladder bar or vent.
+// LITE keeps the glass and the crown only. All existing kit keys: +0 draw calls.
+function lampHead(out, x, y, z, gas) {
+  const h = 0.75, top = y + h
+  if (gas) {
+    out.lantern.push(new THREE.CylinderGeometry(0.36, 0.24, h, 4).rotateY(Math.PI / 4).translate(x, y + h / 2, z))
+    out.gold.push(cone(0.5, 0.42, 4, x, top + 0.21, z), cyl(0.06, 0.08, 0.22, 6, x, top + 0.5, z), new THREE.ConeGeometry(0.1, 0.12, 6).translate(x, top + 0.66, z)) // crown, vent, cowl
+    if (LITE) return
+    for (const [cx, cz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) out.steel.push(beam([x + cx * 0.17, y, z + cz * 0.17], [x + cx * 0.255, top, z + cz * 0.255], 0.018, 4))
+    out.steel.push(box(0.9, 0.05, 0.05, x, y - 0.55, z)) // ladder bar across the column
+  } else {
+    out.lantern.push(new THREE.CylinderGeometry(0.27, 0.24, h, 6).translate(x, y + h / 2, z))
+    out.gold.push(new THREE.ConeGeometry(0.36, 0.34, 6).translate(x, top + 0.17, z), new THREE.ConeGeometry(0.06, 0.3, 5).translate(x, top + 0.48, z))
+    if (LITE) return
+    out.steel.push(cyl(0.29, 0.29, 0.05, 6, x, top, z), cyl(0.26, 0.26, 0.05, 6, x, y, z)) // top and bottom rings
+  }
 }
 
 const dashes = (out, z0, z1) => {
@@ -181,7 +200,7 @@ function sandbags(out, x, z, w, d, courses) {
 export function ApproachDetails({ era }) {
   return (
     <Meshes
-      deps={[era?.blackout, era?.woodBlocks]}
+      deps={[era?.blackout, era?.woodBlocks, era?.gasLamps]}
       materials={lanternFor(era)}
       build={() => {
         const o = kit()
@@ -201,7 +220,7 @@ export function ApproachDetails({ era }) {
 export function DeckMarkings({ era }) {
   return (
     <Meshes
-      deps={[era?.blackout, era?.woodBlocks]}
+      deps={[era?.blackout, era?.woodBlocks, era?.gasLamps]}
       materials={{ sand: SAND }}
       build={() => {
         const o = kit()
@@ -221,7 +240,7 @@ export function DeckMarkings({ era }) {
 export function BasculeDetails({ era }) {
   return (
     <Meshes
-      deps={[era?.blackout, era?.woodBlocks]}
+      deps={[era?.blackout, era?.woodBlocks, era?.gasLamps]}
       materials={lanternFor(era)}
       build={() => {
         const o = kit()

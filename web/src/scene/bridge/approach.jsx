@@ -24,7 +24,7 @@ const onRamp = (w, h, x, z0, z1, drop, y0 = 0) => {
 export function RampDetails({ side = 'north', era }) {
   return (
     <Meshes
-      deps={[side, era?.blackout]}
+      deps={[side, era?.blackout, era?.gasLamps]}
       materials={lanternFor(era)}
       build={() => {
         const o = kit(), drop = STREET_DROP[side]

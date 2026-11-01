@@ -16,6 +16,7 @@ const BuildingsCredit = makeSlot('BuildingsCredit', ['../scene/Buildings.jsx']) 
 
 function Credit() {
   const lidar = useStore((s) => s.lidar)
+  const old = useStore((s) => s.year < 1950) // Terrain drapes the NLS 1890s map then
   const [meta, setMeta] = useState(null)
   useEffect(() => {
     fetch(`/terrain/${PLACE}/meta.json`).then((r) => (r.ok ? r.json() : null)).then(setMeta).catch(() => {})
@@ -23,7 +24,8 @@ function Credit() {
   return (
     <p className="credit">
       <span className={`lidar-tag${lidar ? ' on' : ''}`}>LiDAR</span>
-      {meta ? `${meta.source}${meta.licence ? ` · ${meta.licence}` : ''}` : 'Environment Agency 1 m LiDAR, terrain loading'}
+      {meta ? (meta.attribution ?? `${meta.source}${meta.licence ? ` · ${meta.licence}` : ''}`) : 'Environment Agency 1 m LiDAR, terrain loading'}
+      {old && <> · 1890s map: OS London 1893-96, <a href="https://maps.nls.uk/" target="_blank" rel="noreferrer">reproduced with the permission of the National Library of Scotland</a> (CC-BY)</>}
       <GoogleCredit />
       <BuildingsCredit />
     </p>

@@ -1,6 +1,7 @@
 import { Suspense, use, useEffect, useMemo } from 'react'
 import { useThree } from '@react-three/fiber'
 import * as THREE from 'three'
+import { useStore } from '../store'
 
 const BASE = '/terrain/tower-bridge/'
 let cache
@@ -133,12 +134,14 @@ function TerrainMesh({ step }) {
     g.computeBoundingSphere()
     return g
   }, [t, step])
-  const map = useMemo(() => {
-    const tex = new THREE.TextureLoader().load(BASE + 'color.jpg')
+  const old = useStore((s) => s.year < 1950) // before 1950 the ground is the OS 1893-96 London Town Plan (NLS)
+  const maps = useMemo(() => ['color.jpg', 'color-1890s.jpg'].map((f) => {
+    const tex = new THREE.TextureLoader().load(BASE + f) // both up front, so the year scrub swaps without a blank frame
     tex.colorSpace = THREE.SRGBColorSpace
     tex.anisotropy = gl.capabilities.getMaxAnisotropy()
     return tex
-  }, [gl])
+  }), [gl])
+  const map = maps[old ? 1 : 0]
   useEffect(() => () => geometry.dispose(), [geometry])
   return (
     <mesh name="terrain" geometry={geometry} raycast={noRaycast} castShadow receiveShadow>

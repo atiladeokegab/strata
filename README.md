@@ -25,6 +25,20 @@
 
 <p align="center"><b>Live app:</b> <a href="https://strata-901257379404.europe-west2.run.app">https://strata-901257379404.europe-west2.run.app</a></p>
 
+### Try it in 60 seconds
+
+1. Press **Enter Tower Bridge**, then **Play the story**.
+2. Drag to orbit the bridge.
+3. Scrub the timeline from 1886 to today.
+4. Tap any part, then ask the docent, for example "How do the bascules open?"
+5. Try the **Exploded**, **Top** and **Walk** buttons.
+
+### Built with Codex
+
+- **Atlas:** the sourced history graph and a validator that rejects unsourced numbers (`c0b7ed8`).
+- **Prometheus:** the cited docent, after benchmarking 8 models. `gpt-5.4-nano` cited 3 of 3 answers correctly, with a 0.42 s first token.
+- The full log, with session ids: [docs/codex.md](docs/codex.md).
+
 <p align="center">
   <img src="docs/img/hero.jpg" alt="Strata in the browser: Tower Bridge on the Thames over the LiDAR point cloud, with the glass side panel, the parts list and the timeline" width="100%">
 </p>
@@ -41,7 +55,7 @@ You can read that Tower Bridge took eight years to build, that its towers stand 
 
 First exhibit: **Tower Bridge**, London.
 
-## Try it
+## Everything you can try
 
 **Live:** [strata-901257379404.europe-west2.run.app](https://strata-901257379404.europe-west2.run.app)
 

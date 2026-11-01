@@ -2,7 +2,8 @@ import { Suspense, useEffect, useMemo } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { Water as WaterSurface } from 'three/examples/jsm/objects/Water.js'
-import { useTerrain } from './Terrain.jsx'
+import { useStore } from '../store'
+import { useGoogleShown, useTerrain } from './Terrain.jsx'
 import { SUN_COLOR, SUN_DIR } from './look/sun.js'
 
 function Surface({ sun }) {
@@ -48,6 +49,8 @@ const SUN = SUN_DIR.toArray() // the Look's sun, so the glints sit under the rea
 
 /** The Thames at the LiDAR water level, with slow animated reflections. `sun` should match the scene's key light. */
 export default function Water({ sun = SUN }) {
+  const lidar = useStore((s) => s.lidar)
+  if (useGoogleShown(lidar)) return null // Google's own Thames is showing
   return <Suspense fallback={null}><Surface sun={sun} /></Suspense>
 }
 

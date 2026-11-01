@@ -691,11 +691,12 @@
       "status": "text-attested"
     },
     {
-      "year": 1942,
-      "title": "Third engine installed as wartime reserve",
-      "text": "A third engine was installed in 1942 as a reserve against enemy damage to the existing engines.",
+      "year": 1941,
+      "title": "Third steam engine installed",
+      "text": "A third steam engine was added to the original two at Tower Bridge in 1941.",
       "sources": [
-        "tb-ww2-milne"
+        "tb-armstrong-engines",
+        "forncett-tower-bridge-engine"
       ],
       "stage": 8,
       "status": "text-attested"
@@ -906,6 +907,20 @@
       "url": "https://en.wikipedia.org/wiki/Tower_Bridge#20th_century",
       "kind": "secondary citation",
       "locator": "Gustav Milne, The Thames at War: Saving London From the Blitz (Pen and Sword, 2020), p. 153; cited in the Tower Bridge article's 20th century section. Wikipedia was checked; the book was not consulted directly."
+    },
+    {
+      "id": "tb-armstrong-engines",
+      "title": "Sir William Armstrong — the engines that powered Bridge Lifts",
+      "url": "https://www.towerbridge.org.uk/stories/sir-william-armstrong",
+      "kind": "institutional history",
+      "locator": "The engines that powered Bridge Lifts: third engine installed in 1941."
+    },
+    {
+      "id": "forncett-tower-bridge-engine",
+      "title": "The Tower Bridge Engine — Forncett Industrial Steam Museum",
+      "url": "https://www.forncettsteammuseum.co.uk/tower-bridge",
+      "kind": "museum collection record",
+      "locator": "The engine on display was added to the original two in 1941; separate builder entry also dates it to 1941."
     }
   ],
   "people": [

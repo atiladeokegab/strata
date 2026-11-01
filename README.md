@@ -63,7 +63,7 @@ Everything in "What you can do" above is being built today and lands here as it 
 
 ## What we built today
 
-Everything in this repo was built on 1 November 2026 at DevDay London, by one person working with a team of AI coding agents: the LiDAR terrain pipeline, the procedural bridge, the hydraulic simulation, the history graph and its data, the API and docent, and the web app.
+Everything in this repo was built at the DevDay Community Hackathon London on 1 November 2026, by one person working with a team of AI coding agents: the LiDAR terrain pipeline, the procedural bridge, the hydraulic simulation, the history graph and its data, the API and docent, and the web app.
 
 ## Use of Codex
 
@@ -141,4 +141,4 @@ Run the checks with `make smoke`.
 
 ---
 
-<p align="center">Built at DevDay London, 1 November 2026.</p>
+<p align="center">Built at the DevDay Community Hackathon London, 1 November 2026.</p>

@@ -23,6 +23,7 @@ import { EngineRoom } from './engineRoom.jsx'
 import { Ship } from './ship.jsx'
 import { Stairs, Lifts } from './interiors.jsx'
 import { Traffic } from './traffic.jsx'
+import { OpeningDay } from './opening.jsx'
 import { TopView } from './topview.jsx'
 import { liftSpeed, heldLever } from './liftSequence.js'
 import { LiftControls } from './liftControls.jsx'
@@ -186,6 +187,12 @@ export function TowerBridge(props) {
     <group ref={root} name="tower-bridge" {...props}>
       <Half side="north" rt={rt} st={st} towerTop={towerTop} era={era} maxAngle={maxAngle} />
       <Half side="south" rt={rt} st={st} towerTop={towerTop} era={era} maxAngle={maxAngle} />
+      {/* opening day, 30 June 1894: flags and bunting; rides no part, so hidden when exploded */}
+      {year === 1894 && (
+        <group visible={!exploded}>
+          <OpeningDay />
+        </group>
+      )}
       {year >= 1894 && <Ship rt={rt} year={year} maxAngle={maxAngle} />}
       {shown('walkway', st.stage) &&
         ['east', 'west'].map((side) => (

@@ -657,6 +657,14 @@ console.log('geom materials untextured, all kinded ok')
     assert.ok(p.traffic[0] <= 8, `${y} traffic draws ${p.traffic[0]} calls`)
     console.log(`  traffic ${y}: ${p.traffic[0]} draw calls, ${Math.round(p.traffic[1])} triangles`)
   }
+  // opening day dressing: 1894 only, staffs plus one flag material (2 calls; LITE drops only the bunting)
+  for (const [y, calls] of [[1894, 2], [1895, undefined]]) {
+    useStore.getState().setYear(y)
+    const p = {}
+    tally({ type: TowerBridge, props: {} }, null, p)
+    assert.equal(p.OpeningDay?.[0], calls, `${y}: opening day dressing draws ${p.OpeningDay?.[0]} calls`)
+    if (calls) console.log(`  opening day 1894: ${calls} draw calls, ${Math.round(p.OpeningDay[1])} triangles`)
+  }
   useStore.getState().setYear(2026)
 
   // Leaves at max_angle (nose bolts drawn): every part of the raised leaf assembly (detail, footways,

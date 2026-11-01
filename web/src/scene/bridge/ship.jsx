@@ -277,25 +277,45 @@ function Coaster({ mats }) {
   )
 }
 
-// Thames Clipper catamaran (~37 m): twin slim hulls, glazed cabin. Air draft ~6 m.
+// Plan-shaped slab: rectangle with a rounded nose at -x, extruded from y0 up h. rake pushes the top
+// face's nose aft by that many metres (a raked windscreen); the stern end stays vertical.
+function slab(len, beamW, nose, y0, h, rake = 0, x0 = 0) {
+  const a = x0 - len / 2, b = x0 + len / 2, w = beamW / 2
+  const s = new THREE.Shape()
+  s.moveTo(b, -w)
+  s.lineTo(a + nose, -w)
+  s.quadraticCurveTo(a, -w, a, 0)
+  s.quadraticCurveTo(a, w, a + nose, w)
+  s.lineTo(b, w)
+  s.closePath()
+  const g = new THREE.ExtrudeGeometry(s, { depth: h, bevelEnabled: false, curveSegments: 8 })
+  g.rotateX(Math.PI / 2).translate(0, y0 + h, 0)
+  const p = g.attributes.position
+  for (let i = 0; i < p.count; i++) if (p.getY(i) > y0 + h / 2) p.setX(i, a + rake + ((p.getX(i) - a) * (len - rake)) / len)
+  g.computeVertexNormals()
+  return g
+}
+
+// Thames Clipper catamaran (~37 m): twin slim hulls, a long glazed saloon with a raked front, white
+// skirt, overhanging roof and a small wheelhouse forward. Air draft ~7 m. One draw per material.
 function Clipper({ mats }) {
   const geo = useMemo(
     () => ({
-      hulls: merge([-3.4, 3.4].map((z) => hullGeo(-2.5, 6.5).scale(0.7, 0.42, 0.22).translate(0, 0, z))),
-      deck: box(32, 0.9, 9.4, -1, 2.2, 0),
-      cabin: box(24, 2.6, 8.4, -1.5, 3.9, 0),
-      glass: box(24.2, 1.1, 8.6, -1.5, 4.3, 0),
-      roof: merge([box(25, 0.3, 8.8, -1.5, 5.3, 0), beam([4, 5.4, 0], [4.4, 6.6, 0], 0.08)]),
+      navy: merge([
+        ...[-3.4, 3.4].map((z) => hullGeo(-2.5, 6.5).scale(0.7, 0.42, 0.22).translate(0, 0, z)),
+        slab(20.6, 8.8, 3.5, 5.2, 0.3, 0.3, 1.2), // roof, overhanging the glazing
+        beam([6, 5.5, 0], [6.4, 7, 0], 0.06), // radar mast
+      ]),
+      white: merge([slab(34, 9.6, 6, 2.0, 0.8, 0, -1.5), slab(23, 8.5, 4, 2.8, 0.8, 1, -0.5), box(3, 0.9, 9.4, 15.5, 2.9, 0)]),
+      glass: merge([slab(23, 8.2, 4, 2.8, 2.4, 3, -0.5), slab(4.2, 3.4, 1.4, 5.5, 1.1, 0.9, -5.4)]),
     }),
     [],
   )
   return (
     <>
-      <mesh geometry={geo.hulls} material={mats.navy} castShadow />
-      <mesh geometry={geo.deck} material={mats.white} castShadow />
-      <mesh geometry={geo.cabin} material={mats.white} castShadow />
+      <mesh geometry={geo.navy} material={mats.navy} castShadow />
+      <mesh geometry={geo.white} material={mats.white} castShadow />
       <mesh geometry={geo.glass} material={mats.glass} />
-      <mesh geometry={geo.roof} material={mats.navy} />
     </>
   )
 }

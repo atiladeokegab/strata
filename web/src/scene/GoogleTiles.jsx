@@ -9,7 +9,7 @@ import { GoogleCloudAuthPlugin } from '3d-tiles-renderer/core/plugins'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import * as THREE from 'three'
 import { useStore } from '../store'
-import { useGoogle } from './google/state'
+import { useGoogle, useGoogleShown, useGoogleWanted } from './google/state'
 import { FRAME_ROTATION_Y, ORIGIN, cutGap } from './google/frame'
 
 const draco = new DRACOLoader().setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/')
@@ -20,7 +20,7 @@ function clipGap({ scene }) {
 }
 
 export function GoogleTiles() {
-  const lidar = useStore((s) => s.lidar)
+  const wanted = useGoogleWanted(useStore((s) => s.lidar))
   const [key, setKey] = useState(null)
   const [t, setTiles] = useState(null) // the TilesRenderer, once it exists
 
@@ -64,9 +64,9 @@ export function GoogleTiles() {
 
   if (!key) return null
   return (
-    <group rotation-y={FRAME_ROTATION_Y} visible={!lidar}>
+    <group rotation-y={FRAME_ROTATION_Y} visible={wanted}>
       {/* errorTarget 20 is Google's recommendation; on a laptop at street level it keeps ~150 tiles. */}
-      <TilesRenderer ref={setTiles} errorTarget={20} enabled={!lidar} lruCache-minSize={600} lruCache-maxSize={900}>
+      <TilesRenderer ref={setTiles} errorTarget={20} enabled={wanted} lruCache-minSize={600} lruCache-maxSize={900}>
         <TilesPlugin plugin={GoogleCloudAuthPlugin} args={{ apiToken: key, autoRefreshToken: true }} />
         <TilesPlugin plugin={GLTFExtensionsPlugin} args={{ dracoLoader: draco }} />
         <TilesPlugin plugin={ReorientationPlugin} args={{ lat: rad(ORIGIN.lat), lon: rad(ORIGIN.lon), height: ORIGIN.height }} />
@@ -81,9 +81,9 @@ export function GoogleTiles() {
 
 // The copyright line Google requires while its tiles are on screen; build-4 mounts this in the credit pill.
 export function GoogleCredit() {
-  const lidar = useStore((s) => s.lidar)
-  const { status, credit } = useGoogle()
-  if (lidar || status !== 'ready') return null
+  const shown = useGoogleShown(useStore((s) => s.lidar))
+  const credit = useGoogle((s) => s.credit)
+  if (!shown) return null
   return <span className="google-credit"> · 3D tiles {credit || 'Google'}</span>
 }
 

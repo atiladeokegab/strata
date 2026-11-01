@@ -1,11 +1,12 @@
 // Georeference: our frame is metres, origin at the centre of the Tower Bridge road deck, x east, y up, z south.
 import * as THREE from 'three'
 
-// Measured against the tiles by raycasting: Google's deck reads y=0 here, its towers' inner faces sit at
-// z = +/-35 and its deck edges at x = +/-9.5, matching the procedural bridge.
+// lat/lon: the terrain's refined deck centre, OSGB 533670.3, 180265.1, through OSTN15 (1.8 m from where the
+// tiles' own bridge put it). Height and bearing were measured by raycasting the tiles: Google's deck reads y=0,
+// its towers' inner faces sit at z = +/-35 and its deck edges stay parallel to z (grid 20.95 deg + 1.51 convergence = 22.46).
 export const ORIGIN = {
-  lat: 51.50553, // degrees, centre of the deck between the bascules
-  lon: -0.075358,
+  lat: 51.505519, // degrees, centre of the deck between the bascules
+  lon: -0.075378,
   height: 58, // WGS84 ellipsoid height of the road deck, m
   bearing: 22.8, // deg the real bridge axis is turned east of north at its north end; turning by it lays the bridge on our z axis
 }

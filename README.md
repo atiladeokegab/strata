@@ -43,7 +43,7 @@ First exhibit: **Tower Bridge**, London.
 2. Press **Play the story** for the guided tour from 1886 to today. Add `?tour=1` to the link to start it straight away.
 3. Drag to orbit and scroll to zoom, or switch to **Top** or **Walk** at the top right.
 4. Tap any part of the bridge, or pick one from the panel. The camera flies to it and the inspector shows each figure with its source and status.
-5. Press **Exploded** to take the bridge apart and look inside the towers. Raise the **Bascules** and watch the traffic stop at the gates and the ship downstream wait, then sail through.
+5. Press **Exploded** to take the bridge apart and look inside the towers. Raise the **Bascules**, or drag a leaf, and watch the traffic stop at the gates and the ship downstream wait, then sail through.
 6. Drag the timeline. The site works, rigs, barges and scaffold come and go stage by stage, real archive photographs from 1892 to 1940 appear for the year, and the ticks on the timeline open the story of each event.
 7. Ask the docent, for example "How do the bascules open?", by typing or by voice.
 8. Press **See it in** a year to have the view repainted as a period photograph, or upload your own photo of the bridge to have its parts named.
@@ -68,7 +68,7 @@ Everything in this repo was built at the DevDay Community Hackathon London on 1 
 - **The app shell:** a museum-of-places Home stage, a full-screen 3D stage, a calm glass panel with the place card, search, part inspector and docent, orbit, top-down and walk views, fly-to-part, a phone move pad, and a timeline with story markers and sourced story cards.
 - **The bridge:** a procedural Tower Bridge whose meshes are named by part id, from the towers' parapets, pinnacles and turrets down to the bascule girders, chains and anchor plates. It explodes into its parts, and its cladding x-rays to show the steel frame.
 - **The interiors:** the Victorian stairs and hydraulic lifts inside the towers.
-- **The machine:** bascules driven by a weighted-accumulator hydraulic simulation, with a live readout, road traffic held by gates and signals at each bascule, and the 1894 hydraulic engine house on the south bank.
+- **The machine:** bascules driven by a weighted-accumulator hydraulic simulation, with a live readout, power flowing along the hydraulic mains, a drag handle on each leaf that works the operator's lever, road traffic held by gates and signals at each bascule, and the 1894 hydraulic engine house on the south bank.
 - **The ship:** a vessel that matches the year waits downstream until the leaves are up, then sails through. A low one ignores the bascules.
 - **The construction stages and works:** the bridge rises from 1886 to 1894 with the period's site works around it: staging, a piling rig, barges, derricks, centring, cradles and scaffold.
 - **The look:** a physical sky and sun, fitted soft shadows, haze, and a post stack with a period colour grade by year.
@@ -172,7 +172,7 @@ Checks: `make smoke` runs the Python tests, and `uv run python scripts/validate.
 
 Existing code, data and ideas this project stands on. File-by-file detail and licence texts are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-- **[Mechanica](https://github.com/Caleb0796/mechanica)** (MIT, commit `27b5f8b`): the idea that data is law, sourced numbers with a status, and mechanisms driven by simulated state. Adapted code: the scene look (light rig, ACES grade, haze), the procedural PBR textures, the museum Home stage, the tour's part close-up, and the docent's sourcing and refusal contract.
+- **[Mechanica](https://github.com/Caleb0796/mechanica)** (MIT, commit `27b5f8b`): the idea that data is law, sourced numbers with a status, and mechanisms driven by simulated state. Adapted code: the scene look (light rig, ACES grade, haze), the procedural PBR textures, the museum Home stage, the tour's part close-up, the bascule drag handle, box-projected UVs, and the docent's sourcing and refusal contract.
 - **Environment Agency LiDAR:** LiDAR Composite DSM, 1 m. © Environment Agency copyright and/or database right. [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/). For the terrain, which is coming next.
 - **OpenStreetMap:** © OpenStreetMap contributors, [Open Database Licence (ODbL)](https://opendatacommons.org/licenses/odbl/), for the surrounding buildings, which are coming next.
 - **Google Photorealistic 3D Tiles:** © Google and its data providers. The attribution shows on screen whenever the tiles do. The tiles layer is coming next.

@@ -14,6 +14,9 @@ Strata includes code adapted from the projects below. Each keeps its own licence
 | `web/src/scene/look/textures.js` | `src/core/textures.ts` and its geometry warmup | Seeded procedural PBR texture sets, idle-slice warmup |
 | `web/src/ui/home/Home.jsx` | `src/ui/HomeCarouselHero.tsx` | Museum light rig, light pool, plinth and turntable drift |
 | `web/src/scene/Tour.jsx` | `src/ui/viewer/DemoFocusRig.tsx` | Part close-up and the controls hand-off |
+| `web/src/scene/bridge/BasculeDrive.jsx` | `src/ui/viewer/DriveHandle.tsx`, `src/ui/viewer/DriveGizmo.tsx` | Drag handle on a bascule leaf, cut down to one joint |
+| `web/src/scene/bridge/geom.js` (`boxProjectUvs`) | `core/geometryUvs.ts` | Box-projected UVs at one unit per metre |
+| `server/docent.py` | `api/docent.ts` (`DOCENT_PROMPT_CORE`) | Sourcing, numeric fidelity and refusal contract |
 
 
 ```

@@ -20,8 +20,8 @@ function Surface({ sun }) {
       textureHeight: 1024,
       waterNormals: normals,
       sunColor: SUN_COLOR,
-      waterColor: 0x10302b, // the Thames is a muddy green-brown, not a pool blue
-      distortionScale: 0.6,
+      waterColor: 0x2c3b34, // the Thames is a muddy green-grey, not a pool blue
+      distortionScale: 0.12, // reflections wobble, they do not shatter
       alpha: 1,
       fog: !!fog,
     })
@@ -29,11 +29,12 @@ function Surface({ sun }) {
     w.rotation.x = -Math.PI / 2
     // the river surface, in the bridge frame (y = 0 is the deck)
     w.position.set((minE + maxE) / 2 - oE, meta.water_h - meta.origin_h, oN - (minN + maxN) / 2)
-    w.material.uniforms.size.value = 30 // fine ripples read as a wide river from the air
+    w.material.uniforms.size.value = 4 // broad, slow swell: fine ripples alias into grey noise near the camera
     // the stock shader mirrors a bright sky into a white sheet; a murky tidal river reflects far less
     w.material.fragmentShader = w.material.fragmentShader
       .replace('float rf0 = 0.3;', 'float rf0 = 0.04;')
-      .replace('reflectionSample * 0.9', 'reflectionSample * 0.55')
+      .replace('reflectionSample * 0.9', 'reflectionSample * 0.4')
+      .replace('noise.xzy * vec3( 1.5, 1.0, 1.5 )', 'noise.xzy * vec3( 0.35, 1.0, 0.35 )') // calm water: flatten the summed normals
     w.receiveShadow = true
     return w
   }, [meta, fog])

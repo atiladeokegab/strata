@@ -186,7 +186,8 @@ def water_normals(path, n=512):
             continue
         hgt += np.sin(kx * x + ky * y + rng.uniform(0, 2 * np.pi)) / np.hypot(kx, ky) ** 1.2
     gy, gx = np.gradient(hgt)
-    nrm = np.dstack([-gx, -gy, np.full_like(hgt, 0.08)])
+    flat = np.percentile(np.hypot(gx, gy), 95) / 0.35  # gentle: 95% of the surface tilts under ~19 degrees
+    nrm = np.dstack([-gx, -gy, np.full_like(hgt, flat)])
     nrm /= np.linalg.norm(nrm, axis=2, keepdims=True)
     Image.fromarray(((nrm * 0.5 + 0.5) * 255).astype(np.uint8)).save(path, quality=90)
 

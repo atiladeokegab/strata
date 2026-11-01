@@ -44,6 +44,10 @@ function Half({ side, rt, st, towerTop, era, maxAngle }) {
   const id = (base) => `${base}-${side}`
   const towerId = n ? 'north-tower' : 'south-tower'
   const sim = rt.sim
+  // LITE: the stair and lift interiors only draw when you can see them (frame still open, exploded, or x-rayed by a selection)
+  const selected = useStore((s) => s.selected)
+  const exploded = useStore((s) => s.exploded)
+  const inside = !LITE || !shown('cladding', st.stage) || exploded || containersOf(selected).includes(towerId)
   return (
     <group rotation={[0, n ? 0 : Math.PI, 0]}>
       {shown('cofferdam', st.stage) && (
@@ -72,10 +76,14 @@ function Half({ side, rt, st, towerTop, era, maxAngle }) {
       {shown('frame', st.stage) && (
         <>
           <Part id={id('stairs')} rt={rt} explode={[0, 4, -14]} clipY={rising(st, 1, S.L.pierTop, towerTop)}>
-            <Stairs />
+            <group visible={inside}>
+              <Stairs />
+            </group>
           </Part>
           <Part id={id('lift')} rt={rt} explode={[0, 4, -14]} clipY={rising(st, 1, S.L.pierTop, towerTop)}>
-            <Lifts sim={sim} />
+            <group visible={inside}>
+              <Lifts sim={sim} />
+            </group>
           </Part>
         </>
       )}

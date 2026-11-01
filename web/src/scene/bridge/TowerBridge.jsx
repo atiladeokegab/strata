@@ -16,6 +16,7 @@ import { ConstructionSite } from './construction.jsx'
 import { EngineRoom } from './engineRoom.jsx'
 import { Ship } from './ship.jsx'
 import { Stairs, Lifts } from './interiors.jsx'
+import { Traffic } from './traffic.jsx'
 
 // The live sim state, for any panel that wants to show pressure or stored volume. Read-only.
 export const bridgeHydraulics = createHydraulics()
@@ -182,6 +183,7 @@ export function TowerBridge(props) {
           </Part>
         ))}
       {shown('engine', st.stage) && <EngineRoom rt={rt} explode={[14, 6, 20]} />}
+      {st.stage >= 5 && <Traffic rt={rt} year={year} sim={bridgeHydraulics} />}
       {st.stage < 5 && (
         <Html position={[0, towerTop + 14, 0]} center zIndexRange={[10, 0]} style={{ pointerEvents: 'none' }}>
           <div className="bridge-stage-label" style={LABEL}>

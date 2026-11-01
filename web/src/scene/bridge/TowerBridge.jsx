@@ -14,6 +14,7 @@ import * as S from './structures.jsx'
 import * as D from './details.jsx'
 import { ConstructionSite } from './construction.jsx'
 import { EngineRoom } from './engineRoom.jsx'
+import { Ship } from './ship.jsx'
 
 // The live sim state, for any panel that wants to show pressure or stored volume. Read-only.
 export const bridgeHydraulics = createHydraulics()
@@ -152,6 +153,7 @@ export function TowerBridge(props) {
     <group ref={root} name="tower-bridge" {...props}>
       <Half side="north" rt={rt} st={st} towerTop={towerTop} />
       <Half side="south" rt={rt} st={st} towerTop={towerTop} />
+      {year >= 1894 && <Ship rt={rt} maxAngle={maxAngle} />}
       {shown('walkway', st.stage) &&
         ['east', 'west'].map((side) => (
           <Part

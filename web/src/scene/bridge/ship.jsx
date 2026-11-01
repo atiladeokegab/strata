@@ -219,19 +219,41 @@ function Barque({ mats }) {
   )
 }
 
+// Thames lighter (dumb barge), side profile with the overhanging raked 'swim' at both ends, extruded
+// across the beam; x0..x0+30, deck at y 0.9.
+function lighterHull(x0) {
+  const s = new THREE.Shape()
+  s.moveTo(x0 + 4, -1.7)
+  s.lineTo(x0 + 26, -1.7)
+  s.lineTo(x0 + 30, 0.9)
+  s.lineTo(x0, 0.9)
+  s.closePath()
+  return new THREE.ExtrudeGeometry(s, { depth: 8, bevelEnabled: false }).translate(0, 0, -4)
+}
+// tarred tarpaulin ridged over the hold
+function tarp(x0, len) {
+  const s = new THREE.Shape()
+  s.moveTo(-3.1, 1.35)
+  s.lineTo(3.1, 1.35)
+  s.lineTo(0, 2.3)
+  s.closePath()
+  return new THREE.ExtrudeGeometry(s, { depth: len, bevelEnabled: false }).rotateY(Math.PI / 2).translate(x0, 0, 0)
+}
+
 // Steam tug (~26 m) towing a dumb lighter 30 m astern. Funnel top ~10 m, mast ~14 m.
 function Tug({ mats }) {
   const geo = useMemo(
     () => ({
-      hull: hullGeo(-2.5, 6.5).scale(0.5, 0.6, 0.72),
+      hull: merge([hullGeo(-2.5, 6.5).scale(0.5, 0.6, 0.72), beam([3, 8.6, 0], [3.05, 10, 0], 0.93, 14)]), // + funnel's black top
       band: hullGeo(2.4, 0.7, 1.025).scale(0.5, 0.6, 0.72),
-      house: merge([box(6, 2.6, 4, 1, 3.7, 0), box(3.2, 1.8, 3.4, -2.5, 5.9, 0)]),
-      glass: box(3.3, 0.6, 3.5, -2.5, 6.2, 0),
+      house: box(10, 1.5, 3.6, 2, 3.2, 0), // engine casing
+      glass: box(3.1, 0.6, 3.3, -2.5, 5.1, 0),
       funnel: beam([2.5, 4, 0], [3, 9.4, 0], 0.9, 14),
-      funnelTop: beam([3, 8.6, 0], [3.05, 10, 0], 0.93, 14),
-      mast: merge([beam([-6, 2.4, 0], [-6.2, 14, 0], 0.12), beam([-6.1, 9, -1.6], [-6.1, 9, 1.6], 0.06)]),
-      lighter: merge([box(30, 2.6, 8, 52, -0.4, 0), box(26, 0.4, 6.6, 52, 1.1, 0)]),
-      tow: beam([11, 2.2, 0], [37, 1, 0], 0.06, 4),
+      // mast and the varnished wheelhouse forward of the funnel share the timber
+      mast: merge([beam([-6, 2.4, 0], [-6.2, 14, 0], 0.12), beam([-6.1, 9, -1.6], [-6.1, 9, 1.6], 0.06), box(3, 1.9, 3.2, -2.5, 4.9, 0), box(3.6, 0.2, 3.8, -2.5, 5.95, 0)]),
+      lighter: merge([lighterHull(37), box(23, 0.5, 6.6, 52, 1.15, 0)]),
+      // tow line, the lighter's tarpaulin and the tug's rope 'pudding' bow fender: all rope, one draw
+      tow: merge([beam([11, 2.2, 0], [37, 1, 0], 0.06, 4), tarp(41, 22), beam([-13.6, 1.2, -1.6], [-13.6, 1.2, 1.6], 0.55, 8)]),
     }),
     [],
   )
@@ -242,7 +264,6 @@ function Tug({ mats }) {
       <mesh geometry={geo.house} material={mats.white} castShadow />
       <mesh geometry={geo.glass} material={mats.glass} />
       <mesh geometry={geo.funnel} material={mats.buff} castShadow />
-      <mesh geometry={geo.funnelTop} material={mats.black} />
       <mesh geometry={geo.mast} material={mats.spars} />
       <mesh geometry={geo.lighter} material={mats.rust} castShadow receiveShadow />
       <mesh geometry={geo.tow} material={mats.rope} />

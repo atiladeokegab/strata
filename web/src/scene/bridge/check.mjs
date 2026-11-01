@@ -222,7 +222,7 @@ for (const y of [1900, 1940, 1960, 1985, 2026]) {
 }
 console.log('ship checks ok')
 
-import { placeLabels, labelSize, CALLOUTS, crosses } from './callouts.js'
+import { placeLabels, labelSize, CALLOUTS, crosses, buildDone } from './callouts.js'
 const lab = (id, x, y) => ({ id, x, y, ...labelSize('North tower') })
 const pl = placeLabels([lab('a', 500, 400), lab('b', 502, 401), lab('c', 900, 400), lab('off', -5, 400)], 1400, 900)
 assert.ok(pl.a && pl.b && pl.c && !pl.off, 'labels for on-screen anchors, none for off-screen')
@@ -238,6 +238,17 @@ const cp = placeLabels(col, 1400, 900)
 const rects = Object.entries(cp).map(([id, o]) => { const it = col.find((c) => c.id === id); return { id, x: it.x + o.dx - it.w / 2, y: it.y + o.dy - it.h / 2, w: it.w, h: it.h, ax: it.x, ay: it.y, ex: it.x + o.dx * 0.7, ey: it.y + o.dy * 0.7 } })
 for (const a of rects) for (const b of rects) if (a !== b) assert.ok(!crosses(a.ax, a.ay, a.ex, a.ey, b), `leader of ${a.id} crosses label ${b.id}`)
 assert.ok(Object.keys(cp).length >= 5, 'most of the column still gets labels')
+{
+  // the footprint fill grows every construction year and is full from opening
+  assert.equal(buildDone(stageForYear(1885)), 0)
+  let prev = 0
+  for (let y = 1886; y <= 1893; y++) {
+    const d = buildDone(stageForYear(y))
+    assert.ok(d > prev && d < 1, `build share grows in ${y}`)
+    prev = d
+  }
+  assert.equal(buildDone(stageForYear(1894)), 1)
+}
 console.log('callout checks ok')
 // lift for a ship: the full cycle over the real hydraulic, ship and traffic sims, wired as in the app
 const liftCycle = (scale) => {

@@ -136,6 +136,7 @@ function Half({ side, rt, st, towerTop, era }) {
 export function TowerBridge(props) {
   const place = useStore((s) => s.place)
   const year = useStore((s) => s.year)
+  const view = useStore((s) => s.view)
   const exploded = useStore((s) => s.exploded)
   const select = useStore((s) => s.select)
   const gl = useThree((s) => s.gl)
@@ -199,10 +200,11 @@ export function TowerBridge(props) {
           </Part>
         ))}
       {shown('engine', st.stage) && <EngineRoom rt={rt} steam={era.steam} explode={[14, 6, 20]} />}
-      <TopView stage={st.stage} maxAngle={maxAngle} sim={bridgeHydraulics} />
+      <TopView st={st} year={year} maxAngle={maxAngle} sim={bridgeHydraulics} />
       {st.stage >= 5 && <Traffic rt={rt} year={year} sim={bridgeHydraulics} maxAngle={maxAngle} />}
       {st.stage >= 5 && <LiftControls year={year} towerTop={towerTop} style={LABEL} />}
-      {st.stage < 5 && (
+      {/* the top view draws its own build caption */}
+      {st.stage < 5 && view !== 'top' && (
         <Html position={[0, towerTop + 14, 0]} center zIndexRange={[10, 0]} style={{ pointerEvents: 'none' }}>
           <div className="bridge-stage-label" style={LABEL}>
             <span style={{ opacity: 0.7, marginRight: 8 }}>{year}</span>

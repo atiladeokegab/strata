@@ -71,3 +71,7 @@ export function placeLabels(items, width, height) {
   }
   return out
 }
+
+// Share of the build done, 0 before work began to 1 at opening; the end of stage 4 (1893) leaves
+// the half stage of fitting out and testing before 1894. The top view fills the footprints by it.
+export const buildDone = ({ stage, progress }) => (stage < 0 ? 0 : stage >= 5 ? 1 : (stage + progress) / 5.5)

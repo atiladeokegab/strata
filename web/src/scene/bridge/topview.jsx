@@ -1,15 +1,16 @@
 // <TopView />: what the sky view adds. Clickable part callouts with leader lines (placed by the
 // pure placeLabels so they never overlap, hidden when the camera is far), a 50 m scale bar, a
 // north arrow, a faint swing envelope for each bascule drawn flat on the water, the hydraulic
-// mains with a live pressure chip, and the ship's track and road gates as dashed lines.
+// mains with a live pressure chip, the ship's track and road gates as dashed lines, a live leaf
+// angle beside each swing band, and in 1886-1893 the pier works in plan with a build caption.
 import { useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { useStore } from '../../store.js'
 import { shown } from './stages.js'
-import { L } from './structures.jsx'
-import { CALLOUTS, labelSize, placeLabels } from './callouts.js'
+import { L, pierShape } from './structures.jsx'
+import { CALLOUTS, labelSize, placeLabels, buildDone } from './callouts.js'
 import { box, merge } from './geom.js'
 import { OPEN_TIME_S, PRESSURE_PSI } from './hydraulics.js'
 import { WAIT_X, END_X } from './shipSim.js'
@@ -120,6 +121,21 @@ function SwingGhosts({ maxAngle }) {
   )
 }
 
+// Live leaf angle beside each band (both leaves share one sim). North band lies east of the
+// north leaf; the south half is turned 180°, so its band lies west.
+function LeafAngles({ sim }) {
+  const tags = useRef([])
+  useFrame(() => {
+    const deg = `${Math.round((sim.angle * 180) / Math.PI)}°`
+    tags.current.forEach((t, i) => t && (t.textContent = `${i ? 'S' : 'N'} leaf ${deg}`))
+  })
+  return [[34, -12], [-34, 12]].map(([x, z], i) => (
+    <Html key={i} position={[x, WATER, z]} center zIndexRange={[20, 10]} style={{ pointerEvents: 'none' }}>
+      <div ref={(r) => (tags.current[i] = r)} style={{ ...TAG, border: '1px solid rgba(255,181,71,0.6)' }} />
+    </Html>
+  ))
+}
+
 // Hydraulic mains in plan: engine room -> approach main -> south pier, then under the river to
 // the north pier. Same cyan glow and running dashes as the engine room's Flow, driven the same way.
 const OMEGA_MAX = (86 * Math.PI) / 180 / OPEN_TIME_S
@@ -182,8 +198,9 @@ function Mains({ sim }) {
 function Dashed({ pts, color, dash = 4, y = WATER + 0.2, over = false }) {
   const line = useMemo(() => {
     const g = new THREE.BufferGeometry().setFromPoints(pts.map(([x, z]) => new THREE.Vector3(x, y, z)))
-    const l = new THREE.Line(g, new THREE.LineDashedMaterial({ color, dashSize: dash, gapSize: dash, transparent: true, opacity: over ? 0.9 : 0.6, depthTest: !over }))
-    l.renderOrder = over ? 3 : 0
+    // over: drawn last, untoned and through the towers, so red reads red from the sky
+    const l = new THREE.Line(g, new THREE.LineDashedMaterial({ color, dashSize: dash, gapSize: dash, transparent: true, opacity: over ? 1 : 0.6, depthTest: !over, toneMapped: !over }))
+    l.renderOrder = over ? 10 : 0
     l.computeLineDistances()
     return l
   }, [pts, color, dash, y, over])
@@ -192,7 +209,45 @@ function Dashed({ pts, color, dash = 4, y = WATER + 0.2, over = false }) {
 const TRACK = [[WAIT_X, 0], [END_X, 0]]
 const GATES = [-1, 1].map((d) => [[-16, d * GATE_U], [16, d * GATE_U]]) // a little wider than the deck so they show past the labels
 
-export function TopView({ stage, maxAngle, sim }) {
+// 1886-1893: each pier's cofferdam ring, pier footprint and timber staging (with its jetty) in
+// plan, outlined from the start and filled as the build goes on; drawn through anything above.
+const COFFER = pierShape().getSpacedPoints(90).map((p) => [p.x * 1.18, p.y * 1.25])
+const PIER = pierShape().getPoints().map((p) => [p.x, p.y])
+const rect = (x, z, hx, hz) => [[x - hx, z - hz], [x + hx, z - hz], [x + hx, z + hz], [x - hx, z + hz], [x - hx, z - hz]]
+const STAGING = [rect(0, 0, 36, 22), rect(18, -37, 2, 15)] // construction.jsx PierWorks, about the pier centre
+function Works({ st }) {
+  const g = useMemo(() => {
+    const loop = (pts, c) => {
+      const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts.map(([x, z]) => new THREE.Vector3(x, 0, z))), c)
+      l.renderOrder = 6
+      return l
+    }
+    const fill = (pts) => new THREE.ShapeGeometry(new THREE.Shape(pts.map(([x, z]) => new THREE.Vector2(x, -z)))).rotateX(-Math.PI / 2)
+    const lines = () => [loop([...COFFER, COFFER[0]], WORK_LINE), loop([...PIER, PIER[0]], PIER_LINE), ...STAGING.map((r) => loop(r, WORK_LINE))]
+    return { coffer: fill(COFFER), pier: fill(PIER), lines: [lines(), lines()] }
+  }, [])
+  const done = buildDone(st)
+  return [1, -1].map((s) => (
+    <group key={s} position={[0, WATER + 0.3, s * L.pierZ]} rotation={[0, s > 0 ? 0 : Math.PI, 0]}>
+      <mesh geometry={g.coffer} material={WORK_FILL} material-opacity={0.06 + 0.2 * done} renderOrder={5} />
+      <mesh geometry={g.pier} material={PIER_FILL} material-opacity={0.1 + 0.45 * done} renderOrder={5} />
+      {g.lines[s > 0 ? 0 : 1].map((l, i) => <primitive key={i} object={l} />)}
+    </group>
+  ))
+}
+function Caption({ st, year }) {
+  return (
+    <Html position={[0, WATER, L.pierZ - 52]} center zIndexRange={[20, 10]} style={{ pointerEvents: 'none' }}>
+      <div style={{ ...TAG, font: '500 13px/1.2 system-ui, sans-serif', padding: '4px 10px' }}>
+        <span style={{ opacity: 0.7 }}>{year} · stage {st.stage + 1} of 5 · </span>
+        {st.label} · {Math.round(buildDone(st) * 100)}% built
+      </div>
+    </Html>
+  )
+}
+
+export function TopView({ st, year, maxAngle, sim }) {
+  const stage = st.stage
   const view = useStore((s) => s.view)
   const select = useStore((s) => s.select)
   if (view !== 'top') return null
@@ -201,11 +256,18 @@ export function TopView({ stage, maxAngle, sim }) {
       <Callouts stage={stage} select={select} />
       <MapMarks />
       {shown('bascule', stage) && <SwingGhosts maxAngle={maxAngle} />}
+      {shown('bascule', stage) && <LeafAngles sim={sim} />}
+      {stage >= 0 && stage < 5 && (
+        <>
+          <Works st={st} />
+          <Caption st={st} year={year} />
+        </>
+      )}
       {shown('engine', stage) && <Mains sim={sim} />}
       {stage >= 5 && (
         <>
           <Dashed pts={TRACK} color="#f3efe6" dash={6} />
-          {GATES.map((g, i) => <Dashed key={i} pts={g} color="#ff6b5a" dash={1.2} y={0.6} over />)}
+          {GATES.map((g, i) => <Dashed key={i} pts={g} color="#ff1e10" dash={1.2} y={0.6} over />)}
         </>
       )}
     </>
@@ -215,6 +277,11 @@ export function TopView({ stage, maxAngle, sim }) {
 const INK = new THREE.MeshBasicMaterial({ color: '#15191f', side: THREE.DoubleSide })
 const PAPER = new THREE.MeshBasicMaterial({ color: '#f3efe6' })
 const GHOST = new THREE.MeshBasicMaterial({ color: '#ffb547', transparent: true, opacity: 0.12, depthWrite: false, side: THREE.DoubleSide })
+const OVER = { transparent: true, depthTest: false, depthWrite: false, toneMapped: false, side: THREE.DoubleSide }
+const WORK_FILL = new THREE.MeshBasicMaterial({ color: '#c8a26a', ...OVER })
+const PIER_FILL = new THREE.MeshBasicMaterial({ color: '#d9d2c3', ...OVER })
+const WORK_LINE = new THREE.LineBasicMaterial({ color: '#e0b878', ...OVER })
+const PIER_LINE = new THREE.LineBasicMaterial({ color: '#f3efe6', ...OVER })
 const GHOST_EDGE = new THREE.MeshBasicMaterial({ color: '#ffb547', transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide })
 
 const TAG = {

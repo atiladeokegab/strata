@@ -26,7 +26,7 @@ export const L = {
 }
 
 // ---- piers and cofferdams ----
-const pierShape = () => {
+export const pierShape = () => {
   const s = new THREE.Shape()
   ;[[-28, 0], [-21, -15], [21, -15], [28, 0], [21, 15], [-21, 15]].forEach(([x, z], i) =>
     i ? s.lineTo(x, z) : s.moveTo(x, z),

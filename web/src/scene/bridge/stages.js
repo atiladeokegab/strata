@@ -55,7 +55,7 @@ export const ERAS = {
   asphalt: 1930, // carriageway wood blocks -> asphalt, and painted markings; inferred, no dated source yet
   battleshipGrey: 1939, // steel repainted grey as camouflage, "pre-WW2" (towerbridge.org.uk); year inferred
   blackout: 1939, // wartime: lamps dark, kerbs and lamp posts banded white, sandbags (blackout from 1 Sept 1939)
-  thirdEngine: 1942, // a third steam pumping engine added (Wikipedia, citing Milne, The Thames at War, 2020, p.153)
+  thirdEngine: 1941, // a third steam pumping engine added (Tower Bridge's own account and the Forncett engine record; Wikipedia's 1942 is the outlier)
   blackoutEnd: 1945,
   electricLamps: 1950, // approach lanterns gas -> electric; inferred, no dated source yet
   electricDrive: 1976, // steam pumping engines replaced by electro-hydraulic drive

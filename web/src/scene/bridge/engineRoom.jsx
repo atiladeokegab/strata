@@ -25,8 +25,8 @@ const mats = () =>
 
 // House footprint and the machinery layout inside it.
 const H = { x0: 20, x1: 44, z0: 146, z1: 166, wall: 9, t: 0.6 }
-// z of each horizontal engine's axis. The third (1942) is cited (Wikipedia, citing Milne, The Thames at War, 2020,
-// p.153); its place beside the pair is inferred. The boilers moved to the old accumulator bay to make room.
+// z of each horizontal engine's axis. The third (1941) is cited (Tower Bridge's own account and the Forncett engine record;
+// Wikipedia's 1942 is the outlier); its place beside the pair is inferred. The boilers moved to the old accumulator bay to make room.
 const ENGINES = [150.5, 155.5, 160.5]
 const ENG_Y = 1.6, CRANK = 0.9, FLY_X = 33.5
 // accumulator tower: built against the east face (world x 16) of the south abutment's east tower, at street level

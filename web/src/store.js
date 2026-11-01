@@ -4,7 +4,7 @@ import { create } from 'zustand'
 export const FIRST_YEAR = 1886
 export const THIS_YEAR = new Date().getFullYear()
 // ?embed=1: the bare scene for iframes (atilade.uk): hero view, slow auto-orbit, credit and an "open the full app" link only
-export const EMBED = new URLSearchParams(location.search).get('embed') === '1'
+export const EMBED = new URLSearchParams(globalThis.location?.search ?? '').get('embed') === '1' // node (check.mjs) has no location
 
 export const useStore = create((set) => ({
   sheet: false, // phone/tablet: bottom sheet expanded

@@ -181,7 +181,10 @@ function Grade({ low }) {
   }), [])
   useEffect(() => () => Object.values(fx).forEach((e) => e.dispose()), [fx])
   const k = useRef(periodGrade(useStore.getState().year))
-  useFrame((_, dt) => {
+  const ao = useRef()
+  useFrame(({ camera }, dt) => {
+    // AO grounds things up close; from altitude it only greys the dense LiDAR roofscape, so fade it out
+    if (ao.current) ao.current.configuration.intensity = 2.4 * (1 - 0.75 * THREE.MathUtils.smoothstep(camera.position.y, 150, 900))
     const p = (k.current = THREE.MathUtils.damp(k.current, periodGrade(useStore.getState().year), 4, dt))
     fx.sat.saturation = 0.04 - 0.4 * p
     fx.sepia.intensity = 0.42 * p
@@ -191,7 +194,7 @@ function Grade({ low }) {
   })
   return (
     <EffectComposer multisampling={0} enableNormalPass={false}>
-      {!low && <N8AO halfRes aoRadius={4} distanceFalloff={1} intensity={2.4} quality="medium" />}
+      {!low && <N8AO ref={ao} halfRes aoRadius={4} distanceFalloff={1} intensity={2.4} quality="medium" />}
       <Bloom mipmapBlur intensity={0.3} luminanceThreshold={1} luminanceSmoothing={0.2} />
       <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
       <primitive object={fx.sat} dispose={null} />

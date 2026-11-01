@@ -6,6 +6,7 @@ import { useMemo } from 'react'
 import { Look } from '../Look'
 import { useStore } from '../../store'
 import { pbr } from './textures'
+import Terrain from '../Terrain'
 
 const q = new URLSearchParams(location.search)
 const cam = (q.get('cam') || '-180,60,160').split(',').map(Number)
@@ -47,7 +48,7 @@ function City() {
 
 createRoot(document.getElementById('root')).render(
   <Canvas camera={{ position: cam, fov: 45, near: 0.5, far: 20000 }} gl={{ antialias: false }}>
-    <City />
+    {q.get('terrain') ? <Terrain step={+q.get('terrain')} /> : <City />}
     <OrbitControls target={target} />
     <Look />
   </Canvas>,

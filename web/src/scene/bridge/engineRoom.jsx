@@ -79,7 +79,7 @@ function Shell() {
 
 const UNIT_ROD = new THREE.CylinderGeometry(0.12, 0.12, 1, 6).rotateZ(Math.PI / 2).translate(0.5, 0, 0)
 
-function Machinery({ sim }) {
+function Machinery({ sim, steam }) {
   const m = mats()
   const fly = useRef([]), cross = useRef([]), rod = useRef([]), ram = useRef()
   const crank = useRef(0)
@@ -111,7 +111,7 @@ function Machinery({ sim }) {
   }, [])
 
   useFrame((_, dt) => {
-    if (sim.pumping) crank.current += Math.min(dt, 0.1) * 3
+    if (steam && sim.pumping) crank.current += Math.min(dt, 0.1) * 3
     ENGINES.forEach((z, i) => {
       const a = crank.current + i * Math.PI / 2 // cranks quartered
       fly.current[i].rotation.z = a
@@ -255,16 +255,17 @@ function Flow({ rt }) {
   )
 }
 
-export function EngineRoom({ rt, explode = [14, 6, 20] }) {
+// steam=false: electro-hydraulic era (from 1976), steam engines stand idle and the stack is cold.
+export function EngineRoom({ rt, explode = [14, 6, 20], steam = true }) {
   return (
     <>
       <Part id="engine-room" rt={rt} explode={explode} xray>
         <Shell />
       </Part>
       <Part id="engine-room" rt={rt} explode={explode}>
-        <Machinery sim={rt.sim} />
+        <Machinery sim={rt.sim} steam={steam} />
       </Part>
-      <Smoke sim={rt.sim} />
+      {steam && <Smoke sim={rt.sim} />}
       <Flow rt={rt} />
     </>
   )

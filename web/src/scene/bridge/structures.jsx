@@ -6,7 +6,7 @@ import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { beam, box, merge, M } from './geom.js'
-import { WALK, walkwayTruss } from './walkway.js'
+import { walkwayTruss, walkwayInfill } from './walkway.js'
 
 export const L = {
   hw: -9, // Thames high water below the roadway
@@ -299,20 +299,27 @@ export function Accumulators({ sim }) {
 // ---- high walkways (span between the towers, built once at the root) ----
 export function Walkway({ x, glazed = true, glassFloor = false }) {
   const g = useMemo(() => {
-    const z1 = -(L.pierZ + L.towerHalfZ), z0 = -z1, w = WALK.w, y0 = L.walkY, y1 = L.walkY + L.walkH
-    return {
-      truss: walkwayTruss(x, -(L.pierZ + L.towerHalfZ), y0, y1),
-      roof: box(2 * w + 0.6, 0.3, z0 - z1, x, y1 + 0.2, 0),
-      floor: box(2 * w, 0.35, z0 - z1, x, y0 + 0.1, 0),
-      glazing: box(2 * w - 0.3, L.walkH - 0.6, z0 - z1, x, (y0 + y1) / 2, 0),
-    }
+    const ze = -(L.pierZ + L.towerHalfZ), y0 = L.walkY, y1 = L.walkY + L.walkH
+    const parts = walkwayInfill(x, ze, y0, y1)
+    return { truss: walkwayTruss(x, ze, y0, y1), ...Object.fromEntries(Object.entries(parts).map(([k, gs]) => [k, merge(gs)])) }
   }, [x])
   return (
     <>
       <mesh geometry={g.truss} material={M.steel} castShadow />
       <mesh geometry={g.roof} material={M.slate} castShadow />
-      <mesh geometry={g.floor} material={glassFloor ? M.glass : M.white} />
-      {glazed && <mesh geometry={g.glazing} material={M.glass} />}
+      <mesh geometry={glassFloor ? g.floorGap : g.floor} material={M.timber} receiveShadow />
+      {glassFloor && (
+        <>
+          <mesh geometry={g.glassFloor} material={M.pane} />
+          <mesh geometry={g.glassFrames} material={M.steel} />
+        </>
+      )}
+      {glazed && (
+        <>
+          <mesh geometry={g.glazing} material={M.pane} />
+          <mesh geometry={g.frames} material={M.steel} />
+        </>
+      )}
     </>
   )
 }

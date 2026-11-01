@@ -67,6 +67,11 @@ export const MATERIALS = {
   brass: () => mat('iron', { color: '#b08d4a', roughness: 0.35, metalness: 0.9 }),
   road: () => mat('road', { color: '#3f3f3f', roughness: 0.87 }),
   glass: () => mat('glass', { color: '#18202b', roughness: 0.15, metalness: 0.6 }),
+  // clear glass you see through (walkway glazing and glass floor); userData.opacity is its own opacity,
+  // which Part's x-ray fade multiplies rather than overwrites
+  pane: () => Object.assign(mat('glass', { color: '#b8ccd4', roughness: 0.04, metalness: 0.1, transparent: true, opacity: 0.2, depthWrite: false }), {
+    userData: { kind: 'glass', opacity: 0.2 },
+  }),
   timber: () => mat('timber', { color: '#42291b', roughness: 0.72, metalness: 0.08 }),
   gold: () => mat('trim', { color: '#c9a646', roughness: 0.3, metalness: 1 }),
 }

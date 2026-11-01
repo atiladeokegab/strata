@@ -576,4 +576,15 @@ console.log('geom materials untextured, all kinded ok')
   const verts = g.attributes.position.count
   assert.ok(verts < 60000, `walkway truss stays light (${verts} verts)`)
   console.log(`walkway truss ok (${verts} verts)`)
+  const { walkwayInfill, FLOOR_TOP, GLASS_FLOOR } = await import('./walkway.js')
+  const inf = walkwayInfill(10.5, ze, y0, y1)
+  const bb = (gs) => gs.reduce((b, g) => (g.computeBoundingBox(), b.union(g.boundingBox)), new THREE.Box3())
+  const top = y0 + FLOOR_TOP
+  for (const k of ['floor', 'floorGap']) assert.ok(Math.abs(bb(inf[k]).max.y - top) < 1e-4, `${k} walking surface at y0 + FLOOR_TOP`)
+  assert.ok(Math.abs(bb(inf.glassFloor).max.y - top) < 1e-4, 'glass floor flush with the timber floor')
+  const hole = bb(inf.floorGap.slice(2)), glass = bb(inf.glassFloor)
+  assert.ok(glass.min.x >= hole.min.x && glass.max.x <= hole.max.x && glass.max.z <= GLASS_FLOOR.len / 2 + 1e-6, 'glass floor sits in the gap in the timber')
+  const gz = bb(inf.glazing)
+  assert.ok(gz.min.x > 10.5 - WALK.w && gz.max.x < 10.5 + WALK.w && gz.min.y >= top - 1e-4, 'glazing inside the lattice, above the floor')
+  console.log('walkway floor, glass floor and glazing ok')
 }

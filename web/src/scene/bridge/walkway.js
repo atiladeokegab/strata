@@ -51,3 +51,39 @@ export function walkwayTruss(x, ze, y0, y1) {
   return merge(gs)
 }
 
+
+// Deck, roof, the 1982 glazing and the 2014 glass floor, one geometry list per material.
+// The floor's walking surface is y0 + FLOOR_TOP (WalkwayPeople stand on it). The glass floor is the
+// middle GLASS_FLOOR.len of the span, GLASS_FLOOR.w wide, so the timber floor around it is cut away there.
+export const FLOOR_TOP = 0.275
+export const GLASS_FLOOR = { len: 11, w: 1.8, panes: 4 }
+export function walkwayInfill(x, ze, y0, y1) {
+  const { w, panels: n, boom } = WALK, len = 2 * ze, top = y0 + FLOOR_TOP, gl = GLASS_FLOOR
+  const deck = (z0, z1, x0, x1) => box(x1 - x0, 0.3, z1 - z0, x + (x0 + x1) / 2, top - 0.15, (z0 + z1) / 2)
+  const side = (w - gl.w / 2) // timber either side of the glass
+  const o = {
+    roof: [box(2 * w + 0.6, 0.3, len, x, y1 + 0.2, 0)],
+    floor: [deck(-ze, ze, -w, w)],
+    floorGap: [deck(-ze, -gl.len / 2, -w, w), deck(gl.len / 2, ze, -w, w), deck(-gl.len / 2, gl.len / 2, -w, -w + side), deck(-gl.len / 2, gl.len / 2, w - side, w)],
+    glassFloor: [box(gl.w, 0.08, gl.len, x, top - 0.04, 0)],
+    glassFrames: [],
+    glazing: [],
+    frames: [],
+  }
+  // glass floor: steel frames round and between the panes, flush with the walking surface
+  for (let i = 0; i <= gl.panes; i++) o.glassFrames.push(box(gl.w + 0.1, 0.1, 0.08, x, top - 0.05, -gl.len / 2 + (gl.len * i) / gl.panes))
+  for (const s of [-1, 1]) o.glassFrames.push(box(0.08, 0.1, gl.len, x + s * (gl.w / 2 + 0.01), top - 0.05, 0))
+  // 1982 glazing: a glass sheet inside each lattice, framed per panel in three lights with a transom
+  const gy0 = top, gy1 = y1 - boom, gx = w - 0.16
+  for (const s of [-1, 1]) {
+    const px = x + s * gx
+    o.glazing.push(box(0.02, gy1 - gy0, len, px, (gy0 + gy1) / 2, 0))
+    o.frames.push(box(0.1, 0.12, len, px, gy0 + 0.06, 0), box(0.1, 0.1, len, px, gy1 - 0.05, 0), box(0.07, 0.06, len, px, gy0 + (gy1 - gy0) * 0.7, 0))
+    for (let i = 0; i < n * 3; i++) {
+      if (i % 3 === 0) continue // the panel posts already frame these
+      const z = -ze + (len * i) / (n * 3)
+      o.frames.push(box(0.07, gy1 - gy0, 0.06, px, (gy0 + gy1) / 2, z))
+    }
+  }
+  return o
+}

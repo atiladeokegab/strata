@@ -61,11 +61,12 @@ export function Part({ id, rt, home = [0, 0, 0], explode = [0, 0, 0], xray = fal
       m.emissive.copy(HIGHLIGHT)
       m.emissiveIntensity = glow
       if (m.userData.kind === 'steel') m.color.set(rt.steel.current)
-      const t = fade > 0.01
+      const own = m.userData.opacity ?? 1 // clear glass keeps its own opacity under the fade
+      const t = fade > 0.01 || own < 1
       // three bakes `transparent` into the shader (OPAQUE define), so a flip needs a recompile.
       if (m.transparent !== t) (m.transparent = t), (m.needsUpdate = true)
-      m.opacity = 1 - 0.7 * fade
-      m.depthWrite = fade < 0.5
+      m.opacity = own * (1 - 0.7 * fade)
+      m.depthWrite = own === 1 && fade < 0.5
       m.clippingPlanes = clip
     }
   })

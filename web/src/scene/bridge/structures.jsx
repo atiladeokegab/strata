@@ -345,22 +345,16 @@ export function Suspension() {
 export function Approach() {
   const g = useMemo(() => {
     const z0 = L.pierZ - L.towerHalfZ, z1 = L.spanEnd, len = z0 - z1, zc = (z0 + z1) / 2
-    const rails = []
-    for (const x of [-9.1, 9.1]) {
-      rails.push(beam([x, 1.1, z0], [x, 1.1, z1], 0.07, 5))
-      for (let z = z1; z < z0; z += 2.5) rails.push(beam([x, 0, z], [x, 1.1, z], 0.05, 4))
-    }
+    // the cast-iron balustrade on the girders is ApproachDetails (details.jsx)
     return {
       deck: box(18, 1, len, 0, -0.5, zc),
       girders: merge([box(0.6, 2.4, len, -9.4, -0.9, zc), box(0.6, 2.4, len, 9.4, -0.9, zc)]),
-      rails: merge(rails),
     }
   }, [])
   return (
     <>
       <mesh geometry={g.deck} material={M.road} receiveShadow />
       <mesh geometry={g.girders} material={M.steel} castShadow />
-      <mesh geometry={g.rails} material={M.white} />
     </>
   )
 }

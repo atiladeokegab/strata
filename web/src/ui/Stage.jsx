@@ -3,7 +3,7 @@ import { useEffect } from 'react'
 import { Canvas, useThree } from '@react-three/fiber'
 import { Raycaster, Vector3 } from 'three'
 import { Sky } from '@react-three/drei'
-import { useStore, TILES } from '../store'
+import { useStore, TILES, EMBED } from '../store'
 import { CameraRig } from './CameraRig'
 import { makeSlot } from './slots'
 import { BridgeStandIn, GroundStandIn, WaterStandIn } from './StandIns'
@@ -24,19 +24,22 @@ function partOf(object, ids) {
   return null
 }
 
-// Scene labels (drei <Html> buttons in .stage) hide while they overlap the on-screen controls,
-// or, with the bascules up, while their anchor is behind or inside a raised leaf.
+// Scene labels (drei <Html> buttons in .stage) are kept readable: nearest first, each one hides while it overlaps
+// the on-screen controls or a nearer label, or while its anchor is behind or inside a raised leaf; a label cut
+// by the screen edge is slid back inside it. Embeds keep only the few nearest.
 const CLEAR_OF = '.controls, .credit, .dock, .embed-open'
 const overlaps = (a, b, m = 6) => a.left < b.right + m && a.right > b.left - m && a.top < b.bottom + m && a.bottom > b.top - m
 const LEAF = /^bascule-(north|south)$/
+const EDGE = 8 // px kept clear of the screen edge
+const EMBED_LABELS = 4
 const ray = new Raycaster()
 const at = new Vector3()
 
-// screen points (px) of label anchors a raised leaf hides: one ray per landmark, tested against the leaf meshes only
+// every label anchor on screen: {x, y} in px, its distance d from the camera, and whether a leaf hides it.
 // The leaves are driven by the dock slider, the tour and the ship lift sequence, so no "raised" flag
-// is shared; test always (a closed deck that hides an anchor hides it too). The mesh list is cached 2 s.
+// is shared; test always (a closed deck that hides an anchor hides it too). The leaf mesh list is cached 2 s.
 let leafCache = { at: 0, list: [] }
-export function behindLeaves(scene, camera, canvas) {
+export function labelAnchors(scene, camera, canvas) {
   const now = performance.now()
   if (now - leafCache.at > 2000) {
     const list = []
@@ -45,35 +48,55 @@ export function behindLeaves(scene, camera, canvas) {
   }
   const leaves = leafCache.list
   const marks = scene.getObjectByName('landmarks')
-  if (!leaves.length || !marks) return []
+  if (!marks) return []
   const box = canvas.getBoundingClientRect()
-  const hidden = []
+  const out = []
   for (const g of marks.children) {
     const anchor = g.children[0] // drei <Html>'s own group, at the label's anchor
     if (!anchor) continue
     anchor.getWorldPosition(at)
+    const d = camera.position.distanceTo(at)
     ray.set(camera.position, at.clone().sub(camera.position).normalize())
-    ray.far = camera.position.distanceTo(at)
-    if (!ray.intersectObjects(leaves, false).length) continue
+    ray.far = d
+    const hidden = leaves.length > 0 && ray.intersectObjects(leaves, false).length > 0
     at.project(camera)
-    hidden.push([box.left + ((at.x + 1) / 2) * box.width, box.top + ((1 - at.y) / 2) * box.height])
+    out.push({ x: box.left + ((at.x + 1) / 2) * box.width, y: box.top + ((1 - at.y) / 2) * box.height, d, hidden })
   }
-  return hidden
+  return out
+}
+
+// one pass over the labels; returns the names shown. ?capture=1 exposes it as window.__strataLabels for the label test
+export function guardLabels(scene, camera, canvas, max = Infinity) {
+  const keep = [...document.querySelectorAll(CLEAR_OF)].map((el) => el.getBoundingClientRect())
+  const anchors = labelAnchors(scene, camera, canvas)
+  const W = innerWidth, H = innerHeight
+  const labels = [...document.querySelectorAll('.stage button')].map((b) => {
+    const r = b.getBoundingClientRect(), was = +(b.dataset.dx || 0)
+    const left = r.left - was, right = r.right - was
+    const cx = (left + right) / 2, cy = (r.top + r.bottom) / 2 // labels are centred on their anchor
+    const a = anchors.find((p) => Math.abs(p.x - cx) < 4 && Math.abs(p.y - cy) < 4)
+    const dx = Math.max(EDGE - left, Math.min(0, W - EDGE - right)) // slide a label cut by the edge back on screen
+    return { b, dx, a, cx, cy, r: { left: left + dx, right: right + dx, top: r.top, bottom: r.bottom } }
+  }).sort((p, q) => (p.a?.d ?? Infinity) - (q.a?.d ?? Infinity)) // nearest first
+  const shown = []
+  for (const l of labels) {
+    const off = l.cx < 0 || l.cx > W || l.cy < EDGE || l.cy > H - EDGE // anchor off screen: no clamping to a wrong place
+      || l.a?.hidden || shown.length >= max
+      || keep.some((k) => overlaps(l.r, k)) || shown.some((s) => overlaps(l.r, s.r, 4))
+    if (!off) shown.push(l)
+    l.b.style.visibility = off ? 'hidden' : ''
+    l.b.dataset.dx = l.dx
+    l.b.style.transform = l.dx ? `translateX(${l.dx}px)` : ''
+  }
+  return shown.map((l) => l.b.textContent)
 }
 
 function LabelGuard() {
   const { scene, camera, gl } = useThree()
   useEffect(() => {
-    const id = setInterval(() => {
-      const keep = [...document.querySelectorAll(CLEAR_OF)].map((el) => el.getBoundingClientRect())
-      const hidden = behindLeaves(scene, camera, gl.domElement)
-      for (const b of document.querySelectorAll('.stage button')) {
-        const r = b.getBoundingClientRect()
-        const cx = (r.left + r.right) / 2, cy = (r.top + r.bottom) / 2 // labels are centred on their anchor
-        const off = keep.some((k) => overlaps(r, k)) || hidden.some(([x, y]) => Math.abs(x - cx) < 4 && Math.abs(y - cy) < 4)
-        b.style.visibility = off ? 'hidden' : ''
-      }
-    }, 150)
+    const run = () => guardLabels(scene, camera, gl.domElement, EMBED ? EMBED_LABELS : Infinity)
+    const id = setInterval(run, 150)
+    if (new URLSearchParams(location.search).has('capture')) window.__strataLabels = run
     return () => clearInterval(id)
   }, [scene, camera, gl])
   return null

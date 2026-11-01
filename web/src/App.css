@@ -234,3 +234,5 @@ input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 
   border: 1px solid var(--line); color: var(--ink); font: 500 var(--t2)/1 var(--sans); text-decoration: none; box-shadow: var(--shadow); white-space: nowrap; }
 .embed-open:hover { background: var(--surface-solid); }
 @media (max-width: 480px) { .app.embed .credit { right: 8px; max-width: none; } .embed-open { top: auto; bottom: 8px; } }
+/* drags over the scene never select label text (the labels' inline all:unset needs !important) */
+.stage, .stage button { -webkit-user-select: none !important; user-select: none !important; }

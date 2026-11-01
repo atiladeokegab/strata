@@ -4,7 +4,7 @@ import { Component, Suspense, lazy } from 'react'
 // globs of files that do not exist yet are simply empty, so the build never fails on a missing slot
 const mods = import.meta.glob(['../scene/Terrain.jsx', '../scene/Water.jsx', '../scene/bridge/TowerBridge.jsx', '../scene/bridge/index.jsx', '../scene/Look.jsx', '../scene/Tour.jsx', '../scene/GoogleTiles.jsx', '../scene/Buildings.jsx', '../scene/Landmarks.jsx'])
 
-class Guard extends Component {
+export class Guard extends Component {
   state = { failed: false }
   static getDerivedStateFromError() { return { failed: true } }
   componentDidCatch(e) { console.warn(`[strata] ${this.props.name} failed, showing the stand-in:`, e) }

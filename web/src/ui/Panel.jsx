@@ -230,8 +230,13 @@ function Docent() {
 
 export function Panel() {
   const place = useStore((s) => s.place)
+  const selected = useStore((s) => s.selected)
+  const sheet = useStore((s) => s.sheet)
+  const setSheet = useStore((s) => s.setSheet)
+  useEffect(() => { if (selected) setSheet(true) }, [selected, setSheet]) // a tapped part opens the sheet on phones
   return (
-    <aside className="panel glass">
+    <aside className="panel glass" onFocusCapture={(e) => e.target.matches('input') && setSheet(true)}>
+      <button type="button" className="sheet-handle" aria-expanded={sheet} aria-label={sheet ? 'Collapse the panel' : 'Expand the panel'} onClick={() => setSheet(!sheet)}><i /></button>
       <header className="brand">
         <span className="mark" aria-hidden="true" />
         <span className="word">Strata</span>

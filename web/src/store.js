@@ -5,6 +5,10 @@ export const FIRST_YEAR = 1886
 export const THIS_YEAR = new Date().getFullYear()
 
 export const useStore = create((set) => ({
+  sheet: false, // phone/tablet: bottom sheet expanded
+  setSheet: (sheet) => set({ sheet }),
+  help: false, // the How to use card
+  setHelp: (help) => set({ help }),
   place: null, // {id, name, location, parts, events, sources} from GET /api/places/{id}
   setPlace: (place) => set({ place }),
   loadPlace: async (id) => {

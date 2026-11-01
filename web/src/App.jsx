@@ -7,7 +7,8 @@ import { Controls, Dock } from './ui/Dock'
 const Reimagine = lazy(() => import('./ui/Reimagine'))
 const Identify = lazy(() => import('./ui/Identify'))
 import Home from './ui/home/Home'
-import { makeSlot } from './ui/slots'
+import { Guard, makeSlot } from './ui/slots'
+import { Help, HelpButton, helpSeen } from './ui/Help'
 import './App.css'
 
 const PLACE = 'tower-bridge'
@@ -47,6 +48,11 @@ function MovePad() {
   )
 }
 
+function AutoEnter({ go }) {
+  useEffect(() => { go() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  return null
+}
+
 function Loading({ error, retry }) {
   return (
     <div className={`loading${error ? ' failed' : ''}`} role="status">
@@ -66,10 +72,17 @@ export default function App() {
   const [entered, setEntered] = useState(() => new URLSearchParams(location.search).get('tour') === '1')
   const load = () => { setError(false); loadPlace(PLACE).catch(() => setError(true)) }
   useEffect(load, []) // eslint-disable-line react-hooks/exhaustive-deps
-  if (!entered) return <Home onEnter={() => setEntered(true)} />
+  const sheet = useStore((s) => s.sheet)
+  const enter = () => {
+    setEntered(true)
+    const film = /[?&](tour|capture)=1/.test(location.search)
+    if (!film && !helpSeen()) useStore.getState().setHelp(true)
+  }
+  // no WebGL (old phone, locked-down browser): skip the 3D landing; the panel, timeline and docent still work
+  if (!entered) return <Guard name="Home" fallback={<AutoEnter go={enter} />}><Home onEnter={enter} /></Guard>
   return (
-    <div className={`app view-${view}`}>
-      <Stage />
+    <div className={`app view-${view}${sheet ? ' sheet-open' : ''}`}>
+      <Guard name="Stage" fallback={<p className="no-webgl">This browser can't draw the 3D bridge. The facts, timeline and docent below still work.</p>}><Stage /></Guard>
       <Panel />
       <Dock />
       <Controls>
@@ -77,7 +90,9 @@ export default function App() {
           <Reimagine />
           <Identify />
         </Suspense>
+        <HelpButton />
       </Controls>
+      <Help />
       <Credit />
       {view === 'walk' && <p className="walk-hint glass">W A S D to walk · drag to look · Shift to run</p>}
       {view === 'walk' && <MovePad />}

@@ -38,6 +38,18 @@ BRIDGE_CUT = {"length": 270.0, "width": 64.0}  # metres, along / across the brid
 ABUTMENT_END = 153.0  # m along the axis: the shore abutments stand just outside the cut, ending about here
 
 
+
+# Engine house and pump house (bridge-local x 16-47.5, z 140.5-169.5 south) plus a 2 m apron: the DSM there is the
+# real buildings beside the south approach, which bury our free-standing house and any camera framing it.
+ENGINE_HOUSE = {"across": (14.0, 49.5), "along": (-171.5, -138.5), "y": -3.4}  # m; along is north-positive, so -z
+
+
+def carve_engine_house(a, along, across, origin_h, encode=lambda h: h):
+    m = (across >= ENGINE_HOUSE["across"][0]) & (across < ENGINE_HOUSE["across"][1])
+    m &= (along >= ENGINE_HOUSE["along"][0]) & (along < ENGINE_HOUSE["along"][1])
+    a[m] = encode(origin_h + ENGINE_HOUSE["y"])
+
+
 def fill_abutments(a, along, across, axis):
     """The DSM sees the shore abutments' roofs as an 18 m wall across the road (|along| 135-143). Our procedural
     abutments replace them, so fill that band from the street just beyond, keeping the road open. Mutates a."""
@@ -155,6 +167,7 @@ def main():
         sides.append(a[sy, sx])
     a[ys, xs] = np.minimum(*sides)
     fill_abutments(a, along, across, axis)
+    carve_engine_house(a, along, across, origin_h)
 
     min_h, max_h = float(np.floor(a.min())), float(np.ceil(a.max()))
     v = np.round((a - min_h) / (max_h - min_h) * 65535).astype(np.uint16)

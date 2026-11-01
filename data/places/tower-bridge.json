@@ -1,0 +1,27 @@
+{
+  "id": "tower-bridge",
+  "name": "Tower Bridge",
+  "location": {"lat": 51.50546, "lon": -0.07536, "osgb": [533782, 180242]},
+  "frame": "metres; origin at the centre of the bridge deck at road level; x east, y up, z south",
+  "parts": [
+    {"id": "north-tower", "name": "North tower", "group": "towers",
+     "dims": {"height": {"value": 65, "unit": "m", "source": "wiki-tb", "status": "text-attested"}},
+     "summary": "Steel frame clad in Cornish granite and Portland stone.", "sources": ["wiki-tb"]},
+    {"id": "south-tower", "name": "South tower", "group": "towers",
+     "dims": {"height": {"value": 65, "unit": "m", "source": "wiki-tb", "status": "text-attested"}},
+     "summary": "Twin of the north tower.", "sources": ["wiki-tb"]},
+    {"id": "bascule-north", "name": "North bascule", "group": "bascules",
+     "dims": {"max_angle": {"value": 86, "unit": "deg", "source": "wiki-tb", "status": "text-attested"}},
+     "summary": "One leaf of the opening roadway, pivoting on its counterweighted end.", "sources": ["wiki-tb"]},
+    {"id": "bascule-south", "name": "South bascule", "group": "bascules",
+     "dims": {"max_angle": {"value": 86, "unit": "deg", "source": "wiki-tb", "status": "text-attested"}},
+     "summary": "The other leaf.", "sources": ["wiki-tb"]}
+  ],
+  "events": [
+    {"year": 1886, "title": "Construction begins", "text": "Work starts on the piers.", "sources": ["wiki-tb"], "stage": 0},
+    {"year": 1894, "title": "Opened", "text": "Opened by the Prince of Wales on 30 June 1894.", "sources": ["wiki-tb"], "stage": 4}
+  ],
+  "sources": [
+    {"id": "wiki-tb", "title": "Tower Bridge, Wikipedia", "url": "https://en.wikipedia.org/wiki/Tower_Bridge", "kind": "secondary"}
+  ]
+}

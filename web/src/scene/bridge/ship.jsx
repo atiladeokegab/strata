@@ -258,16 +258,18 @@ function Tug({ mats }) {
     }),
     [],
   )
+  // lite: near-black glazing joins the black hull, dark rope joins the dark timber (two draws fewer)
+  if (LITE && geo.tow) (geo.hull = merge([geo.hull, geo.glass])), (geo.mast = merge([geo.mast, geo.tow])), delete geo.glass, delete geo.tow
   return (
     <>
       <mesh geometry={geo.hull} material={mats.black} castShadow />
       <mesh geometry={geo.band} material={mats.red} />
       <mesh geometry={geo.house} material={mats.white} castShadow />
-      <mesh geometry={geo.glass} material={mats.glass} />
+      {geo.glass && <mesh geometry={geo.glass} material={mats.glass} />}
       <mesh geometry={geo.funnel} material={mats.buff} castShadow />
       <mesh geometry={geo.mast} material={mats.spars} />
       <mesh geometry={geo.lighter} material={mats.rust} castShadow receiveShadow />
-      <mesh geometry={geo.tow} material={mats.rope} />
+      {geo.tow && <mesh geometry={geo.tow} material={mats.rope} />}
     </>
   )
 }

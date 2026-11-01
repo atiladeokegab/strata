@@ -3,15 +3,17 @@
 // The part close-up and the controls hand-off are adapted from Mechanica (MIT), src/ui/viewer/DemoFocusRig.tsx.
 import { useEffect, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
+import { Html } from '@react-three/drei'
 import { Box3, Sphere } from 'three'
 import { useStore, THIS_YEAR } from '../store.js'
-import { useTour, startTour, stopTour, DURATION, poseAt, runTracks, hydraulicsPart } from '../tour/tour.js'
+import { useTour, startTour, stopTour, DURATION, poseAt, runTracks, hydraulicsPart, CARD, cardOpacity } from '../tour/tour.js'
 
 export default function Tour() {
   const playing = useTour((s) => s.playing)
   const { camera, scene, gl } = useThree()
   const controls = useThree((st) => st.controls)
   const run = useRef(null) // {prev, ctx, centres}
+  const card = useRef(null)
 
   // ?tour=1: start when the place is in (or after 4 s regardless, so a dead API never blocks a take).
   useEffect(() => {
@@ -52,6 +54,7 @@ export default function Tour() {
     const r = run.current
     if (!useTour.getState().playing || !r) return
     const t = Math.min(DURATION, (performance.now() - useTour.getState().startedAt) / 1000)
+    if (card.current) card.current.style.opacity = Math.max(0, cardOpacity(t))
     runTracks(r.prev, t, r.ctx)
     r.prev = t
     const { pos, target } = poseAt(t, (k) => (k.part && fitPart(scene, camera, r, r.ctx.hydraulics, k)) || k)
@@ -61,7 +64,23 @@ export default function Tour() {
     if (t >= DURATION) stopTour()
   })
 
-  return null
+  if (!playing) return null
+  return (
+    <Html fullscreen zIndexRange={[20, 10]} style={{ pointerEvents: 'none' }}>
+      <div ref={card} style={cardStyle} aria-live="polite">
+        <div style={{ maxWidth: 780 }}>
+          <p style={{ margin: 0, font: '400 clamp(26px, 3.4vw, 44px)/1.18 var(--serif)', color: 'var(--ink)', letterSpacing: '-.01em' }}>{CARD.problem}</p>
+          <p style={{ margin: '18px 0 0', font: '400 clamp(15px, 1.5vw, 19px)/1.5 var(--sans)', color: 'var(--muted)' }}>{CARD.pitch}</p>
+          <p style={{ margin: '26px 0 0', font: '500 12px/1 var(--mono)', color: 'var(--gold)', letterSpacing: '.14em', textTransform: 'uppercase' }}>{CARD.place}</p>
+        </div>
+      </div>
+    </Html>
+  )
+}
+
+const cardStyle = {
+  position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 24px',
+  textAlign: 'center', opacity: 0, background: 'radial-gradient(ellipse at center, rgba(11,11,9,.72) 0%, rgba(11,11,9,.35) 55%, rgba(11,11,9,0) 80%)',
 }
 
 // Aim at the mesh named partId and fit the distance to its bounding sphere (Mechanica's focus fit: radius * 2.4 /

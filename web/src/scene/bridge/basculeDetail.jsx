@@ -69,12 +69,12 @@ function build() {
   // nose: lock housings and bolts under the tip, interlocking teeth on the meeting edge.
   // Teeth at -8.5 + 2k: the opposite leaf (turned 180 deg) puts its own in the gaps.
   for (const x of [-5.25, 0, 5.25]) {
-    iron.push(box(1.6, 0.7, 1.6, x, PLATE - 0.35, LEN - 0.9))
+    fascia.push(box(1.6, 0.7, 1.6, x, PLATE - 0.35, LEN - 0.9)) // painted like the leaf: dark metal reads black when raised
     bolts.push(beam([x, PLATE - 0.35, LEN - 1.4], [x, PLATE - 0.35, LEN + 0.35], 0.16, 8)) // shot home: 0.35 m into the other leaf
-    iron.push(box(1.8, 0.12, 1.8, x, PLATE - 0.75, LEN - 0.9))
+    fascia.push(box(1.8, 0.12, 1.8, x, PLATE - 0.75, LEN - 0.9))
   }
-  for (let x = -8.5; x <= 8.5; x += 2) iron.push(box(0.9, 0.35, 0.3, x, PLATE - 0.2, LEN + 0.1))
-  iron.push(box(18, 0.2, 0.15, 0, PLATE - 0.45, LEN - 0.08))
+  for (let x = -8.5; x <= 8.5; x += 2) fascia.push(box(0.9, 0.35, 0.3, x, PLATE - 0.2, LEN + 0.1))
+  fascia.push(box(18, 0.2, 0.15, 0, PLATE - 0.45, LEN - 0.08))
 
   // tail: lock bars and buffers at the end of the tail, under the counterweight arm
   const tz = -14

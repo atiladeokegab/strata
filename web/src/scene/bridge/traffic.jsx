@@ -11,6 +11,7 @@ import { Part } from './Part.jsx'
 import { box, merge, M } from './geom.js'
 import { createTraffic, stepTraffic, onLeaves, roadY, TYPES, GATE_U } from './trafficSim.js'
 import { STREET_DROP } from './structures.jsx'
+import { FOOTWAY_H } from './roadway.js'
 import { lift, stepLift, liftSpeed, gatesClosed } from './liftSequence.js'
 import { shipState } from './ship.jsx'
 
@@ -105,7 +106,7 @@ export function Traffic({ rt, year, sim, maxAngle }) {
         const z = L.dir * (v.u - TYPES[v.type].len / 2)
         const y = roadY(z, STREET_DROP)
         // pitch with the ramp: nose down (+x in the body frame) when the road falls ahead
-        o.position.set(L.x, y, z)
+        o.position.set(L.x, y + (v.type === 'ped' ? FOOTWAY_H : 0), z)
         o.rotation.set(Math.atan(y - roadY(z + L.dir, STREET_DROP)), L.dir > 0 ? 0 : Math.PI, 0, 'YXZ')
         o.updateMatrix()
         m.setMatrixAt(n[v.type]++, o.matrix)

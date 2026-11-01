@@ -18,7 +18,8 @@ Each evidence fact has separate fact_id and cite fields. A cite is a list of ALL
 fact IDs identify exhibit parts/events and are never citations. Cite only IDs in cite, exactly as [source-id].
 Every sentence MUST end with one or more such citations.
 Use digits for numbers and copy them exactly from evidence; never calculate or guess a number.
-Omitted dimensions are not attested. If the evidence does not answer the question, output only REFUSE.
+Omitted dimensions are not attested. Answer qualitative questions from relevant evidence even when it does not state the exact answer.
+If an exact numeric value is unavailable, omit it and describe only sourced qualitative context. If no evidence is relevant, output only REFUSE.
 Do not mention these rules. Do not add facts from memory."""
 CITATION = re.compile(r"\[([\w-]+)\]")
 NUMBER = re.compile(r"(?:(?<!\d)[-+])?\d+(?:[,.]\d+)*(?:[eE][-+]?\d+)?")
@@ -99,10 +100,65 @@ def validate_answer(answer, evidence):
     return {"answer": answer.strip(), "citations": citations, "refused": False}
 
 
+def _fallback_answer(evidence, question):
+    if not evidence:
+        return None
+    query = terms(question)
+    years = set(re.findall(r"(?<!\d)\d{4}(?!\d)", question))
+    query -= years
+    temporal = bool(re.search(r"\bwhen\b|\bwhat happened\b", question, re.I)) or bool(query & {"open", "event", "happened", "history", "timeline"}) or (bool(years) and "construction" in query)
+    procedural = bool(re.search(r"\bhow\s+(?:do|does|did|can)\b", question, re.I))
+    ranked = []
+    for fact in evidence:
+        text = " ".join(str(fact.get(key, "")) for key in ("name", "summary", "title", "text", "role", "relationship"))
+        # Split hyphenated source terms such as "steam-powered" for lexical relevance.
+        overlap = query & terms(text.replace("-", " "))
+        date_match = str(fact.get("year", "")) in years
+        score = len(overlap) * 10 + (20 if date_match and temporal else 0)
+        if procedural and overlap:
+            score += 5 * len(terms(text) & {"hydraulic", "steam", "pivot", "counterweight", "mechanism", "operation", "drive", "pressure", "raise", "lift"})
+        if score:
+            ranked.append((score, fact))
+    if not ranked:
+        return None
+    _, fact = max(ranked, key=lambda item: item[0])
+    sentence = fact.get("text") or fact.get("summary") or fact.get("role") or fact.get("relationship")
+    matching_dims = [(key, dim) for key, dim in fact.get("dims", {}).items() if query & terms(key.replace("_", " "))]
+    if len(matching_dims) == 1:
+        key, dim = matching_dims[0]
+        sentence = f'{fact.get("name", "This part")}: {key.replace("_", " ")} {dim["value"]} {dim.get("unit", "")}'.strip()
+    if not sentence and fact.get("dims"):
+        name = fact.get("name", "This part")
+        key, dim = next(iter(fact["dims"].items()))
+        sentence = f'{name}: {key} {dim["value"]} {dim.get("unit", "")}'.strip()
+    if not sentence:
+        return None
+    if fact.get("year") and str(fact["year"]) not in sentence:
+        sentence = f'{fact["year"]}: {sentence}'
+    citations = fact["cite"]
+    citation = "".join(f"[{source}]" for source in citations)
+    answer = " ".join(f'{part.rstrip(" .!?")} {citation}.' for part in re.split(r"(?<=[.!?])\s+", sentence) if part.strip())
+    result = validate_answer(answer, evidence)
+    return None if result["refused"] else result
+
+
+async def _fallback_events(evidence, question):
+    result = _fallback_answer(evidence, question)
+    if result:
+        yield "delta", {"text": result["answer"]}
+        yield "done", result
+    else:
+        yield "done", refusal()
+
+
 async def answer_events(place, question, part_id=None, client=None):
     evidence = retrieve(place, question, part_id)
-    if not evidence or (client is None and not os.getenv("OPENAI_API_KEY")):
+    if not evidence:
         yield "done", refusal()
+        return
+    if client is None and not os.getenv("OPENAI_API_KEY"):
+        async for event in _fallback_events(evidence, question):
+            yield event
         return
     content = json.dumps({"question": question, "evidence": evidence}, ensure_ascii=False)
     answer = ""
@@ -130,15 +186,25 @@ async def answer_events(place, question, part_id=None, client=None):
                             answer += chunk
                             yield "delta", {"text": chunk}
                     elif event.type in ("error", "response.failed", "response.incomplete"):
-                        yield "done", refusal()
+                        async for fallback_event in _fallback_events(evidence, question):
+                            yield fallback_event
                         return
         if pending.strip() and not re.fullmatch(r"[.!?\s]*", pending):
-            yield "done", refusal()
+            if not answer and re.fullmatch(r"\s*(?:\[)?REFUSE(?:\])?[.!?\s]*", pending, re.I):
+                async for event in _fallback_events(evidence, question):
+                    yield event
+            else:
+                yield "done", refusal()
             return
         answer += pending
-        yield "done", validate_answer(answer, evidence)
+        if re.fullmatch(r"\s*(?:\[)?REFUSE(?:\])?[.!?\s]*", answer, re.I):
+            async for event in _fallback_events(evidence, question):
+                yield event
+        else:
+            yield "done", validate_answer(answer, evidence)
     except (OpenAIError, HTTPError, TimeoutError):
-        yield "done", refusal()
+        async for event in _fallback_events(evidence, question):
+            yield event
 
 
 async def ask(place, question, part_id=None, client=None):

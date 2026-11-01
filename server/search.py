@@ -7,13 +7,13 @@ import re
 from openai import AsyncOpenAI, OpenAIError
 
 STOP_WORDS = set("a an and are as at be bridge by can do does did during for how i in is it me of on or tell the this to was were what when which who why with you".split())
-ALIASES = {"tall": "height", "high": "height", "opened": "open", "opening": "open", "built": "construction", "took": "take", "work": "hydraulic", "works": "hydraulic"}
+ALIASES = {"tall": "height", "high": "height", "opened": "open", "opening": "open", "built": "construction", "build": "construction", "building": "construction", "powered": "power", "took": "take", "work": "hydraulic", "works": "hydraulic"}
 EMBEDDING_MODEL = "text-embedding-3-small"
 _cache = {}
 
 
 def terms(text):
-    return {ALIASES.get(word, word).removesuffix("s") for word in re.findall(r"[\w-]+", text.casefold()) if word not in STOP_WORDS}
+    return {ALIASES.get(word, word.removesuffix("s")) for word in re.findall(r"\w+", text.casefold()) if word not in STOP_WORDS}
 
 
 def documents(place):

@@ -1,6 +1,20 @@
+# Python
 .venv/
 __pycache__/
 .pytest_cache/
+
+# Secrets: keys live in .env and never in git
 .env
+.env.*
+
+# Web
 node_modules/
-web/dist/
+dist/
+
+# Render outputs: film frames, screen captures and videos
+renders/
+frames/
+captures/
+*.mp4
+*.mov
+*.webm

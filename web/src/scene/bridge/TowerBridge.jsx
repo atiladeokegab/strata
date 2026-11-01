@@ -28,6 +28,7 @@ import { TopView } from './topview.jsx'
 import { liftSpeed, heldLever, substep } from './liftSequence.js'
 import { LiftControls } from './liftControls.jsx'
 import { useHomeDisc } from './homeDisc.js'
+import { Interior } from './interior.jsx'
 import { LITE } from '../look/tier.js'
 
 // The live sim state, for any panel that wants to show pressure or stored volume. Read-only.
@@ -129,13 +130,17 @@ function Half({ side, rt, st, towerTop, era, maxAngle }) {
           <Part id={id('pivot')} rt={rt} explode={[0, -2, 8]}>
             <S.PivotShaft />
           </Part>
-          <Part id={id('hydraulic-engine')} rt={rt} explode={[-22, -8, 0]}>
-            <S.HydraulicEngine sim={sim} />
-          </Part>
+          <Interior id={id('hydraulic-engine')}>
+            <Part id={id('hydraulic-engine')} rt={rt} explode={[-22, -8, 0]}>
+              <S.HydraulicEngine sim={sim} />
+            </Part>
+          </Interior>
           {/* every accumulator shares one part id (the data has one `accumulator` part) */}
-          <Part id="accumulator" rt={rt} explode={[24, -6, 0]}>
-            <S.Accumulators sim={sim} />
-          </Part>
+          <Interior id="accumulator">
+            <Part id="accumulator" rt={rt} explode={[24, -6, 0]}>
+              <S.Accumulators sim={sim} />
+            </Part>
+          </Interior>
         </>
       )}
       {st.stage >= 0 && st.stage < 5 && (

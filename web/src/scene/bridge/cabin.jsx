@@ -11,6 +11,7 @@ import { useStore } from '../../store.js'
 import { box, merge, M } from './geom.js'
 import { gaugePsi, PRESSURE_PSI } from './hydraulics.js'
 import { L } from './structures.jsx'
+import { Interior } from './interior.jsx'
 import { Part } from './Part.jsx'
 
 const W = 4, D = 3.4, H = 3, T = 0.25 // outer size, wall thickness
@@ -80,14 +81,16 @@ export function Cabin({ side, rt }) {
       <Part id={`cabin-${side}`} rt={rt} home={home} explode={[n ? -6 : 6, 6, 0]} xray>
         {sh.map(([k, g]) => <mesh key={k} geometry={g} material={M[k]} castShadow receiveShadow />)}
       </Part>
-      <Part id={`cabin-controls-${side}`} rt={rt} home={home} explode={[n ? -6 : 6, 3, 0]}>
-        <mesh geometry={ct.iron} material={M.iron} castShadow />
-        <mesh geometry={ct.white} material={M.white} />
-        <mesh ref={lever} geometry={geo.handle} material={M.brass} position={LEVER} />
-        <mesh ref={dial} geometry={geo.needle} material={M.iron} position={DIAL} />
-        <mesh ref={gauge} geometry={geo.needle} material={M.iron} position={GAUGE} />
-        <mesh ref={lamp} geometry={geo.lamp} material={M.white} position={LAMP} />
-      </Part>
+      <Interior id={`cabin-controls-${side}`}>
+        <Part id={`cabin-controls-${side}`} rt={rt} home={home} explode={[n ? -6 : 6, 3, 0]}>
+          <mesh geometry={ct.iron} material={M.iron} castShadow />
+          <mesh geometry={ct.white} material={M.white} />
+          <mesh ref={lever} geometry={geo.handle} material={M.brass} position={LEVER} />
+          <mesh ref={dial} geometry={geo.needle} material={M.iron} position={DIAL} />
+          <mesh ref={gauge} geometry={geo.needle} material={M.iron} position={GAUGE} />
+          <mesh ref={lamp} geometry={geo.lamp} material={M.white} position={LAMP} />
+        </Part>
+      </Interior>
     </>
   )
 }

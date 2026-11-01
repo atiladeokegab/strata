@@ -142,11 +142,14 @@ const KINDS = {
   brick: { variant: 'brick:london' },
 }
 const _c = new THREE.Color()
+const _hsl = {}
 
 function kindOf(m) {
   const k = m?.userData?.kind
   if (!KINDS[k] || m.map || m.metalness >= 0.9) return null // keep gold, brass and anything already textured
-  if (k === 'stone' && m.color.getHSL({}).l < 0.7) return KINDS.granite
+  // lightness in sRGB, as the hex in geom.js is written: portland #c7beab is 0.73, granite #93908b 0.56
+  // (read in linear, the default, portland was 0.49 and every tower got the granite set)
+  if (k === 'stone' && m.color.getHSL(_hsl, THREE.SRGBColorSpace).l < 0.65) return KINDS.granite
   return KINDS[k]
 }
 

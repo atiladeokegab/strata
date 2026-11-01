@@ -33,8 +33,7 @@ First exhibit: **Tower Bridge**, with the Tower of London, the Thames and Shad T
 
 ## Try it
 
-<!-- TODO(live): the Cloud Run URL goes here once the deploy lands. -->
-**Live demo:** coming shortly.
+**Live demo:** [strata-901257379404.europe-west2.run.app](https://strata-901257379404.europe-west2.run.app)
 
 1. Open the link and let the terrain load. You start in orbit view over Tower Bridge.
 2. Drag to orbit, scroll to zoom, or switch to top-down or walk with the view switcher.
@@ -56,6 +55,8 @@ First exhibit: **Tower Bridge**, with the Tower of London, the Thames and Shad T
 - Tower Bridge place data with sourced dimensions and dated events (`data/places/tower-bridge.json`)
 - FastAPI server: `GET /api/health` and `GET /api/places/{id}`
 - The React three.js web app scaffold, its shared store (place, selection, view, year, exploded, bascule) and the `/api` dev proxy
+- The procedural Tower Bridge (`web/src/scene/bridge/`): meshes named by part id, click to select, exploded view, bascules driven by a weighted-accumulator hydraulic simulation, and construction stages from 1886 to 1894. It is not yet mounted in the app.
+- A Cloud Run deploy: a multi-stage Dockerfile that builds the web app, and `make deploy`
 
 ### Coming next
 
@@ -118,7 +119,7 @@ Existing code, data and ideas this project stands on:
 - **Terrain height:** Environment Agency LiDAR Composite DSM, 1 m. © Environment Agency copyright and/or database right. Licensed under the [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/).
 - **Imagery and historic maps:** credited here as the terrain builder records them in `web/public/terrain/tower-bridge/meta.json`.
 - **History and dimensions:** each figure cites its own source in `data/places/tower-bridge.json`.
-- **Idea:** [Mechanica](https://github.com/Caleb0796/mechanica), MIT licence: data is law, sourced numbers with a status, mechanisms driven by simulated state.
+- **Idea and code:** [Mechanica](https://github.com/Caleb0796/mechanica), MIT licence: data is law, sourced numbers with a status, mechanisms driven by simulated state. Parts of Strata's code are adapted from Mechanica (commit `27b5f8b`); they are listed, with Mechanica's licence, in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 - **3D:** [three.js](https://threejs.org/) (MIT), [React Three Fiber](https://github.com/pmndrs/react-three-fiber) (MIT) and [drei](https://github.com/pmndrs/drei) (MIT).
 - **Web and server:** [React](https://react.dev/), [Vite](https://vite.dev/), [zustand](https://github.com/pmndrs/zustand), [FastAPI](https://fastapi.tiangolo.com/) and [SurrealDB](https://surrealdb.com/).
 - **Banner:** an illustration drawn in code (`docs/img/banner.html`), not a render of the survey data.

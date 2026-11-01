@@ -200,7 +200,7 @@ export function BasculeLeaf() {
       i ? s.lineTo(z, y) : s.moveTo(z, y),
     )
     const girders = [-7.5, -3, 3, 7.5].map((x) =>
-      new THREE.ExtrudeGeometry(s, { depth: 0.7, bevelEnabled: false }).rotateY(-Math.PI / 2).translate(x + 0.35, -L.pivotY, 0),
+      new THREE.ExtrudeGeometry(s, { depth: 0.7, bevelEnabled: false }).rotateY(-Math.PI / 2).translate(x + 0.35, -L.pivotY - 0.06, 0) // just under the deck: no z-fight,
     )
     const deck = box(18, 0.45, len, 0, -L.pivotY - 0.225, len / 2)
     girders.push(box(0.35, 1.3, len, -9, -L.pivotY - 0.7, len / 2), box(0.35, 1.3, len, 9, -L.pivotY - 0.7, len / 2))

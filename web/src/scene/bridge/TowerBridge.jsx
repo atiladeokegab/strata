@@ -35,7 +35,7 @@ function Half({ side, rt, st, towerTop }) {
           <S.Cofferdam />
         </Part>
       )}
-      <Part id={id('pier')} rt={rt} explode={[0, -22, 0]} xray clipY={rising(st, 0, S.L.bed, S.L.pierTop)}>
+      <Part id={id('pier')} rt={rt} explode={[0, 6, 0]} xray clipY={rising(st, 0, S.L.hw - 3, S.L.pierTop)}>
         <S.Pier />
       </Part>
       {shown('abutment', st.stage) && (

@@ -10,6 +10,7 @@ export const START_U = -140
 export const END_U = 140
 const ACCEL = 2 // m/s²
 const BRAKE = 3 // m/s², comfortable deceleration used to plan the stop
+const CLEAR_V = 5 // m/s; shortcut: everyone on a leaf hurries off at least this fast so a lift starts within ~15 s (time-compressed like SIM_SPEED)
 
 // len (m), vmax (m/s), gap = minimum bumper-to-bumper spacing (m)
 export const TYPES = {
@@ -61,7 +62,7 @@ export function stepTraffic(t, dt, closed) {
       let limit = lead ? lead.u - TYPES[lead.type].len - ty.gap : Infinity
       if (closed && v.u <= STOP_U) limit = Math.min(limit, STOP_U)
       const hurry = closed && v.u > -BASCULE_U && v.u - ty.len < BASCULE_U ? 1.5 : 1
-      const want = Math.min(ty.vmax * v.pace * hurry, Math.sqrt(2 * BRAKE * Math.max(0, limit - v.u)))
+      const want = Math.min(hurry > 1 ? Math.max(ty.vmax * hurry, CLEAR_V) : ty.vmax * v.pace, Math.sqrt(2 * BRAKE * Math.max(0, limit - v.u)))
       v.v = want > v.v ? Math.min(want, v.v + ACCEL * dt) : want
       // hard constraint on top of the braking curve: never into the vehicle ahead or past a closed gate
       v.u = Math.max(v.u, Math.min(v.u + v.v * dt, limit))
@@ -80,3 +81,7 @@ export function stepTraffic(t, dt, closed) {
   }
   return t
 }
+
+// Vehicles and pedestrians with any part of them on a bascule leaf.
+export const onLeaves = (t) =>
+  t.lanes.reduce((n, L) => n + L.list.filter((v) => v.u > -BASCULE_U && v.u - TYPES[v.type].len < BASCULE_U).length, 0)

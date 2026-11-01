@@ -9,7 +9,9 @@ import * as THREE from 'three'
 import { useStore } from '../../store.js'
 import { Part } from './Part.jsx'
 import { box, merge, M } from './geom.js'
-import { createTraffic, stepTraffic, TYPES, GATE_U } from './trafficSim.js'
+import { createTraffic, stepTraffic, onLeaves, TYPES, GATE_U } from './trafficSim.js'
+import { lift, stepLift } from './liftSequence.js'
+import { shipState } from './ship.jsx'
 
 // ---- low-poly bodies: origin at the centre, ground at y=0, facing +z ----
 const paint = (g, hex) => {
@@ -75,7 +77,7 @@ const BODY = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6
 
 const o = new THREE.Object3D()
 
-export function Traffic({ rt, year, sim }) {
+export function Traffic({ rt, year, sim, maxAngle }) {
   const era = year < 1920
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const t = useMemo(() => createTraffic(year), [era])
@@ -85,7 +87,10 @@ export function Traffic({ rt, year, sim }) {
 
   useFrame((_, dt) => {
     const g = gate.current
-    g.closed = useStore.getState().bascule > 0 || sim.angle > 0.001
+    const store = useStore.getState()
+    const lever = stepLift(lift, { dt, onLeaves: onLeaves(t), angle: sim.angle, maxAngle, shipX: shipState.x, shipSailing: shipState.sailing })
+    if (lever !== null && lever !== store.bascule) store.setBascule(lever)
+    g.closed = lift.red || store.bascule > 0 || sim.angle > 0.001
     g.swing += ((g.closed ? 1 : 0) - g.swing) * (1 - Math.exp(-Math.min(dt, 0.1) * 1.5))
     stepTraffic(t, Math.min(dt, 0.1), g.closed)
     const n = Object.fromEntries(Object.keys(TYPES).map((k) => [k, 0]))

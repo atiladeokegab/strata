@@ -189,7 +189,7 @@ export function TowerBridge(props) {
         ))}
       {shown('engine', st.stage) && <EngineRoom rt={rt} explode={[14, 6, 20]} />}
       <TopView stage={st.stage} maxAngle={maxAngle} />
-      {st.stage >= 5 && <Traffic rt={rt} year={year} sim={bridgeHydraulics} />}
+      {st.stage >= 5 && <Traffic rt={rt} year={year} sim={bridgeHydraulics} maxAngle={maxAngle} />}
       {st.stage < 5 && (
         <Html position={[0, towerTop + 14, 0]} center zIndexRange={[10, 0]} style={{ pointerEvents: 'none' }}>
           <div className="bridge-stage-label" style={LABEL}>

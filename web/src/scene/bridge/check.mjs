@@ -1,12 +1,13 @@
 // Self-check for the pure bridge logic: `node web/src/scene/bridge/check.mjs`
 import assert from 'node:assert/strict'
-import { createHydraulics, stepHydraulics, OPEN_TIME_S } from './hydraulics.js'
+import { createHydraulics, stepHydraulics, OPEN_TIME_S, SIM_SPEED } from './hydraulics.js'
 import { stageForYear, shown } from './stages.js'
 import { containersOf } from './xray.js'
 import { createShip, stepShip, WAIT_X, HOLD_X } from './shipSim.js'
-import { createTraffic, stepTraffic, TYPES, STOP_U, BASCULE_U } from './trafficSim.js'
 import { vesselForYear, needsLift, leafInput, CLEARANCE } from './vessels.js'
 import { createRiver, stepRiver, gap, CRAFT, CLEAR } from './riverSim.js'
+import { createTraffic, stepTraffic, onLeaves, TYPES, STOP_U, BASCULE_U } from './trafficSim.js'
+import { createLift, liftForShip, stepLift, PASSED_X } from './liftSequence.js'
 
 const MAX = (86 * Math.PI) / 180
 const run = (s, target, seconds) => {
@@ -132,3 +133,29 @@ const crowd = placeLabels(Array.from({ length: 20 }, (_, i) => lab(`k${i}`, 700,
 assert.ok(Object.keys(crowd).length <= 8 && Object.keys(crowd).length >= 3, 'a crowd keeps only labels that fit')
 assert.equal(new Set(CALLOUTS.map((c) => c.id)).size, CALLOUTS.length)
 console.log('callout checks ok')
+// lift for a ship: the full cycle over the real hydraulic, ship and traffic sims, wired as in the app
+{
+  const h = createHydraulics(), ship = createShip(), t = createTraffic(2026, 3), s = createLift()
+  let lever = 0, phases = ['idle'], dt = 0.05
+  liftForShip(s)
+  assert.equal(s.caption, 'Signals to red')
+  for (let i = 0; i < 20 * 60 * 4 && !(s.phase === 'idle' && phases.length > 1); i++) {
+    const io = { dt, onLeaves: onLeaves(t), angle: h.angle, maxAngle: MAX, shipX: ship.x, shipSailing: ship.sailing }
+    const prev = s.phase
+    const next = stepLift(s, io)
+    if (next === 1 && lever === 0) assert.equal(io.onLeaves, 0, 'lever only goes up once the leaves are empty')
+    if (next === 0 && lever === 1) assert.ok(ship.x < PASSED_X, 'lever only comes down once the ship is through')
+    if (prev === 'lowering' && s.phase === 'resume') assert.ok(h.angle < 0.001, 'gates open only with the leaves down')
+    if (next !== null) lever = next
+    if (s.phase !== phases.at(-1)) phases.push(s.phase)
+    const closed = s.red || lever > 0 || h.angle > 0.001
+    stepTraffic(t, dt, closed)
+    if (h.angle > 0.001) assert.equal(onLeaves(t), 0, 'no road user on a moving leaf')
+    stepHydraulics(h, lever, dt * SIM_SPEED, MAX)
+    stepShip(ship, h.angle / MAX, dt)
+  }
+  assert.deepEqual(phases, ['idle', 'red', 'raising', 'passing', 'lowering', 'resume', 'idle'], `lift phases ${phases}`)
+  assert.equal(lever, 0)
+  assert.ok(t.lanes.every((l) => l.list.some((v) => v.u > STOP_U + 5)), 'traffic moves again after the lift')
+}
+console.log('lift checks ok')

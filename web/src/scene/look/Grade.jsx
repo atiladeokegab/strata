@@ -23,6 +23,12 @@ export default function Grade({ low }) {
   const ao = useRef()
   useFrame(({ camera }, dt) => {
     // AO grounds things up close; from altitude it only greys the dense LiDAR roofscape, so fade it out
+    if (ao.current) {
+      // N8AO otherwise traverses the scene each frame and, finding any transparent material (glass, fading
+      // tiles), renders the whole scene twice more for transparency: drop that, AO behind glass is fine.
+      ao.current.autoDetectTransparency = false
+      ao.current.configuration.transparencyAware = false
+    }
     if (ao.current) ao.current.configuration.intensity = AO * (1 - 0.75 * THREE.MathUtils.smoothstep(camera.position.y, 150, 900))
     const p = (k.current = THREE.MathUtils.damp(k.current, periodGrade(useStore.getState().year), 4, dt))
     fx.sat.saturation = 0.04 - 0.4 * p

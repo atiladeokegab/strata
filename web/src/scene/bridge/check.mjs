@@ -497,12 +497,16 @@ console.log('geom materials untextured, all kinded ok')
   const out = join(tmpdir(), `bridge-corridor-${process.pid}.mjs`)
   const resolveDir = fileURLToPath(new URL('.', import.meta.url))
   // three is bundled too, so the scene and the components share one copy
-  await bundle({ stdin: { contents: `export { TowerBridge } from './TowerBridge.jsx'; export { BODIES } from './traffic.jsx'; export { useStore } from '../../store.js'; export { Fragment } from 'react/jsx-runtime'; export { setLite } from '../look/tier.js'; export * as T from 'three'`, resolveDir, loader: 'js' }, bundle: true, format: 'esm', platform: 'node', jsx: 'automatic', plugins: [stubs], outfile: out, logLevel: 'error' })
+  await bundle({ stdin: { contents: `export { TowerBridge } from './TowerBridge.jsx'; export { BODIES, BODY } from './traffic.jsx'; export { useStore } from '../../store.js'; export { Fragment } from 'react/jsx-runtime'; export { setLite } from '../look/tier.js'; export * as T from 'three'`, resolveDir, loader: 'js' }, bundle: true, format: 'esm', platform: 'node', jsx: 'automatic', plugins: [stubs], outfile: out, logLevel: 'error' })
   const noop = new Proxy(() => noop, { get: () => noop }) // canvas textures draw into a no-op 2D context
   globalThis.document ??= { createElement: () => ({ getContext: () => noop }) }
   globalThis.location ??= { search: '' } // store.js reads ?embed= at import
-  const { TowerBridge, BODIES, useStore, Fragment, T, setLite } = await import(out)
+  const { TowerBridge, BODIES, BODY, useStore, Fragment, T, setLite } = await import(out)
   unlinkSync(out)
+  // bus rears went black in shade: the paint carries its own bounce term into the standard shader
+  const sh = { fragmentShader: T.ShaderLib.standard.fragmentShader }
+  BODY.onBeforeCompile(sh)
+  assert.match(sh.fragmentShader, /#include <emissivemap_fragment>\n\ttotalEmissiveRadiance \+= vColor\.rgb \* 0\.12;/, 'traffic paint keeps a bounce term in shade')
 
   // Vehicle and people bodies (regression: the bus's rear face rendered black): every part is a convex
   // primitive, so each face's stored normals and its winding must point away from the part's centre.

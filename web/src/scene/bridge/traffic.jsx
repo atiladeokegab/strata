@@ -10,7 +10,7 @@ import * as THREE from 'three'
 import { useStore } from '../../store.js'
 import { Part } from './Part.jsx'
 import { box, merge, M } from './geom.js'
-import { createTraffic, stepTraffic, onLeaves, roadY, streetProfile, eraOf, nearCam, END_U, RAMP_FOOT, TYPES, GATE_U, POST_X, POST_Z, POST_W } from './trafficSim.js'
+import { createTraffic, stepTraffic, onLeaves, roadY, streetProfile, eraOf, nearCam, RAMP_FOOT, TYPES, GATE_U, POST_X, POST_Z, POST_W } from './trafficSim.js'
 import { LITE } from '../look/tier.js'
 import { STREET_DROP } from './structures.jsx'
 import { FOOTWAY_H } from './roadway.js'
@@ -98,7 +98,12 @@ export const BODIES = {
 // Phones (LITE) draw two in five pedestrians and get smaller instance buffers.
 const CAP = Object.fromEntries(Object.entries({ cart: 40, hansom: 60, car: 60, taxi: 60, bus: 30, ped: 160, lady: 100 }).map(([k, c]) => [k, k === 'ped' || k === 'lady' ? Math.ceil(c * (LITE ? 0.4 : 1)) : c]))
 const PEOPLE = new Set(['ped', 'lady'])
-const BODY = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, metalness: 0.1 }) // paint: higher metalness mirrored the dark lower sky on flat ends
+export const BODY = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, metalness: 0.1 }) // paint: higher metalness mirrored the dark lower sky on flat ends
+// Bounce light: an end in shade sees only the bluish sky, which saturated red paint (G, B ~ 0) barely reflects,
+// so the grade crushed bus rears to black. A little of the paint's own colour keeps every shaded end in hue.
+BODY.onBeforeCompile = (s) => {
+  s.fragmentShader = s.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n\ttotalEmissiveRadiance += vColor.rgb * 0.12;')
+}
 
 const o = new THREE.Object3D()
 

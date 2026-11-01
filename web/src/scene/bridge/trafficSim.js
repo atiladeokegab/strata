@@ -72,7 +72,6 @@ export const TYPES = {
   taxi: { len: 4.5, vmax: 10, gap: 2 },
   ped: { len: 0.6, vmax: 1.4, gap: 0.5 },
   lady: { len: 0.6, vmax: 1.3, gap: 0.5 },
-  tram: { len: 10.5, vmax: 4, gap: 0 }, // street only: never in a lane, see tramZ
 }
 
 // Street eras. Before 1920 the bridge carried horse traffic; between the wars motor traffic shared
@@ -82,20 +81,8 @@ export const eraOf = (year) => (year < 1920 ? 'horse' : year < 1960 ? 'interwar'
 const ROAD = { horse: ['cart', 'hansom', 'hansom'], interwar: ['car', 'car', 'taxi', 'bus', 'cart'], modern: ['car', 'car', 'taxi', 'taxi', 'bus'] }
 const PEDS = { horse: ['ped', 'lady'], interwar: ['ped', 'lady'], modern: ['ped'] }
 
-// LCC trams ran along Tower Bridge Road to the south approach but never over the bridge (the City
-// barred them). One double-ended car shuttles: in to its stop past the south ramp foot, dwell,
-// reverse out past the spawn point, away a while. status: inferred, years ~1904-1952.
-export const hasTram = (year) => year >= 1904 && year < 1952
-export const TRAM_STOP = RAMP_FOOT + 6 // north end of the car at the stop, bridge z
-export const TRAM_OUT = END_U + TYPES.tram.len // north end once wholly past the spawn point
-const TRAM_RUN = 14, TRAM_DWELL = 25, TRAM_AWAY = 20 // s
-export const TRAM_CYCLE = 2 * TRAM_RUN + TRAM_DWELL + TRAM_AWAY
-export function tramZ(time) {
-  const c = ((time % TRAM_CYCLE) + TRAM_CYCLE) % TRAM_CYCLE
-  const ease = (s) => (s = Math.min(1, Math.max(0, s)), s * s * (3 - 2 * s))
-  const k = c < TRAM_RUN ? 1 - ease(c / TRAM_RUN) : c < TRAM_RUN + TRAM_DWELL ? 0 : ease((c - TRAM_RUN - TRAM_DWELL) / TRAM_RUN)
-  return TRAM_STOP + (TRAM_OUT - TRAM_STOP) * k
-}
+// No tram: LCC routes 68 and 70 ran along Tower Bridge Road through its Tooley Street junction (70
+// terminated in Tooley Street by London Bridge), so none turned back at the foot of the bridge.
 
 function rng(seed) {
   return () => {
@@ -113,7 +100,6 @@ export function createTraffic(year, seed = 1) {
   const t = {
     rand: rng(seed),
     nextId: 1,
-    tram: hasTram(year) ? { time: 0 } : null,
     lanes: [
       lane(1, 2.5, road, 6),
       lane(-1, -2.5, road, 6),
@@ -129,7 +115,6 @@ export function createTraffic(year, seed = 1) {
 // anything already past the gate carries on and clears the bascule. hurry > 1 runs the clock of
 // those clearing a leaf that much faster (the film's fast lift); everyone else keeps real time.
 export function stepTraffic(t, dt, closed, hurry = 1) {
-  if (t.tram) t.tram.time += dt
   for (const L of t.lanes) {
     let lead = null
     for (const v of L.list) {

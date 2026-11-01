@@ -10,7 +10,7 @@ import * as THREE from 'three'
 import { useStore } from '../../store.js'
 import { Part } from './Part.jsx'
 import { box, merge, M } from './geom.js'
-import { createTraffic, stepTraffic, onLeaves, roadY, streetProfile, eraOf, hasTram, tramZ, nearCam, END_U, RAMP_FOOT, TYPES, GATE_U, POST_X, POST_Z, POST_W } from './trafficSim.js'
+import { createTraffic, stepTraffic, onLeaves, roadY, streetProfile, eraOf, nearCam, END_U, RAMP_FOOT, TYPES, GATE_U, POST_X, POST_Z, POST_W } from './trafficSim.js'
 import { LITE } from '../look/tier.js'
 import { STREET_DROP } from './structures.jsx'
 import { FOOTWAY_H } from './roadway.js'
@@ -70,17 +70,6 @@ export const BODIES = {
     paint(box(2.56, 0.18, 8.42, 0, 2.75, 0), '#f1e9d2'),
     ...wheels(0.5, 1.15, [-2.6, 2.8]),
   ],
-  // LCC E/1-type double-deck tram, crimson lake and primrose, double-ended; conduit pickup, so no pole
-  tram: () => [
-    paint(box(2.1, 0.5, 10.5, 0, 0.75, 0), '#1c1c1c'),
-    paint(box(2.1, 1.2, 9.2, 0, 1.6, 0), '#7a1f2b'),
-    paint(box(2.12, 0.9, 7.6, 0, 2.6, 0), '#2a2f36'),
-    paint(box(2.1, 0.25, 9.6, 0, 3.15, 0), '#e8dcae'),
-    paint(box(2.1, 0.8, 9.6, 0, 3.7, 0), '#7a1f2b'),
-    paint(box(2.12, 0.6, 9, 0, 4.4, 0), '#2a2f36'),
-    paint(box(2, 0.15, 9.4, 0, 4.78, 0), '#5a5a5a'),
-    ...wheels(0.35, 0.72, [-3.2, -2.2, 2.2, 3.2]),
-  ],
   // people: the man and the woman change clothes with the street era
   ped: (era) => {
     const head = paint(new THREE.SphereGeometry(0.15, 6, 4).translate(0, 1.55, 0), '#c9a487')
@@ -107,7 +96,7 @@ export const BODIES = {
   },
 }
 // Phones (LITE) draw two in five pedestrians and get smaller instance buffers.
-const CAP = Object.fromEntries(Object.entries({ cart: 40, hansom: 60, car: 60, taxi: 60, bus: 30, ped: 160, lady: 100, tram: 1 }).map(([k, c]) => [k, k === 'ped' || k === 'lady' ? Math.ceil(c * (LITE ? 0.4 : 1)) : c]))
+const CAP = Object.fromEntries(Object.entries({ cart: 40, hansom: 60, car: 60, taxi: 60, bus: 30, ped: 160, lady: 100 }).map(([k, c]) => [k, k === 'ped' || k === 'lady' ? Math.ceil(c * (LITE ? 0.4 : 1)) : c]))
 const PEOPLE = new Set(['ped', 'lady'])
 const BODY = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, metalness: 0.1 }) // paint: higher metalness mirrored the dark lower sky on flat ends
 
@@ -115,12 +104,11 @@ const o = new THREE.Object3D()
 
 export function Traffic({ rt, year, sim, maxAngle }) {
   const era = eraOf(year)
-  const tram = hasTram(year)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const t = useMemo(() => createTraffic(year), [era, tram])
+  const t = useMemo(() => createTraffic(year), [era])
   // only the bodies this street era uses are mounted: one draw call each
   const geos = useMemo(() => {
-    const kinds = new Set([...t.lanes.flatMap((L) => L.kinds), ...(t.tram ? ['tram'] : [])])
+    const kinds = new Set(t.lanes.flatMap((L) => L.kinds))
     return Object.fromEntries([...kinds].map((k) => [k, merge(BODIES[k](era))]))
   }, [t, era])
   const meshes = useRef({})
@@ -178,14 +166,6 @@ export function Traffic({ rt, year, sim, maxAngle }) {
         m.setMatrixAt(n[v.type]++, o.matrix)
       }
     })
-    const zt = t.tram && tramZ(t.tram.time) + TYPES.tram.len / 2 // tram centre, on the crown of the south street
-    if (zt && zt - TYPES.tram.len / 2 < END_U && meshes.current.tram && !offDisc(disc, 0, zt, TYPES.tram.len / 2) && !nearCam(cam, 0, zt, TYPES.tram.len / 2)) {
-      const sp = street.current?.[0], y = roadY(zt, STREET_DROP, sp)
-      o.position.set(0, y, zt)
-      o.rotation.set(Math.atan(y - roadY(zt - 1, STREET_DROP, sp)), Math.PI, 0, 'YXZ') // faces north, like a dir -1 lane
-      o.updateMatrix()
-      meshes.current.tram.setMatrixAt(n.tram++, o.matrix)
-    }
     for (const k in meshes.current) {
       const m = meshes.current[k]
       if (!m) continue

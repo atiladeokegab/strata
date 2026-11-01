@@ -16,7 +16,7 @@ import { createShip, stepShip, WAIT_X, HOLD_X, CRUISE } from './shipSim.js'
 import { leverAfter, leverForKey, leverLabel, KEY_STEP } from './drive.js'
 import { vesselForYear, needsLift, leafInput, CLEARANCE } from './vessels.js'
 import { createRiver, stepRiver, gap, CRAFT, CLEAR } from './riverSim.js'
-import { createTraffic, stepTraffic, onLeaves, roadY, streetProfile, RAMP_FOOT, TYPES, STOP_U, BASCULE_U, START_U, END_U, ABUT_Z, RAMP_LEN, POST_X, POST_Z, POST_W, GATE_U, tramZ, TRAM_STOP, TRAM_OUT, TRAM_CYCLE, nearCam, CAM_CLEAR } from './trafficSim.js'
+import { createTraffic, stepTraffic, onLeaves, roadY, streetProfile, RAMP_FOOT, TYPES, STOP_U, BASCULE_U, START_U, END_U, ABUT_Z, RAMP_LEN, POST_X, POST_Z, POST_W, GATE_U, nearCam, CAM_CLEAR } from './trafficSim.js'
 import { createLift, liftForShip, stepLift, liftSpeed, setLiftTimeScale, applyShipWarp, gatesClosed, heldLever, PASSED_X, FILM_SCALE, substep } from './liftSequence.js'
 
 const MAX = (86 * Math.PI) / 180
@@ -156,23 +156,13 @@ for (const year of [1900, 1940, 2026]) {
 }
 assert.ok(createTraffic(1900).lanes[0].list.every((v) => v.type === 'cart' || v.type === 'hansom'), 'horse era')
 assert.ok(createTraffic(2026).lanes[0].list.every((v) => ['car', 'taxi', 'bus'].includes(v.type)), 'motor era')
-// street eras: period dress and the last horse carts between the wars; the LCC tram only on the south street
+// street eras: period dress and the last horse carts between the wars; no tram (no LCC route turned back at the bridge foot)
 {
   const kinds = (y) => new Set(createTraffic(y, 5).lanes.flatMap((l) => l.kinds))
   assert.ok(kinds(1894).has('lady') && kinds(1940).has('lady') && !kinds(2026).has('lady'), 'period dress before 1960 only')
   assert.ok(kinds(1940).has('cart') && kinds(1940).has('bus') && !kinds(2026).has('cart'), 'interwar street mixes horse and motor')
-  assert.ok(createTraffic(1940).tram && !createTraffic(1894).tram && !createTraffic(2026).tram, 'tram years')
-  assert.ok(TRAM_STOP > RAMP_FOOT && TRAM_OUT > END_U, 'tram stop on the street, depot past the spawn point')
-  let last = tramZ(0), vmax = 0, dwell = 0
-  for (let s = 0.1; s <= 2 * TRAM_CYCLE; s += 0.1) {
-    const z = tramZ(s)
-    assert.ok(z >= TRAM_STOP - 1e-9 && z <= TRAM_OUT + 1e-9, `tram at ${z} leaves the south street`)
-    vmax = Math.max(vmax, Math.abs(z - last) / 0.1)
-    if (z === TRAM_STOP) dwell += 0.1
-    last = z
-  }
-  assert.ok(vmax <= TYPES.tram.vmax && dwell > 40, `tram tops ${vmax.toFixed(1)} m/s, dwells ${dwell.toFixed(0)} s in two cycles`)
-  console.log(`street era checks ok (tram ${vmax.toFixed(1)} m/s max, stop at z ${TRAM_STOP})`)
+  assert.ok([1894, 1910, 1940, 2026].every((y) => !createTraffic(y).tram && !kinds(y).has('tram')), 'no tram in any year')
+  console.log('street era checks ok (no tram)')
 }
 assert.deepEqual(containersOf('lift-north'), ['north-tower'])
 assert.deepEqual(containersOf('stairs-south'), ['south-tower'])
@@ -695,7 +685,7 @@ console.log('geom materials untextured, all kinded ok')
     for (const [id, [c]] of works) assert.ok(c <= (BUDGET.baseline1890[id]?.[0] ?? 0), `1890 ${id} draws ${c} calls, over budget.json baseline1890; merge per material`)
     console.log(`render budget 1890 ok (${t[0]} draw calls, ${Math.round(t[1])} triangles; ${works.map(([id, [c, n]]) => `${id} ${c}/${Math.round(n)}`).join(', ')})`)
   }
-  // period streets (horse era, interwar with the tram) may spend at most 8 traffic draw calls (2026's 6 when this was set, + 2)
+  // period streets (horse era, interwar) may spend at most 8 traffic draw calls (2026's 6 when this was set, + 2)
   for (const y of [1894, 1940]) {
     useStore.getState().setYear(y)
     const p = {}

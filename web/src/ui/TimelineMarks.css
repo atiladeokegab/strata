@@ -1,0 +1,15 @@
+.tl-marks { position: absolute; left: 8px; right: 8px; bottom: -6px; height: 12px; pointer-events: none; }
+.tl-mark { position: absolute; top: 0; width: 12px; height: 12px; margin-left: -6px; padding: 0; border: 0; background: none; pointer-events: auto; display: grid; place-items: end center; }
+.tl-mark i { display: block; width: 2px; height: 6px; border-radius: 1px; background: var(--ink); opacity: .55; transition: height 150ms, opacity 150ms; }
+.tl-mark.build i { width: 3px; background: var(--gold); opacity: .85; }
+.tl-mark:hover i, .tl-mark:focus-visible i, .tl-mark.on i { height: 11px; opacity: 1; }
+.tl-tip { position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); white-space: nowrap; z-index: 5;
+  padding: 5px 9px; border-radius: 8px; border: 1px solid var(--line); background: rgba(14, 13, 11, .92); color: var(--ink); font-size: 12px; pointer-events: none; }
+.tl-tip b { color: var(--gold); font-weight: 500; margin-right: 4px; }
+.story-card { padding: 14px 16px; border-top: 1px solid var(--line); }
+.story-card .story-head { display: flex; justify-content: space-between; align-items: center; }
+.story-card .eyebrow { margin: 0; font: 500 11px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--gold); }
+.story-card h2 { margin: 6px 0 4px; font: 400 20px/1.25 var(--serif); }
+.story-card p { margin: 0 0 8px; line-height: 1.5; }
+.story-sources { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; }
+.story-sources a, .story-sources span { padding: 2px 8px; border: 1px solid var(--line); border-radius: 999px; text-decoration: none; color: var(--muted); }

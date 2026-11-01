@@ -5,6 +5,7 @@
 // bascule while it is raised, so nothing here follows the leaf rotation.
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
+import { useHomeDisc, offDisc } from './homeDisc.js'
 import * as THREE from 'three'
 import { useStore } from '../../store.js'
 import { Part } from './Part.jsx'
@@ -108,7 +109,7 @@ export const BODIES = {
 // Phones (LITE) draw two in five pedestrians and get smaller instance buffers.
 const CAP = Object.fromEntries(Object.entries({ cart: 40, hansom: 60, car: 60, taxi: 60, bus: 30, ped: 160, lady: 100, tram: 1 }).map(([k, c]) => [k, k === 'ped' || k === 'lady' ? Math.ceil(c * (LITE ? 0.4 : 1)) : c]))
 const PEOPLE = new Set(['ped', 'lady'])
-const BODY = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.15 })
+const BODY = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, metalness: 0.1 }) // paint: higher metalness mirrored the dark lower sky on flat ends
 
 const o = new THREE.Object3D()
 
@@ -146,6 +147,7 @@ export function Traffic({ rt, year, sim, maxAngle }) {
     }
   }, [t])
 
+  const disc = useHomeDisc()
   useFrame((_, dt) => {
     const g = gate.current
     const store = useStore.getState()
@@ -163,6 +165,7 @@ export function Traffic({ rt, year, sim, maxAngle }) {
         const m = meshes.current[v.type]
         if (!m || n[v.type] >= CAP[v.type] || (LITE && PEOPLE.has(v.type) && v.id % 5 > 1)) continue
         const z = L.dir * (v.u - TYPES[v.type].len / 2)
+        if (offDisc(disc, L.x, z, TYPES[v.type].len / 2)) continue
         const y = roadY(z, STREET_DROP, sp)
         // pitch with the road: nose down (+x in the body frame) when it falls ahead
         o.position.set(L.x, y + (PEOPLE.has(v.type) && Math.abs(z) <= RAMP_FOOT ? FOOTWAY_H : 0), z)
@@ -172,7 +175,7 @@ export function Traffic({ rt, year, sim, maxAngle }) {
       }
     })
     const zt = t.tram && tramZ(t.tram.time) + TYPES.tram.len / 2 // tram centre, on the crown of the south street
-    if (zt && zt - TYPES.tram.len / 2 < END_U && meshes.current.tram) {
+    if (zt && zt - TYPES.tram.len / 2 < END_U && meshes.current.tram && !offDisc(disc, 0, zt, TYPES.tram.len / 2)) {
       const sp = street.current?.[0], y = roadY(zt, STREET_DROP, sp)
       o.position.set(0, y, zt)
       o.rotation.set(Math.atan(y - roadY(zt - 1, STREET_DROP, sp)), Math.PI, 0, 'YXZ') // faces north, like a dir -1 lane

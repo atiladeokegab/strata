@@ -12,6 +12,7 @@ import { createHydraulics, stepHydraulics, SIM_SPEED } from './hydraulics.js'
 import { stageForYear, shown } from './stages.js'
 import * as S from './structures.jsx'
 import * as D from './details.jsx'
+import { ConstructionSite } from './construction.jsx'
 
 // The live sim state, for any panel that wants to show pressure or stored volume. Read-only.
 export const bridgeHydraulics = createHydraulics()
@@ -81,6 +82,11 @@ function Half({ side, rt, st, towerTop }) {
             <S.Accumulators sim={sim} />
           </Part>
         </>
+      )}
+      {st.stage >= 0 && st.stage < 5 && (
+        <Part id={`works-${side}`} rt={rt}>
+          <ConstructionSite st={st} towerTop={towerTop} />
+        </Part>
       )}
       {shown('span', st.stage) && (
         <>

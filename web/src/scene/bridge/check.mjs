@@ -708,11 +708,7 @@ console.log('geom materials untextured, all kinded ok')
     probe(walk, leaf, down, (p) => p.y < top + 3 && Math.abs(p.x) < lx)
     const who = (o) => `${o.userData.part} ${o.userData.from}`
     console.log(`raised leaf: top ${top.toFixed(2)} m, walkway underside ${under.toFixed(2)} m (${(under - top).toFixed(2)} m apart overall); under the walkways ${worst.gap.toFixed(2)} m clear`)
-    // shortcut: the walkway knee brackets (9d89f8f) hang 0.15 m over the raised leaf's edge girder, reported to the lead
-    // 2026-11-01 (walkway not to be moved); held at >= 0.1 m so it cannot touch. Drop KNOWN once they clear 1 m.
-    const KNOWN = worst.gap < 1 && /WalkwayDetails/.test(`${worst.a && who(worst.a)} ${worst.b && who(worst.b)}`) ? 0.1 : 1
-    if (KNOWN < 1) console.log(`  KNOWN CLASH: walkway knee brackets ${worst.gap.toFixed(2)} m over the raised leaf at (${worst.at.toArray().map((n) => n.toFixed(1))}), needs 1 m`)
-    assert.ok(worst.gap >= KNOWN, `raised leaf ${worst.gap.toFixed(2)} m under the walkway at (${worst.at?.toArray().map((n) => n.toFixed(1))}): ${worst.a && who(worst.a)} vs ${worst.b && who(worst.b)}`)
+    assert.ok(worst.gap >= 1, `raised leaf ${worst.gap.toFixed(2)} m under the walkway at (${worst.at?.toArray().map((n) => n.toFixed(1))}): ${worst.a && who(worst.a)} vs ${worst.b && who(worst.b)}`)
   }
 }
 // Road surface by era: waits for Look's maps, then swaps in place (no new material, no draw call).

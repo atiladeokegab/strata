@@ -141,6 +141,7 @@ const BAND = new THREE.MeshStandardMaterial({ color: new THREE.Color(1.6, 1.6, 1
 export const lanternFor = (era) => ({ lantern: era?.blackout ? LANTERN.blackout : era?.gasLamps ? LANTERN.gas : LANTERN.electric, ...(era?.blackout && { white: BAND, sand: SAND }) })
 
 export function lamp(out, x, y, z, era) {
+  if (era?.lamps === false) return
   // blackout: base painted white, then three 0.6 m white bands up the column, wide enough to read from afar
   if (era?.blackout) out.white.push(box(0.74, 0.6, 0.74, x, y + 0.5, z), ...[1.6, 2.8, 4.0].map((h) => cyl(0.2, 0.21, 0.6, 8, x, y + h, z)))
   out.steel.push(
@@ -210,7 +211,7 @@ function sandbags(out, x, z, w, d, courses) {
 export function ApproachDetails({ era }) {
   return (
     <Meshes
-      deps={[era?.blackout, era?.woodBlocks, era?.gasLamps]}
+      deps={[era?.blackout, era?.woodBlocks, era?.gasLamps, era?.lamps]}
       materials={lanternFor(era)}
       build={() => {
         const o = kit()
@@ -230,7 +231,7 @@ export function ApproachDetails({ era }) {
 export function DeckMarkings({ era }) {
   return (
     <Meshes
-      deps={[era?.blackout, era?.woodBlocks, era?.gasLamps]}
+      deps={[era?.blackout, era?.woodBlocks, era?.gasLamps, era?.lamps]}
       materials={{ sand: SAND, ...lanternFor(era) }}
       build={() => deckMarkingsKit(era)}
     />
@@ -253,7 +254,7 @@ export function deckMarkingsKit(era) {
 export function BasculeDetails({ era }) {
   return (
     <Meshes
-      deps={[era?.blackout, era?.woodBlocks, era?.gasLamps]}
+      deps={[era?.blackout, era?.woodBlocks, era?.gasLamps, era?.lamps]}
       materials={lanternFor(era)}
       build={() => {
         const o = kit()

@@ -190,7 +190,7 @@ export function TowerBridge(props) {
   const disc = useHomeDisc()
   const years = useMemo(() => resolveYears(place?.events), [place])
   const st = stageForYear(year, years.stages)
-  const era = eraFor(year, years.eras)
+  const era = { ...eraFor(year, years.eras), lamps: st.stage >= 5 } // lamp standards are fitted for the opening, not during the works
   const towerTop = S.L.hw + dim(place, 'north-tower', 'height', 65)
   const maxAngle = (dim(place, 'bascule-north', 'max_angle', 86) * Math.PI) / 180
 

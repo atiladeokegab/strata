@@ -702,6 +702,20 @@ console.log('geom materials untextured, all kinded ok')
     console.log(`render budget ${tier} 1890 ok (${t[0]} draw calls, ${Math.round(t[1])} triangles; ${works.map(([id, [c, n]]) => `${id} ${c}/${Math.round(n)}`).join(', ')})`)
   }
   setLite(false)
+  // lamp standards are fitted for the opening (stage 5): every era handed down is lamps-off in the works year
+  for (const [y, lit] of [[1890, false], [1894, true]]) {
+    useStore.getState().setYear(y)
+    const seen = []
+    const walk = (el) => {
+      if (el == null || typeof el !== 'object') return
+      if (Array.isArray(el)) return el.forEach(walk)
+      if (typeof el.type !== 'function') return walk(el.props?.children)
+      if (el.props?.era) seen.push(el.props.era.lamps)
+      walk(el.type(el.props ?? {}))
+    }
+    walk({ type: TowerBridge, props: {} })
+    assert.ok(seen.length && seen.every((l) => l === lit), `${y}: era.lamps should be ${lit} everywhere, got ${seen}`)
+  }
   // period streets (horse era, interwar) may spend at most 8 traffic draw calls (2026's 6 when this was set, + 2)
   for (const y of [1894, 1940]) {
     useStore.getState().setYear(y)

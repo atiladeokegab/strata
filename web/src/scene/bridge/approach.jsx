@@ -26,7 +26,7 @@ export function RampDetails({ side = 'north', era }) {
   const disc = useHomeDisc() // Home plinth: no ramp (structures.jsx Abutment), so only the footways under the arch
   return (
     <Meshes
-      deps={[side, era?.blackout, era?.gasLamps, disc]}
+      deps={[side, era?.blackout, era?.gasLamps, era?.lamps, disc]}
       materials={lanternFor(era)}
       build={() => rampKit(side, era, disc)}
     />

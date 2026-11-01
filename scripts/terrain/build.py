@@ -123,6 +123,9 @@ def main():
     a = np.where(a < bed, ndimage.median_filter(a, 7), a)
     a[river] = bed
     a = np.maximum(a, bed)
+    # banks: moored boats, piers and wall-top noise make spikes; a 5 m median over a 12 m strip calms them
+    bank = ndimage.binary_dilation(river, iterations=12) & ~river
+    a[bank] = ndimage.median_filter(a, 5)[bank]
 
     # cut the bridge out: fill its footprint from the ground either side of it
     w, L = BRIDGE_CUT["width"] / 2, BRIDGE_CUT["length"] / 2

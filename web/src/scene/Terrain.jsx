@@ -101,17 +101,29 @@ function Ground() {
 
 // Aerial imagery only sees roofs, so draped walls smear into streaks. On steep faces, swap to a
 // blurred sample of the imagery (a far mip) toned toward London stone, which reads as a clean facade.
+// The 1890s OS sheet is pale paper with fine ink; under scene light it washes to white. Levels + a
+// curve pull the ink dark, then a sepia wash makes it read as an old map. ERA is 1 while it is draped.
+const ERA = { value: 0 }
+const ERA_GRADE = `
+  vec3 eraGrade(vec3 c) {
+    vec3 g = pow(clamp((c - 0.10) / 0.72, 0.0, 1.0), vec3(1.6));
+    float l = dot(g, vec3(0.3, 0.59, 0.11));
+    return mix(c, mix(vec3(l), g, 0.5) * vec3(0.92, 0.78, 0.58), uEra);
+  }`
+
 function facades(shader) {
+  shader.uniforms.uEra = ERA
   shader.vertexShader = shader.vertexShader
     .replace('#include <common>', '#include <common>\nvarying float vUp;')
     .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\nvUp = normal.y;')
   shader.fragmentShader = shader.fragmentShader
-    .replace('#include <common>', '#include <common>\nvarying float vUp;')
+    .replace('#include <common>', `#include <common>\nvarying float vUp;\nuniform float uEra;${ERA_GRADE}`)
     .replace(
       '#include <map_fragment>',
       `#include <map_fragment>
+      diffuseColor.rgb = eraGrade(diffuseColor.rgb);
       float wall = 1.0 - smoothstep(0.35, 0.7, vUp);
-      vec3 blur = texture2D(map, vMapUv, 5.0).rgb;
+      vec3 blur = eraGrade(texture2D(map, vMapUv, 5.0).rgb);
       vec3 facade = mix(blur, vec3(0.42, 0.39, 0.34), 0.3) * 0.8;
       diffuseColor.rgb = mix(diffuseColor.rgb, facade, wall);`,
     )
@@ -147,6 +159,7 @@ function TerrainMesh({ step }) {
     return tex
   }), [gl])
   const map = maps[old ? 1 : 0]
+  useEffect(() => { ERA.value = old ? 1 : 0 }, [old])
   useEffect(() => () => geometry.dispose(), [geometry])
   return (
     <mesh name="terrain" geometry={geometry} raycast={noRaycast} castShadow receiveShadow>

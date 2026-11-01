@@ -6,8 +6,15 @@
 export const GATE_U = 37 // barrier line on the fixed deck, just outside each bascule pivot
 export const STOP_U = -GATE_U - 1 // vehicles stop 1 m short of the gate
 export const BASCULE_U = 35 // |z| < 35 is on a bascule leaf
-export const START_U = -140
-export const END_U = 140
+// Past each shore abutment a ramp falls to the street (structures.jsx RAMP, STREET_DROP); road users
+// arrive and leave out on the level street beyond it, not at the abutment.
+export const ABUT_Z = 148.5 // |z| of the shore abutment, where the ramp starts
+export const RAMP_LEN = 35 // shortcut: mirrors structures.jsx RAMP (check.mjs asserts they agree)
+const STREET_RUN = 30 // m of level street past the ramp foot before a road user appears or leaves
+export const START_U = -(ABUT_Z + RAMP_LEN + STREET_RUN)
+export const END_U = -START_U
+// Road surface height at bridge z (0 = deck level); drop = { north, south } in m, north is -z.
+export const roadY = (z, drop) => -(z < 0 ? drop.north : drop.south) * Math.min(1, Math.max(0, (Math.abs(z) - ABUT_Z) / RAMP_LEN))
 const ACCEL = 2 // m/s²
 const BRAKE = 3 // m/s², comfortable deceleration used to plan the stop
 const CLEAR_RUN = 40 // m beyond the leaf over which road users keep hurrying
@@ -49,7 +56,7 @@ export function createTraffic(year, seed = 1) {
       lane(-1, -8.3, ['ped'], 6),
     ],
   }
-  for (let i = 0; i < 1200; i++) stepTraffic(t, 0.25, false) // pre-fill the road
+  for (let i = 0; i < 1800; i++) stepTraffic(t, 0.25, false) // pre-fill the road
   return t
 }
 

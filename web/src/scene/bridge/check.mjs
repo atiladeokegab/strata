@@ -10,7 +10,7 @@ import { createShip, stepShip, WAIT_X, HOLD_X, CRUISE } from './shipSim.js'
 import { leverAfter, leverForKey, leverLabel, KEY_STEP } from './drive.js'
 import { vesselForYear, needsLift, leafInput, CLEARANCE } from './vessels.js'
 import { createRiver, stepRiver, gap, CRAFT, CLEAR } from './riverSim.js'
-import { createTraffic, stepTraffic, onLeaves, TYPES, STOP_U, BASCULE_U } from './trafficSim.js'
+import { createTraffic, stepTraffic, onLeaves, roadY, TYPES, STOP_U, BASCULE_U, START_U, END_U, ABUT_Z, RAMP_LEN } from './trafficSim.js'
 import { createLift, liftForShip, stepLift, liftSpeed, setLiftTimeScale, applyShipWarp, gatesClosed, heldLever, PASSED_X, FILM_SCALE } from './liftSequence.js'
 
 const MAX = (86 * Math.PI) / 180
@@ -390,3 +390,25 @@ for (const [k, make] of Object.entries(MATERIALS)) {
   assert.equal(m.map, null, `${k} leaves texturing to Look`)
 }
 console.log('geom materials untextured, all kinded ok')
+// Road ends: traffic comes and goes on the street past each ramp, and rides the ramp height.
+{
+  const src = readFileSync(new URL('structures.jsx', import.meta.url), 'utf8')
+  assert.equal(Number(src.match(/export const RAMP = ([\d.]+)/)?.[1]), RAMP_LEN, 'trafficSim RAMP_LEN matches structures.jsx RAMP')
+  const drop = { north: 2.6, south: 4 }
+  assert.ok(roadY(0, drop) === 0)
+  assert.ok(roadY(-ABUT_Z, drop) === 0, 'ramp starts at the abutment')
+  assert.equal(roadY(-ABUT_Z - RAMP_LEN, drop), -2.6, 'north street level')
+  assert.equal(roadY(ABUT_Z + RAMP_LEN + 5, drop), -4, 'south street level')
+  assert.ok(Math.abs(roadY(ABUT_Z + RAMP_LEN / 2, drop) + 2) < 1e-9, 'halfway down the south ramp')
+  assert.ok(-START_U > ABUT_Z + RAMP_LEN && END_U > ABUT_Z + RAMP_LEN, 'road users appear and leave on the street, past the ramps')
+  const t = createTraffic(2026, 5), seen = t.lanes.map(() => [false, false])
+  for (let i = 0; i < 1200; i++) {
+    stepTraffic(t, 0.25, false)
+    t.lanes.forEach((l, k) => l.list.forEach((v) => {
+      if (v.u < -ABUT_Z - RAMP_LEN) seen[k][0] = true
+      if (v.u - TYPES[v.type].len > ABUT_Z + RAMP_LEN) seen[k][1] = true
+    }))
+  }
+  assert.ok(seen.every(([a, b]) => a && b), 'every lane arrives from the street and leaves down the far ramp onto it')
+  console.log('road end checks ok')
+}

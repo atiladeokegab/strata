@@ -1,0 +1,51 @@
+/* The guided tour card and spotlight (Guide.jsx). Desktop: centred over the stage, above the time bar.
+   Phones: above the dock, or just above the sheet when the sheet is open (the dock hides then). */
+.guide-card { position: absolute; z-index: 7; left: calc(50% + var(--panel-w) / 2 + var(--gap) / 2); bottom: calc(var(--gap) + 96px);
+  transform: translateX(-50%); width: min(440px, calc(100% - 32px)); padding: var(--s5) var(--s5) var(--s4); border-radius: var(--r-lg);
+  box-shadow: var(--shadow); animation: guide-in .45s cubic-bezier(.2, .8, .2, 1) both; }
+.guide-card h2 { margin: 0 0 var(--s2); font: 600 var(--t4)/1.2 var(--sans); letter-spacing: -.01em; color: var(--ink); }
+.guide-card p { margin: 0; font-size: var(--t2); line-height: 1.5; color: var(--ink); }
+.guide-card .eyebrow { margin-bottom: var(--s2); padding-right: 40px; }
+.guide-body { animation: guide-fade .35s ease both; }
+.guide-note { margin-top: var(--s2) !important; color: var(--muted) !important; min-height: 3em; animation: guide-fade .35s ease both; }
+.guide-skip { position: absolute; top: 10px; right: 10px; width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 50%;
+  background: none; color: var(--muted); transition: background .15s, color .15s; }
+.guide-skip:hover { background: var(--fill-hover); color: var(--ink); }
+.guide-skip svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; fill: none; }
+.guide-stops { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s3); }
+.guide-stops .chip { height: 36px; padding: 0 var(--s4); font-size: var(--t2); color: var(--ink); background: var(--fill); border-color: var(--line);
+  transition: background .2s, color .2s, border-color .2s; }
+.guide-stops .chip:hover { background: var(--fill-hover); }
+.guide-stops .chip.on { background: var(--ink); color: var(--on-ink); border-color: var(--ink); }
+.guide-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s2) var(--s3); margin-top: var(--s4); }
+.guide-dots { display: flex; gap: 0; min-width: 0; }
+.guide-dots button { flex: none; width: 11px; height: 24px; padding: 0; border: 0; background: none; display: grid; place-items: center; }
+.guide-dots button::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--line-strong); transition: width .25s, background .25s; }
+.guide-dots button.done::before { background: var(--muted); }
+.guide-dots button.on { width: 24px; }
+.guide-dots button.on::before { width: 18px; border-radius: 3px; background: var(--ink); }
+.guide-nav { display: flex; gap: var(--s2); flex: none; margin-left: auto; }
+.guide-nav .primary { min-width: 88px; justify-content: center; }
+
+.guide-spot { position: fixed; z-index: 7; pointer-events: none; opacity: 0; border-radius: 14px;
+  box-shadow: 0 0 0 2px var(--ink), 0 0 0 7px rgba(255, 255, 255, .55), 0 8px 30px rgba(0, 0, 0, .18);
+  transition: left .35s cubic-bezier(.2, .8, .2, 1), top .35s cubic-bezier(.2, .8, .2, 1), width .35s, height .35s, opacity .3s;
+  animation: guide-pulse 2.4s ease-in-out infinite; }
+
+@keyframes guide-in { from { opacity: 0; transform: translate(-50%, 12px); } }
+@keyframes guide-fade { from { opacity: 0; transform: translateY(4px); } }
+@keyframes guide-pulse { 50% { box-shadow: 0 0 0 2px var(--ink), 0 0 0 10px rgba(255, 255, 255, .35), 0 8px 30px rgba(0, 0, 0, .18); } }
+
+@media (max-width: 900px) {
+  .guide-card { left: 8px; right: 8px; width: auto; transform: none; bottom: calc(var(--sheet) + 112px); padding: var(--s4); animation-name: guide-in-m; }
+  .app.sheet-open .guide-card { bottom: calc(var(--sheet) + 8px); }
+  .guide-card h2 { font-size: var(--t3); margin-bottom: var(--s1); }
+  .guide-note { min-height: 0; }
+  .guide-foot { margin-top: var(--s3); }
+  .guide-dots button { width: 9px; }
+  .guide-dots button::before { width: 5px; height: 5px; }
+  .guide-dots button.on { width: 18px; }
+  .guide-dots button.on::before { width: 12px; }
+}
+@keyframes guide-in-m { from { opacity: 0; transform: translateY(12px); } }
+@media (prefers-reduced-motion: reduce) { .guide-card, .guide-body, .guide-note, .guide-spot { animation: none; transition: none; } }

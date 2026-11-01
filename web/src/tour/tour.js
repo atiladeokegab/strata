@@ -53,7 +53,7 @@ export const TRACKS = [
   { from: 17, to: 19, set: yearAt(OPENED, THIS_YEAR) },
   { from: 20.5, to: 20.5, set: () => s().setExploded(true) },
   { from: 24, to: 24, set: () => s().setExploded(false) },
-  { from: 25, to: 25, set: () => liftForShip({ fast: true }) }, // Hermes's lift: signals, bascules, the ship, ~17 s
+  { from: 22, to: 22, set: () => liftForShip({ fast: true }) }, // Hermes's fast lift (lift-timeline.md, 1 Nov): leaves move at +4.4 s = 26.4 as the river shot lands, full open 30.5, ship mid-span 32.1, lowering 33.7
   { from: 33.5, to: 33.5, set: () => { s().setView('top'); s().setLidar?.(true) } },
   { from: 39.5, to: 39.5, set: () => { s().setView('orbit'); s().setLidar?.(false) } },
   { from: 40.5, to: 40.5, set: (_, ctx) => s().select(ctx.hydraulics) },

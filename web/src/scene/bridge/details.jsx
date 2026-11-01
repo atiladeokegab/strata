@@ -7,6 +7,7 @@ import { L } from './structures.jsx'
 import { KERB_X, KERB_W, FOOTWAY_H, FOOTWAY_OUT } from './roadway.js'
 import { balustrade, BAL_X, BAL_Y } from './balustrade.js'
 import { LITE } from '../look/tier.js'
+import { walkwayKnees } from './walkway.js'
 
 // Renders { materialKey: [geometries] } as one merged mesh per material.
 // materials: optional {key: material} overriding M for some keys (e.g. lantern glass by era)
@@ -200,6 +201,7 @@ export function WalkwayDetails({ x }) {
           steel.push(box(0.35, 0.3, 0.35, x, y1 + 0.5, z))
           gold.push(new THREE.ConeGeometry(0.12, 0.8, 6).translate(x, y1 + 1.05, z))
         }
+        steel.push(...walkwayKnees(x, -(L.pierZ + L.towerHalfZ), y0))
         return { steel, gold }
       }}
     />

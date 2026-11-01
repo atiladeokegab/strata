@@ -1,4 +1,5 @@
 // High walkway girders, kept out of JSX so check.mjs can measure them.
+import * as THREE from 'three'
 import { beam, box, merge } from './geom.js'
 
 // Each walkway is a pair of riveted lattice girders: T-section booms, paired-angle posts at the panel points,
@@ -86,4 +87,35 @@ export function walkwayInfill(x, ze, y0, y1) {
     }
   }
   return o
+}
+
+// Where a walkway meets a tower: under each girder end a pierced knee bracket (a plate in the girder plane,
+// its free edge a curved flange) carries the bottom boom down onto a bearing plate on the tower face.
+export const KNEE = { reach: 3.2, drop: 2.4, t: 0.05 }
+function kneeShape() {
+  const { reach: D, drop: H } = KNEE, s = new THREE.Shape()
+  s.moveTo(0, 0)
+  s.lineTo(D, 0)
+  s.quadraticCurveTo(0.3 * D, -0.3 * H, 0, -H) // free edge bows towards the corner
+  s.closePath()
+  for (const [u, v, r] of [[0.55, -0.35, 0.28], [1.35, -0.28, 0.2], [0.42, -1.1, 0.22]]) s.holes.push(new THREE.Path().absarc(u, v, r, 0, Math.PI * 2, true))
+  return s
+}
+export function walkwayKnees(x, ze, y0) {
+  const { w } = WALK, { reach: D, drop: H, t } = KNEE, steel = []
+  const plate = new THREE.ExtrudeGeometry(kneeShape(), { depth: t, bevelEnabled: false, curveSegments: 8 })
+  const edge = new THREE.QuadraticBezierCurve(new THREE.Vector2(D, 0), new THREE.Vector2(0.3 * D, -0.3 * H), new THREE.Vector2(0, -H)).getPoints(8)
+  for (const end of [1, -1]) // +ze: u runs towards -z; -ze: towards +z (basis kept right-handed so faces point out)
+    for (const sx of [-1, 1]) {
+      const gx = x + sx * w
+      // columns: shape u, shape v, extrusion; u x v = extrusion keeps the winding
+      const m = new THREE.Matrix4().makeBasis(new THREE.Vector3(0, 0, -end), new THREE.Vector3(0, 1, 0), new THREE.Vector3(end, 0, 0)).setPosition(gx - (end * t) / 2, y0, end * ze)
+      steel.push(plate.clone().applyMatrix4(m))
+      for (let i = 0; i < edge.length - 1; i++) {
+        const a = new THREE.Vector3(edge[i].x, edge[i].y, 0).applyMatrix4(m), b = new THREE.Vector3(edge[i + 1].x, edge[i + 1].y, 0).applyMatrix4(m)
+        steel.push(beam([gx, a.y, a.z], [gx, b.y, b.z], 0.06, 5))
+      }
+      steel.push(box(0.6, 0.8, 0.1, gx, y0 - H + 0.2, end * (ze - 0.05))) // bearing plate on the tower face
+    }
+  return steel
 }

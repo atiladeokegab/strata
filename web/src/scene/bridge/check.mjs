@@ -602,6 +602,15 @@ console.log('geom materials untextured, all kinded ok')
   const gz = bb(inf.glazing)
   assert.ok(gz.min.x > 10.5 - WALK.w && gz.max.x < 10.5 + WALK.w && gz.min.y >= top - 1e-4, 'glazing inside the lattice, above the floor')
   console.log('walkway floor, glass floor and glazing ok')
+  const { walkwayKnees, KNEE } = await import('./walkway.js')
+  const kn = bb(walkwayKnees(10.5, ze, y0))
+  assert.ok(kn.min.z >= -ze - 0.07 && kn.max.z <= ze + 0.07, 'knee brackets bear on, not into, the tower faces')
+  assert.ok(kn.max.y <= y0 + 0.07 && kn.min.y >= y0 - KNEE.drop - 0.25, 'knee brackets hang below the bottom boom')
+  assert.ok(kn.min.x >= 10.5 - WALK.w - 0.35 && kn.max.x <= 10.5 + WALK.w + 0.35, 'knee brackets in the girder planes')
+  // each end's brackets reach in from its own tower face
+  const near = bb(walkwayKnees(10.5, ze, y0).filter((g) => (g.computeBoundingBox(), g.boundingBox.max.z > 0)))
+  assert.ok(near.min.z >= ze - KNEE.reach - 0.1, 'the +z knees stay within reach of the +z tower')
+  console.log('walkway knee brackets ok')
 }
 
 // Street past the ramp foot follows the terrain: median across the lane (kerbs and vans in the DSM

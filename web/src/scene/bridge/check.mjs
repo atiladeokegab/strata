@@ -590,7 +590,9 @@ console.log('geom materials untextured, all kinded ok')
   assert.ok(b.min.x >= 10.5 - WALK.w - 0.3 && b.max.x <= 10.5 + WALK.w + 0.3, 'walkway truss within its two girders')
   const verts = g.attributes.position.count
   assert.ok(verts < 60000, `walkway truss stays light (${verts} verts)`)
-  console.log(`walkway truss ok (${verts} verts)`)
+  const lite = walkwayTruss(10.5, ze, y0, y1, true).attributes.position.count
+  assert.ok(lite < verts * 0.75, `lite walkway truss is lighter (${lite} vs ${verts} verts)`)
+  console.log(`walkway truss ok (${verts} verts, ${lite} lite)`)
   const { walkwayInfill, FLOOR_TOP, GLASS_FLOOR } = await import('./walkway.js')
   const inf = walkwayInfill(10.5, ze, y0, y1)
   const bb = (gs) => gs.reduce((b, g) => (g.computeBoundingBox(), b.union(g.boundingBox)), new THREE.Box3())

@@ -324,7 +324,7 @@ export function Walkway({ x, glazed = true, glassFloor = false }) {
   const g = useMemo(() => {
     const ze = -(L.pierZ + L.towerHalfZ), y0 = L.walkY, y1 = L.walkY + L.walkH
     const parts = walkwayInfill(x, ze, y0, y1)
-    return { truss: walkwayTruss(x, ze, y0, y1), ...Object.fromEntries(Object.entries(parts).map(([k, gs]) => [k, merge(gs)])) }
+    return { truss: walkwayTruss(x, ze, y0, y1, LITE), ...Object.fromEntries(Object.entries(parts).map(([k, gs]) => [k, merge(gs)])) }
   }, [x])
   return (
     <>

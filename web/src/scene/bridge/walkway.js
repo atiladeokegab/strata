@@ -11,8 +11,9 @@ const bar = (x, [ya, za], [yb, zb], wd, t = 0.035) =>
 export const WALK = { w: 1.6, panels: 20, pitch: 0.9, boom: 0.3 } // half width, panels per span, lattice bar spacing, boom depth
 
 // x: walkway centre line; ze: half span (tower face to tower face); y0, y1: floor and roof booms.
-export function walkwayTruss(x, ze, y0, y1) {
-  const { w, panels: n, pitch, boom } = WALK, len = 2 * ze
+// lite (phones): half the lattice bars, at twice the pitch.
+export function walkwayTruss(x, ze, y0, y1, lite = false) {
+  const { w, panels: n, boom } = WALK, pitch = WALK.pitch * (lite ? 2 : 1), len = 2 * ze
   const gs = []
   for (const sx of [-1, 1]) {
     const gx = x + sx * w

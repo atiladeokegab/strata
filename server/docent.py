@@ -21,6 +21,14 @@ If an exact numeric value is unavailable, omit it and describe only sourced qual
 Do not mention these rules. Do not add facts from memory."""
 CITATION = re.compile(r"\[([\w-]+)\]")
 NUMBER = re.compile(r"(?:(?<!\d)[-+])?\d+(?:[,.]\d+)*(?:[eE][-+]?\d+)?")
+MEASUREMENT_TERMS = set("height width length depth diameter pressure angle weight speed count duration capacity distance volume".split())
+
+
+def _measurement_query(question):
+    words = set(re.findall(r"\w+", question.casefold()))
+    if not words & MEASUREMENT_TERMS and not re.search(r"\bhow\s+(?:tall|high|long|wide|deep|fast|many|much)\b", question, re.I):
+        return set()
+    return terms(question) & MEASUREMENT_TERMS
 
 
 def refusal():
@@ -32,6 +40,7 @@ def retrieve(place, question, part_id=None):
     name = place.get("name", "")
     query_text = re.sub(rf"\b{re.escape(name)}\b", "", question, flags=re.I) if name else question
     query = terms(query_text)
+    measurement_query = _measurement_query(question)
     if query & {"design", "designed", "designer"}:
         query.add("architect")
     candidates = [(document["kind"], record) for document, record in documents(place) if document["kind"] != "source"]
@@ -45,6 +54,9 @@ def retrieve(place, question, part_id=None):
             continue
         label = " ".join(str(record.get(key, "")) for key in ("name", "role", "relationship", "title", "text"))
         score = 3 * len(query & terms(label)) + len(query & terms(json.dumps(record)))
+        if any(measurement_query & terms(key.replace("_", " ")) for key, dim in record.get("dims", {}).items()
+               if dim.get("status") in ("text-attested", "measured") and dim.get("source") in sources):
+            score += 12
         if kind == "event":
             if str(record.get("year", "")) in years:
                 score += 12
@@ -102,6 +114,7 @@ def _fallback_answer(evidence, question):
     if not evidence:
         return None
     query = terms(question)
+    measurement_query = _measurement_query(question)
     years = set(re.findall(r"(?<!\d)\d{4}(?!\d)", question))
     query -= years
     temporal = bool(re.search(r"\bwhen\b|\bwhat happened\b", question, re.I)) or bool(query & {"open", "event", "happened", "history", "timeline"}) or (bool(years) and "construction" in query)
@@ -116,12 +129,13 @@ def _fallback_answer(evidence, question):
         if procedural and overlap:
             score += 5 * len(terms(text) & {"hydraulic", "steam", "pivot", "counterweight", "mechanism", "operation", "drive", "pressure", "raise", "lift"})
         if score:
-            ranked.append((score, fact))
+            matches_dimension = any(measurement_query & terms(key.replace("_", " ")) for key in fact.get("dims", {}))
+            ranked.append(((matches_dimension, score), fact))
     if not ranked:
         return None
     _, fact = max(ranked, key=lambda item: item[0])
     sentence = fact.get("text") or fact.get("summary") or fact.get("role") or fact.get("relationship")
-    matching_dims = [(key, dim) for key, dim in fact.get("dims", {}).items() if query & terms(key.replace("_", " "))]
+    matching_dims = [(key, dim) for key, dim in fact.get("dims", {}).items() if measurement_query & terms(key.replace("_", " "))]
     if len(matching_dims) == 1:
         key, dim = matching_dims[0]
         sentence = f'{fact.get("name", "This part")}: {key.replace("_", " ")} {dim["value"]} {dim.get("unit", "")}'.strip()

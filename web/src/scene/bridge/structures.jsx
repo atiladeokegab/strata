@@ -216,8 +216,10 @@ export function PivotFrame({ sim, children }) {
   )
 }
 
-export function BasculeLeaf() {
-  const g = useMemo(() => {
+// Leaf girders, deck, rails and racks as unmerged geometry lists per material. BasculeLeaf merges them;
+// on the lite tier basculeDetail.jsx folds them into its own per-material meshes instead.
+export function leafParts() {
+  {
     const len = -L.pivotZ // pivot to centre line
     const s = new THREE.Shape()
     ;[[-14, -1.2], [0, -1.2], [0, 0], [len, 0], [len, -1], [0, -4.4], [-14, -4.4]].forEach(([z, y], i) =>
@@ -238,8 +240,16 @@ export function BasculeLeaf() {
       new THREE.TorusGeometry(L.rackR, 0.35, 6, 32, (95 * Math.PI) / 180).rotateZ(-Math.PI / 2).rotateY(Math.PI / 2).translate(x, 0, 0),
     )
     const spokes = [-5, 5].flatMap((x) => [beam([x, 0, 0], [x, -L.rackR, 0], 0.25), beam([x, 0, 0], [x, 0, -L.rackR], 0.25)])
-    return { girders: merge(girders), deck, rails: merge(rails), racks: merge([...racks, ...spokes]) }
+    return { steel: girders, road: [deck], white: rails, iron: [...racks, ...spokes] }
+  }
+}
+
+export function BasculeLeaf() {
+  const g = useMemo(() => {
+    const p = leafParts()
+    return { girders: merge(p.steel), deck: p.road[0], rails: merge(p.white), racks: merge(p.iron) }
   }, [])
+  if (LITE) return null // basculeDetail.jsx draws these on lite
   return (
     <>
       <mesh geometry={g.girders} material={M.steel} castShadow />
@@ -268,7 +278,7 @@ export function HydraulicEngine({ sim }) {
   const pinions = useRef()
   const r = 0.6
   useFrame(() => {
-    for (const p of pinions.current.children) p.rotation.x = (sim.angle * L.rackR) / r
+    pinions.current.rotation.x = (sim.angle * L.rackR) / r // both pinions share the x axis
   })
   const housing = useMemo(
     () =>
@@ -281,15 +291,11 @@ export function HydraulicEngine({ sim }) {
       ),
     [],
   )
-  const pinion = useMemo(() => new THREE.CylinderGeometry(r, r, 0.8, 12).rotateZ(Math.PI / 2), [])
+  const pinion = useMemo(() => merge([-5, 5].map((x) => new THREE.CylinderGeometry(r, r, 0.8, 12).rotateZ(Math.PI / 2).translate(x, 0, 0))), [])
   return (
     <>
       <mesh geometry={housing} material={M.iron} castShadow />
-      <group ref={pinions}>
-        {[-5, 5].map((x) => (
-          <mesh key={x} geometry={pinion} material={M.brass} position={[x, L.pivotY - L.rackR - r, L.pivotZ]} />
-        ))}
-      </group>
+      <mesh ref={pinions} geometry={pinion} material={M.brass} position={[0, L.pivotY - L.rackR - r, L.pivotZ]} />
     </>
   )
 }
@@ -299,22 +305,17 @@ export function Accumulators({ sim }) {
   const rams = useRef()
   const base = L.bed + 3, h = 10
   useFrame(() => {
-    for (const m of rams.current.children) m.position.y = base + 2 + sim.stored * (h - 4)
+    rams.current.position.y = base + 2 + sim.stored * (h - 4) // both rams ride the same pressure
   })
   const casing = useMemo(
     () => merge([-17, 17].flatMap((x) => [new THREE.CylinderGeometry(1.1, 1.1, h, 16).translate(x, base + h / 2, L.pierZ - 6), box(3.2, 0.6, 3.2, x, base, L.pierZ - 6)])),
     [],
   )
+  const ram = useMemo(() => merge([-17, 17].map((x) => new THREE.CylinderGeometry(1.8, 1.8, 2.6, 16).translate(x, 0, 0))), [])
   return (
     <>
       <mesh geometry={casing} material={M.iron} castShadow />
-      <group ref={rams}>
-        {[-17, 17].map((x) => (
-          <mesh key={x} position={[x, base + 2, L.pierZ - 6]} material={M.brass} castShadow>
-            <cylinderGeometry args={[1.8, 1.8, 2.6, 16]} />
-          </mesh>
-        ))}
-      </group>
+      <mesh ref={rams} geometry={ram} position={[0, base + 2, L.pierZ - 6]} material={M.brass} castShadow />
     </>
   )
 }

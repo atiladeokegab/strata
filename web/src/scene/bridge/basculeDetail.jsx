@@ -7,7 +7,7 @@ import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { beam, box, merge, M } from './geom.js'
-import { L } from './structures.jsx'
+import { L, leafParts } from './structures.jsx'
 import { LITE } from '../look/tier.js'
 
 const LEN = -L.pivotZ
@@ -18,7 +18,7 @@ const GIRDERS = [-7.5, -3, 3, 7.5]
 const bottom = (z) => TOP - 0.06 - 4.4 + (3.4 * Math.max(0, z)) / LEN
 
 // The shared kinded materials; Look.jsx textures them, and Part tints the 'steel' fascia by year.
-const mats = () => ({ soffit: M.white, fascia: M.steel, iron: M.iron })
+const mats = () => ({ soffit: M.white, fascia: M.steel, iron: M.iron, road: M.road })
 
 function build() {
   const soffit = [], fascia = [], iron = [], bolts = [], tailBars = []
@@ -112,7 +112,13 @@ function build() {
   }
   iron.push(box(17, 0.3, 0.3, 0, bottom(0) + 0.6, tz - 0.15))
 
-  return { soffit: merge(soffit), fascia: merge(fascia), iron: merge(iron), bolts: merge(bolts), tailBars: merge(tailBars) }
+  const out = { soffit, fascia, iron }
+  if (LITE) {
+    // lite: BasculeLeaf draws nothing; its girders, rails, racks and deck join these meshes (-3 calls per leaf)
+    const p = leafParts()
+    fascia.push(...p.steel), soffit.push(...p.white), iron.push(...p.iron), (out.road = p.road)
+  }
+  return { ...Object.fromEntries(Object.entries(out).map(([k, gs]) => [k, merge(gs)])), bolts: merge(bolts), tailBars: merge(tailBars) }
 }
 
 const BOLT_DRAW = 0.6 // m the nose bolts withdraw

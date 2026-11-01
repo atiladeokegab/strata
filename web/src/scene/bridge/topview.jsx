@@ -209,7 +209,7 @@ function Dashed({ pts, color, dash = 4, y = WATER + 0.2, over = false, live = nu
   return <primitive object={line} />
 }
 const TRACK = [[WAIT_X, 0], [END_X, 0]]
-const GATES = [-1, 1].map((d) => [[-16, d * GATE_U], [16, d * GATE_U]]) // a little wider than the deck so they show past the labels
+const GATES = [-1, 1].map((d) => [[-26, d * GATE_U], [26, d * GATE_U]]) // wider than the callout labels that sit on the same line in plan
 
 // 1886-1893: each pier's cofferdam ring, pier footprint and timber staging (with its jetty) in
 // plan, outlined from the start and filled as the build goes on; drawn through anything above.

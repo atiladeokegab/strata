@@ -20,6 +20,8 @@ export const useStore = create((set) => ({
   setYear: (year) => set({ year }),
   exploded: false,
   setExploded: (exploded) => set({ exploded }),
+  lidar: false, // show the terrain as the raw LiDAR point cloud
+  setLidar: (lidar) => set({ lidar }),
   bascule: 0, // 0 closed .. 1 fully open
   setBascule: (bascule) => set({ bascule: Math.min(1, Math.max(0, bascule)) }),
 }))

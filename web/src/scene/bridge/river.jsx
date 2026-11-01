@@ -7,6 +7,7 @@ import { beam, box, merge } from './geom.js'
 import { L } from './structures.jsx'
 import { createRiver, stepRiver, eraForYear, CRAFT } from './riverSim.js'
 import { LITE } from '../look/tier.js'
+import { useHomeDisc, offDisc } from './homeDisc.js'
 
 const paint = (g, hex) => {
   g = g.index ? g.toNonIndexed() : g
@@ -91,11 +92,13 @@ function Fleet({ craft, type }) {
   const geo = useMemo(() => merge(MODELS[type]()), [type])
   const mat = useMemo(() => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6 }), [])
   const mine = craft.filter((c) => c.type === type)
+  const disc = useHomeDisc()
   useFrame(({ clock }) => {
     const t = clock.elapsedTime
     mine.forEach((c, i) => {
       dummy.position.set(c.x, L.hw + Math.sin(t * 1.3 + i * 2) * 0.12, c.z)
       dummy.rotation.set(Math.sin(t * 0.9 + i) * 0.03, c.dir > 0 ? Math.PI : 0, 0)
+      dummy.scale.setScalar(offDisc(disc, c.x, c.z, CRAFT[type].len / 2) ? 0 : 1) // off the Home plinth
       dummy.updateMatrix()
       ref.current.setMatrixAt(i, dummy.matrix)
     })
@@ -110,11 +113,13 @@ const WAKE = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2)
 const wd = new THREE.Object3D() // its own: Fleet's dummy never resets scale
 function Wakes({ craft, foam }) {
   const ref = useRef()
+  const disc = useHomeDisc()
   const mat = useMemo(() => new THREE.MeshBasicMaterial({ map: foam, transparent: true, depthWrite: false, opacity: 0.45 }), [foam])
   useFrame(() => {
     craft.forEach((c, i) => {
       const { len, beam } = CRAFT[c.type]
-      const long = c.speed ? 5 + c.speed * 7 : 0
+      let long = c.speed ? 5 + c.speed * 7 : 0
+      if (offDisc(disc, c.x, c.z, len / 2) || offDisc(disc, c.x - c.dir * (len / 2 + long), c.z)) long = 0
       wd.position.set(c.x - c.dir * (len / 2 + long / 2 - 0.5), L.hw + 0.05, c.z)
       wd.rotation.set(0, c.dir > 0 ? Math.PI : 0, 0) // texture is densest at u=0: keep that end at the stern
       wd.scale.set(long || 1e-3, 1, beam * 1.5)

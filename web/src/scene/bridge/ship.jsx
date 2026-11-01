@@ -13,6 +13,7 @@ import { lift, liftSpeed, applyShipWarp, substep } from './liftSequence.js'
 import { vesselForYear, leafInput } from './vessels.js'
 import { RiverCraft } from './river.jsx'
 import { LITE } from '../look/tier.js'
+import { useHomeDisc, offDisc } from './homeDisc.js'
 
 
 // Hull plan outline in (x, z): transom stern at +x, pointed bow at -x.
@@ -374,6 +375,7 @@ export function Ship({ rt, year, maxAngle }) {
     [],
   )
   const move = useRef()
+  const disc = useHomeDisc()
   const bob = useRef()
   const flag = useRef()
   const wake = useRef()
@@ -385,6 +387,10 @@ export function Ship({ rt, year, maxAngle }) {
     substep(dt, (h) => stepShip(s, leafInput(vessel, rt.sim.angle / maxAngle), h * liftSpeed()))
     const t = clock.elapsedTime
     move.current.position.set(s.x, L.hw, 0)
+    // Home plinth: no hull hanging off the disc; the wake (70 m astern) hides on its own first
+    const stern = s.x + (vessel.hullStern ?? vessel.stern)
+    move.current.visible = !offDisc(disc, s.x + vessel.bow, 0) && !offDisc(disc, s.x + vessel.stern, 0)
+    wake.current.visible = !offDisc(disc, stern + 70, 0)
     bob.current.position.y = Math.sin(t * 0.9) * 0.25
     bob.current.rotation.x = Math.sin(t * 0.55) * 0.035 // roll
     bob.current.rotation.z = Math.sin(t * 0.4 + 1) * 0.012 // pitch

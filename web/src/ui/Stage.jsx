@@ -1,4 +1,5 @@
 // The full-screen 3D world: sky, light, camera views and the scene slots. Clicking a mesh selects the part it belongs to.
+import { useEffect } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { Sky } from '@react-three/drei'
 import { useStore } from '../store'
@@ -22,7 +23,25 @@ function partOf(object, ids) {
   return null
 }
 
+// Scene labels (drei <Html> buttons in .stage) hide while they overlap the on-screen controls,
+// so they never crowd or sit under the buttons.
+const CLEAR_OF = '.controls, .credit, .dock'
+const overlaps = (a, b, m = 6) => a.left < b.right + m && a.right > b.left - m && a.top < b.bottom + m && a.bottom > b.top - m
+function useLabelsClear() {
+  useEffect(() => {
+    const id = setInterval(() => {
+      const keep = [...document.querySelectorAll(CLEAR_OF)].map((el) => el.getBoundingClientRect())
+      for (const b of document.querySelectorAll('.stage button')) {
+        const r = b.getBoundingClientRect()
+        b.style.visibility = keep.some((k) => overlaps(r, k)) ? 'hidden' : ''
+      }
+    }, 150)
+    return () => clearInterval(id)
+  }, [])
+}
+
 export function Stage() {
+  useLabelsClear()
   const place = useStore((s) => s.place)
   const select = useStore((s) => s.select)
   const lidar = useStore((s) => s.lidar)

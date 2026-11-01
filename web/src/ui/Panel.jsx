@@ -1,7 +1,7 @@
 // The glass side panel: search, the place card, the part inspector and the docent.
 import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { useStore } from '../store'
-import { useTour, startTour, stopTour } from '../tour/tour.js'
+import { useTour, startTour } from '../tour/tour.js'
 const Voice = lazy(() => import('./Voice'))
 import { StoryCard } from './TimelineMarks'
 import { readDocentStream } from '../lib/docentStream'
@@ -160,10 +160,12 @@ function PlaceCard() {
     <section className="place-card">
       <h1>{place.name}</h1>
       <p className="where">{[place.location?.label || place.location?.name || 'River Thames, London', opened && `Opened ${opened.year}`].filter(Boolean).join(' · ')}</p>
-      <button type="button" className="primary" onClick={touring ? stopTour : startTour}>
-        <svg viewBox="0 0 16 16" aria-hidden="true">{touring ? <path d="M4 3h3v10H4zM9 3h3v10H9z" /> : <path d="M4 2.5v11l9-5.5z" />}</svg>
-        {touring ? 'Stop the story' : 'Play the 60 s story'}
-      </button>
+      {/* while the tour plays, Stop lives only in Controls */}
+      {!touring && (
+        <button type="button" className="primary" onClick={startTour}>
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" /></svg>Play the 60 s story
+        </button>
+      )}
     </section>
   )
 }

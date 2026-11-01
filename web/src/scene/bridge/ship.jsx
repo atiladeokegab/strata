@@ -11,6 +11,7 @@ import { L } from './structures.jsx'
 import { pbr } from '../look/textures.js'
 import { createShip, stepShip, CRUISE } from './shipSim.js'
 import { vesselForYear, leafInput } from './vessels.js'
+import { RiverCraft } from './river.jsx'
 
 
 // Hull plan outline in (x, z): transom stern at +x, pointed bow at -x.
@@ -335,6 +336,7 @@ export function Ship({ rt, year, maxAngle }) {
   })
 
   return (
+    <>
     <group ref={move}>
       <group ref={bob}>
         <Part id="ship" rt={rt}>
@@ -357,15 +359,17 @@ export function Ship({ rt, year, maxAngle }) {
       </group>
       {/* wake trails behind the stern; bow waves fan out from the stem */}
       <group ref={wake} position={[0, 0.06, 0]}>
-        <mesh rotation-x={-Math.PI / 2} position={[23 + 35, 0, 0]} material={mats.foam}>
+        <mesh rotation-x={-Math.PI / 2} position={[(vessel.hullStern ?? vessel.stern) + 35, 0, 0]} material={mats.foam}>
           <planeGeometry args={[70, 10]} />
         </mesh>
         {[-1, 1].map((z) => (
-          <mesh key={z} rotation={[-Math.PI / 2, 0, -z * 0.32]} position={[-7, 0, z * 7.2]} material={mats.foam}>
+          <mesh key={z} rotation={[-Math.PI / 2, 0, -z * 0.32]} position={[Math.max(vessel.bow, -29) + 21.8, 0, z * 7.2]} material={mats.foam}>
             <planeGeometry args={[46, 3]} />
           </mesh>
         ))}
       </group>
     </group>
+    <RiverCraft year={year} ship={shipState} vessel={vessel} />
+    </>
   )
 }

@@ -7,9 +7,11 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import { useStore } from '../../store.js'
 import { Part } from './Part.jsx'
+import { BasculeDrive } from './BasculeDrive.jsx'
 import { steelColour } from './geom.js'
 import { createHydraulics, stepHydraulics, SIM_SPEED } from './hydraulics.js'
 import { stageForYear, shown } from './stages.js'
+import { containersOf } from './xray.js'
 import * as S from './structures.jsx'
 import * as D from './details.jsx'
 import { BasculeLeafDetail } from './basculeDetail.jsx'
@@ -18,11 +20,11 @@ import { EngineRoom } from './engineRoom.jsx'
 import { Ship } from './ship.jsx'
 import { Stairs, Lifts } from './interiors.jsx'
 import { Traffic } from './traffic.jsx'
+import { TopView } from './topview.jsx'
 
 // The live sim state, for any panel that wants to show pressure or stored volume. Read-only.
 export const bridgeHydraulics = createHydraulics()
 
-const INTERNAL = /^(counterweight|pivot|hydraulic-engine|accumulator|engine-room|stairs|lift|north-tower|south-tower)/
 
 const dim = (place, id, key, fallback) => place?.parts?.find((p) => p.id === id)?.dims?.[key]?.value ?? fallback
 
@@ -79,11 +81,13 @@ function Half({ side, rt, st, towerTop }) {
       {shown('bascule', st.stage) && (
         <>
           <Part id={n ? 'bascule-north' : 'bascule-south'} rt={rt} explode={[0, 10, 6]}>
-            <S.PivotFrame sim={sim}>
-              <S.BasculeLeaf />
-              <D.BasculeDetails />
-              <BasculeLeafDetail />
-            </S.PivotFrame>
+            <BasculeDrive sim={sim}>
+              <S.PivotFrame sim={sim}>
+                <S.BasculeLeaf />
+                <D.BasculeDetails />
+                <BasculeLeafDetail />
+              </S.PivotFrame>
+            </BasculeDrive>
           </Part>
           <Part id={id('counterweight')} rt={rt} explode={[0, -10, -4]}>
             <S.PivotFrame sim={sim}>
@@ -139,7 +143,7 @@ export function TowerBridge(props) {
       root,
       sim: bridgeHydraulics,
       explode: { current: 0 },
-      xray: { current: 0 },
+      fades: { current: [] }, // shell part ids x-rayed for the current selection
       selected: { current: useStore.getState().selected },
       hovered: { current: null },
       steel: { current: steelColour(year) },
@@ -159,8 +163,7 @@ export function TowerBridge(props) {
   useFrame((_, dt) => {
     const k = 1 - Math.exp(-Math.min(dt, 0.1) * 3)
     rt.explode.current += ((exploded ? 1 : 0) - rt.explode.current) * k
-    const inside = INTERNAL.test(rt.selected.current ?? '') ? 1 : 0
-    rt.xray.current += (Math.max(exploded ? 1 : 0, inside) - rt.xray.current) * k
+    rt.fades.current = containersOf(rt.selected.current)
     // Bascules can only be worked once the bridge is open (stage 5); before that they sit closed.
     const lever = st.stage >= 5 ? useStore.getState().bascule : 0
     stepHydraulics(rt.sim, lever, Math.min(dt, 0.1) * SIM_SPEED, maxAngle)
@@ -185,6 +188,7 @@ export function TowerBridge(props) {
           </Part>
         ))}
       {shown('engine', st.stage) && <EngineRoom rt={rt} explode={[14, 6, 20]} />}
+      <TopView stage={st.stage} maxAngle={maxAngle} />
       {st.stage >= 5 && <Traffic rt={rt} year={year} sim={bridgeHydraulics} />}
       {st.stage < 5 && (
         <Html position={[0, towerTop + 14, 0]} center zIndexRange={[10, 0]} style={{ pointerEvents: 'none' }}>

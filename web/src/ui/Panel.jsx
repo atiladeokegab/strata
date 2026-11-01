@@ -5,6 +5,7 @@ import { useTour, startTour, stopTour } from '../tour/tour.js'
 const Voice = lazy(() => import('./Voice'))
 import { StoryCard } from './TimelineMarks'
 import { readDocentStream } from '../lib/docentStream'
+import Archive from './Archive'
 
 const STATUS = { 'text-attested': 'Text-attested', measured: 'Measured', inferred: 'Inferred' }
 const label = (k) => k.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase())
@@ -171,7 +172,7 @@ function Docent() {
   const [busy, setBusy] = useState(false)
   const [talk, setTalk] = useState(false)
   const end = useRef(null)
-  useEffect(() => { end.current?.scrollIntoView({ block: 'nearest' }) }, [log, busy])
+  useEffect(() => { if (log.length) end.current?.scrollIntoView({ block: 'nearest' }) }, [log, busy]) // not on mount: the place card stays in view
   const ask = async (e) => {
     e.preventDefault()
     const question = q.trim()
@@ -232,6 +233,7 @@ export function Panel() {
         <PlaceCard />
         <StoryCard />
         <Inspector />
+        <Archive />
         <Docent />
       </div>
     </aside>

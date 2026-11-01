@@ -2,9 +2,11 @@
 import assert from 'node:assert/strict'
 import { createHydraulics, stepHydraulics, OPEN_TIME_S } from './hydraulics.js'
 import { stageForYear, shown } from './stages.js'
+import { containersOf } from './xray.js'
 import { createShip, stepShip, WAIT_X, HOLD_X } from './shipSim.js'
 import { createTraffic, stepTraffic, TYPES, STOP_U, BASCULE_U } from './trafficSim.js'
 import { vesselForYear, needsLift, leafInput, CLEARANCE } from './vessels.js'
+import { createRiver, stepRiver, gap, CRAFT, CLEAR } from './riverSim.js'
 
 const MAX = (86 * Math.PI) / 180
 const run = (s, target, seconds) => {
@@ -59,6 +61,14 @@ for (const year of [1900, 2026]) {
 }
 assert.ok(createTraffic(1900).lanes[0].list.every((v) => v.type === 'cart' || v.type === 'hansom'), 'horse era')
 assert.ok(createTraffic(2026).lanes[0].list.every((v) => ['car', 'taxi', 'bus'].includes(v.type)), 'motor era')
+assert.deepEqual(containersOf('lift-north'), ['north-tower'])
+assert.deepEqual(containersOf('stairs-south'), ['south-tower'])
+assert.deepEqual(containersOf('hydraulic-engine-south'), ['pier-south'])
+assert.deepEqual(containersOf('pivot-north'), ['pier-north'])
+assert.deepEqual(containersOf('engine-room'), ['engine-room'])
+assert.deepEqual(containersOf('north-tower'), ['north-tower'])
+assert.deepEqual(containersOf('bascule-north'), [])
+assert.deepEqual(containersOf(null), [])
 console.log('bridge checks ok')
 
 // Ship: waits for the leaves, holds short of the bridge if they drop, but a committed ship keeps going.
@@ -91,4 +101,34 @@ assert.ok(cat.x < HOLD_X - 100, `the clipper passes with the bascules closed, at
 const tall = createShip()
 for (let t = 0; t < 120; t += 0.05) stepShip(tall, leafInput(vesselForYear(1950), 0), 0.05)
 assert.ok(tall.x === WAIT_X, 'the tug waits for the bascules')
+
+// River craft: all fit under the closed deck, and none comes within CLEAR of the big vessel,
+// whatever the year's vessel and with the bascules cycling open and shut.
+for (const k in CRAFT) assert.ok(CRAFT[k].airDraft < CLEARANCE, `${k} fits under the closed deck`)
+for (const y of [1900, 1940, 1960, 1985, 2026]) {
+  const v = vesselForYear(y)
+  const big = createShip()
+  const river = createRiver(y)
+  const foot = { x: 0, bow: v.bow, stern: v.stern }
+  let moved = 0
+  for (let t = 0; t < 900; t += 0.05) {
+    stepShip(big, leafInput(v, (t % 140) < 90 ? 1 : 0), 0.05)
+    foot.x = big.x
+    stepRiver(river, foot, 0.05)
+    for (const c of river) assert.ok(gap(c, foot) >= CLEAR, `${y} ${c.type} at ${c.x.toFixed(1)},${c.z.toFixed(1)} is within ${CLEAR} m of the ${v.kind} at ${big.x.toFixed(1)}`)
+    moved = Math.max(moved, big.x < 0 ? 1 : 0)
+  }
+  assert.ok(moved, `${y}: the ${v.kind} actually passed the craft`)
+}
 console.log('ship checks ok')
+
+import { placeLabels, labelSize, CALLOUTS } from './callouts.js'
+const lab = (id, x, y) => ({ id, x, y, ...labelSize('North tower') })
+const pl = placeLabels([lab('a', 500, 400), lab('b', 502, 401), lab('c', 900, 400), lab('off', -5, 400)], 1400, 900)
+assert.ok(pl.a && pl.b && pl.c && !pl.off, 'labels for on-screen anchors, none for off-screen')
+const box = (id) => ({ x: (id === 'c' ? 900 : id === 'b' ? 502 : 500) + pl[id].dx, y: 400 + pl[id].dy })
+assert.ok(Math.abs(box('a').x - box('b').x) >= labelSize('North tower').w || Math.abs(box('a').y - box('b').y) >= 22, 'overlapping anchors get separate label spots')
+const crowd = placeLabels(Array.from({ length: 20 }, (_, i) => lab(`k${i}`, 700, 450)), 1400, 900)
+assert.ok(Object.keys(crowd).length <= 8 && Object.keys(crowd).length >= 3, 'a crowd keeps only labels that fit')
+assert.equal(new Set(CALLOUTS.map((c) => c.id)).size, CALLOUTS.length)
+console.log('callout checks ok')

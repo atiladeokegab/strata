@@ -5,6 +5,7 @@ import * as THREE from 'three'
 const HIGHLIGHT = new THREE.Color('#ffb547')
 const tmp = new THREE.Vector3()
 const DOWN = new THREE.Vector3(0, -1, 0)
+const noRaycast = () => {}
 
 // One clickable part. Every mesh inside is named by the part id (the shared key), gets its own
 // material clones so highlight and x-ray never leak to other parts, and eases towards its
@@ -13,21 +14,25 @@ const DOWN = new THREE.Vector3(0, -1, 0)
 export function Part({ id, rt, home = [0, 0, 0], explode = [0, 0, 0], xray = false, clipY = null, children }) {
   const ref = useRef()
   const mats = useRef([])
+  const meshes = useRef([])
+  const fadeSel = useRef(0)
   const plane = useRef(new THREE.Plane(new THREE.Vector3(0, -1, 0), 0))
 
   useLayoutEffect(() => {
-    const list = []
+    const list = [], ms = []
     ref.current.traverse((o) => {
       o.name = id
       o.userData.partId = id
-      if (!o.isMesh) return
+      if (!o.isMesh || o.userData.affordance) return // drive gizmos keep their own materials
       if (!o.userData.ownMat) {
         o.material = o.material.clone()
         o.userData.ownMat = true
       }
       list.push(o.material)
+      ms.push(o)
     })
     mats.current = list
+    meshes.current = ms
   })
 
   useFrame((_, dt) => {
@@ -38,7 +43,10 @@ export function Part({ id, rt, home = [0, 0, 0], explode = [0, 0, 0], xray = fal
     const sel = rt.selected.current === id
     const hov = rt.hovered.current === id
     const glow = sel ? 0.45 : hov ? 0.2 : 0
-    const fade = xray ? rt.xray.current : 0
+    fadeSel.current += ((xray && rt.fades.current.includes(id) ? 1 : 0) - fadeSel.current) * (1 - Math.exp(-Math.min(dt, 0.1) * 3))
+    const fade = xray ? Math.max(rt.explode.current, fadeSel.current) : 0
+    // a see-through shell lets clicks through to what it contains
+    for (const o of meshes.current) o.raycast = fade > 0.3 ? noRaycast : THREE.Mesh.prototype.raycast
     if (clipY !== null) plane.current.set(DOWN, clipY).applyMatrix4(rt.root.current.matrixWorld)
     const clip = clipY === null ? null : [plane.current]
     for (const m of mats.current) {

@@ -10,3 +10,14 @@
 .id-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; }
 .id-foot p { margin: 0; flex: 1 1 60%; }
 .id-fly { padding: 0.5em 1.2em; border-radius: 8px; border: 0; background: #f4f4f5; color: #141416; font: inherit; cursor: pointer; }
+
+.id-pick { display: flex; flex-direction: column; gap: 12px; }
+.id-pick p { margin: 0; }
+.id-upload { align-self: flex-start; display: inline-block; }
+.id-samples { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.id-sample { display: flex; flex-direction: column; gap: 4px; padding: 0; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 8px; overflow: hidden; background: #1c1c1f; color: inherit; font: inherit; cursor: pointer; text-align: left; }
+.id-sample img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; }
+.id-sample span { padding: 4px 8px 6px; font-size: 0.85rem; }
+.id-sample:hover, .id-sample:focus-visible { border-color: #00d46a; outline: none; }
+.id-credit { margin: 0; font-size: 0.75rem; }
+.id-credit a { color: inherit; }

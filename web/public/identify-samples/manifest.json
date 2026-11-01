@@ -1,0 +1,129 @@
+{
+ "items": [
+  {
+   "file": "shad-thames.jpg",
+   "label": "Shad Thames, at dawn",
+   "credit": "Colin, CC BY-SA 4.0, via Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:Tower_Bridge_from_Shad_Thames.jpg",
+   "result": {
+    "is_bridge": true,
+    "parts": [
+     {
+      "id": "south-tower",
+      "box": {
+       "x0": 0.288,
+       "y0": 0.095,
+       "x1": 0.415,
+       "y1": 0.747
+      }
+     },
+     {
+      "id": "north-tower",
+      "box": {
+       "x0": 0.563,
+       "y0": 0.301,
+       "x1": 0.663,
+       "y1": 0.77
+      }
+     },
+     {
+      "id": "bascule-south",
+      "box": {
+       "x0": 0.45,
+       "y0": 0.748,
+       "x1": 0.528,
+       "y1": 0.802
+      }
+     },
+     {
+      "id": "bascule-north",
+      "box": {
+       "x0": 0.528,
+       "y0": 0.758,
+       "x1": 0.61,
+       "y1": 0.822
+      }
+     }
+    ],
+    "camera": {
+     "x": 250.0,
+     "y": -7.0,
+     "z": 150.0
+    },
+    "where": "On the south bank, downstream (east) of the bridge, roughly 250\u2013300 m from the centre, near river level.",
+    "model": "gpt-6.1-terra"
+   }
+  },
+  {
+   "file": "st-katharine.jpg",
+   "label": "St Katharine Docks, at dusk",
+   "credit": "The wub, CC BY-SA 4.0, via Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:Tower_Bridge_from_St_Katharine_Docks_entrance_-_2023-03-18.jpg",
+   "result": {
+    "is_bridge": true,
+    "parts": [
+     {
+      "id": "north-tower",
+      "box": {
+       "x0": 0.608,
+       "y0": 0.098,
+       "x1": 0.72,
+       "y1": 0.541
+      }
+     },
+     {
+      "id": "south-tower",
+      "box": {
+       "x0": 0.353,
+       "y0": 0.218,
+       "x1": 0.445,
+       "y1": 0.552
+      }
+     },
+     {
+      "id": "bascule-south",
+      "box": {
+       "x0": 0.403,
+       "y0": 0.548,
+       "x1": 0.491,
+       "y1": 0.583
+      }
+     },
+     {
+      "id": "bascule-north",
+      "box": {
+       "x0": 0.491,
+       "y0": 0.546,
+       "x1": 0.581,
+       "y1": 0.579
+      }
+     }
+    ],
+    "camera": {
+     "x": 220.0,
+     "y": -5.0,
+     "z": -160.0
+    },
+    "where": "On the north bank, east of the bridge, roughly 250\u2013300 m from its centre, near riverbank level.",
+    "model": "gpt-6.1-terra"
+   }
+  },
+  {
+   "file": "london-bridge.jpg",
+   "label": "Not Tower Bridge",
+   "credit": "burge5000, CC BY 2.0, via Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:London_Bridge_Illuminated.jpg",
+   "result": {
+    "is_bridge": false,
+    "parts": [],
+    "camera": {
+     "x": 0.0,
+     "y": 0.0,
+     "z": 0.0
+    },
+    "where": "The photo shows London Bridge, illuminated red over the River Thames at dusk, with Southwark Cathedral visible behind it\u2014not Tower Bridge.",
+    "model": "gpt-6.1-sol"
+   }
+  }
+ ]
+}

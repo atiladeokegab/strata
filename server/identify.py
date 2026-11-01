@@ -1,20 +1,19 @@
 """Through your own eyes: a photo of the real bridge -> the parts in it and where the photographer stood."""
 import base64
 import binascii
+import asyncio
 import json
-from concurrent.futures import ThreadPoolExecutor
 from functools import cache
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
-from openai import OpenAI
+from openai import AsyncOpenAI
 from pydantic import BaseModel
 
 ROOT = Path(__file__).resolve().parent.parent
 # Timed on 2 Commons photos: sol/low ~11 s, both right; terra/low ~5 s but wrong bank on one; sol default ~24 s.
 # So both run at once: terra's answer wins if it passes sane(), otherwise we wait for sol.
 FAST, SURE = ("gpt-6.1-terra", "low"), ("gpt-6.1-sol", "low")
-POOL = ThreadPoolExecutor(max_workers=8)
 MAX_BYTES = 6 * 1024 * 1024
 MAGIC = {"jpeg": (b"\xff\xd8\xff",), "png": (b"\x89PNG\r\n\x1a\n",), "webp": (b"RIFF",)}
 
@@ -27,7 +26,7 @@ class IdentifyIn(BaseModel):
 
 @cache
 def client():
-    return OpenAI(timeout=60)
+    return AsyncOpenAI(timeout=60)
 
 
 SCHEMA = {
@@ -95,8 +94,8 @@ def clamp(v: float) -> float:
     return min(1.0, max(0.0, float(v)))
 
 
-def ask(model, effort, prompt, image, known):
-    r = client().responses.create(
+async def ask(model, effort, prompt, image, known):
+    r = await client().responses.create(
         model=model,
         reasoning={"effort": effort},
         input=[{"role": "user", "content": [
@@ -141,7 +140,7 @@ def sane(r) -> bool:
 
 
 @router.post("/api/identify")
-def identify(body: IdentifyIn):
+async def identify(body: IdentifyIn):
     decode(body.image)
     place = json.loads((ROOT / "data" / "places" / "tower-bridge.json").read_text())
     known = {p["id"] for p in place["parts"]}
@@ -153,14 +152,15 @@ If it is, list each of these parts that is visible in the photo, by id, with a t
 Then estimate where the photographer stood: `where` in plain words (bank, side, rough distance, height if raised),
 and `camera` as a position in this frame:
 {FRAME}"""
-    fast, sure = (POOL.submit(ask, *m, prompt, body.image, known) for m in (FAST, SURE))
+    fast, sure = (asyncio.create_task(ask(*m, prompt, body.image, known)) for m in (FAST, SURE))
     try:
-        r = fast.result()
+        r = await fast
         if sane(r):
-            return r  # shortcut: sol keeps running and is billed; cancel it if cost matters
+            sure.cancel()  # closes sol's connection; OpenAI stops the response, input already sent may still bill
+            return r
     except Exception:
         pass
     try:
-        return sure.result()
+        return await sure
     except Exception as e:  # the model or the network; the client sees a plain 502
         raise HTTPException(502, f"vision model failed: {type(e).__name__}")

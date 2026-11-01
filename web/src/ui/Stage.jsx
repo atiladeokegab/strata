@@ -6,6 +6,7 @@ import { CameraRig } from './CameraRig'
 import { makeSlot } from './slots'
 import { BridgeStandIn, GroundStandIn, WaterStandIn } from './StandIns'
 
+export const WORLD_TURN = (20.95 * Math.PI) / 180 // meta.json bridge_axis_deg
 const Terrain = makeSlot('Terrain', ['../scene/Terrain.jsx'], GroundStandIn)
 const Water = makeSlot('Water', ['../scene/Water.jsx'], WaterStandIn)
 const TowerBridge = makeSlot('TowerBridge', ['../scene/bridge/TowerBridge.jsx', '../scene/bridge/index.jsx'], BridgeStandIn)
@@ -23,6 +24,7 @@ function partOf(object, ids) {
 export function Stage() {
   const place = useStore((s) => s.place)
   const select = useStore((s) => s.select)
+  const lidar = useStore((s) => s.lidar)
   const ids = new Set(place?.parts.map((p) => p.id))
   const hit = (e) => partOf(e.object, ids)
   return (
@@ -44,8 +46,11 @@ export function Stage() {
         onPointerOver={(e) => { if (hit(e)) { e.stopPropagation(); document.body.style.cursor = 'pointer' } }}
         onPointerOut={() => { document.body.style.cursor = '' }}
       >
-        <Terrain />
-        <Water />
+        {/* Real world layers are grid-aligned (x east, z south); the bridge model runs along z, the real one 20.95° east of grid north, so turn the world to meet it. */}
+        <group rotation-y={WORLD_TURN}>
+          <Terrain lidar={lidar} />
+          <Water />
+        </group>
         <TowerBridge />
       </group>
     </Canvas>

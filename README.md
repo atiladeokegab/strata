@@ -25,7 +25,7 @@
 
 <p align="center"><b>Live app:</b> <a href="https://strata-901257379404.europe-west2.run.app">https://strata-901257379404.europe-west2.run.app</a></p>
 
-### Try it in 60 seconds
+### Try it
 
 1. On a first visit the guided tour opens by itself: **Next** and **Back** step through every feature, each one live.
    - **Skip tour**, top right of the card, ends it at any step and drops you into the app.

@@ -136,7 +136,7 @@ for el in json.loads(raw.read_text())["elements"]:
         lidar = lidar_heights(E, N)
         tagged = num(tags.get("height")) or (num(tags.get("building:levels")) or 0) * 3.3 or None
         if lidar and lidar[1] - lidar[0] >= 2.5:
-            ground, height = lidar[0], lidar[1] - lidar[0]
+            ground, height = lidar[0], lidar[1] - lidar[0] + 0.3  # roof 0.3 m clear of the terrain's own LiDAR roof: no z-fight
         elif tagged:
             ground, height = (lidar[0] if lidar else CITY_GROUND), tagged
         else:
@@ -156,6 +156,7 @@ for el in json.loads(raw.read_text())["elements"]:
         }
         if tags.get("name"): b["n"] = tags["name"]
         if holes: b["h"] = holes
+        if lidar: b["l"] = 1  # inside the terrain tile: the roof wears the terrain's aerial photo
         buildings.append(b)
 
 out.parent.mkdir(parents=True, exist_ok=True)
@@ -163,7 +164,7 @@ out.write_text(json.dumps({
     "credit": "© OpenStreetMap contributors",
     "licence": "Open Database License (ODbL) 1.0, https://www.openstreetmap.org/copyright",
     "heights": "Environment Agency LIDAR Composite DSM 1 m (OGL v3) inside the terrain tile; OSM height or levels beyond it",
-    "frame": {"origin_osgb": [oE, oN], "origin_h": oH, "axis_deg": meta["bridge_axis_deg"]},
+    "frame": {"origin_osgb": [oE, oN], "origin_h": oH, "axis_deg": meta["bridge_axis_deg"], "bbox_osgb": meta["bbox_osgb"]},
     "start_rule": "s = OSM start_date year; with none, 1950 for buildings over 40 m (taken as modern); null = always shown",
     "buildings": buildings,
 }, separators=(",", ":"), ensure_ascii=False))

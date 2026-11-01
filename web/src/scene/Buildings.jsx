@@ -48,7 +48,9 @@ const LOOK = {
   b: { color: '#b39270', roughness: 0.92 },
   g: { color: '#8ea2b0', roughness: 0.14, metalness: 0.55, envMapIntensity: 1.4 },
   roof: { color: '#6b6862', roughness: 0.95 },
+  drape: { color: '#ffffff', roughness: 0.95 }, // roofs inside the LiDAR tile wear the terrain's aerial photo (or 1890s map)
 }
+const TERRAIN = '/terrain/tower-bridge/'
 
 // Era cut and contact shadow, injected into a stock material (and its shadow depth twin).
 function eraPatch(uniforms, shade) {
@@ -69,7 +71,11 @@ function eraPatch(uniforms, shade) {
 
 // One mesh per look: footprints -> extruded walls + roofs, packed into four big geometries.
 function build(data) {
-  const out = { s: newBucket(), b: newBucket(), g: newBucket(), roof: newBucket() }
+  const out = { s: newBucket(), b: newBucket(), g: newBucket(), roof: newBucket(), drape: newBucket() }
+  // the terrain's uv mapping (Terrain.jsx grid): u east across the tile, v = 1 at its north edge
+  const [minE, minN, maxE, maxN] = data.frame.bbox_osgb
+  const [oE, oN] = data.frame.origin_osgb
+  const tileUv = (x, z) => [(x + oE - minE) / (maxE - minE), 1 - (z - oN + maxN) / (maxN - minN)]
   for (const bd of data.buildings) {
     const ring = (flat) => { const p = []; for (let i = 0; i < flat.length; i += 2) p.push(new THREE.Vector2(flat[i], -flat[i + 1])); return p }
     const shape = new THREE.Shape(ring(bd.o))
@@ -78,7 +84,11 @@ function build(data) {
     geo.rotateX(-Math.PI / 2) // shape (x, -z) extruded along +y
     geo.translate(0, bd.b, 0)
     const start = bd.s ?? -1e4
-    for (const grp of geo.groups) push(grp.materialIndex === 0 ? out.roof : out[bd.k] || out.b, geo, grp, start, bd.b)
+    for (const grp of geo.groups) {
+      if (grp.materialIndex !== 0) push(out[bd.k] || out.b, geo, grp, start, bd.b)
+      else if (bd.l) push(out.drape, geo, grp, start, bd.b, tileUv)
+      else push(out.roof, geo, grp, start, bd.b)
+    }
     geo.dispose()
   }
   return Object.fromEntries(Object.entries(out).map(([k, b]) => [k, toGeometry(b)]))
@@ -86,12 +96,12 @@ function build(data) {
 
 const newBucket = () => ({ pos: [], nor: [], uv: [], start: [], base: [] })
 
-function push(b, geo, { start, count }, year, base) {
+function push(b, geo, { start, count }, year, base, uvAt) {
   const { position, normal, uv } = geo.attributes
   for (let i = start; i < start + count; i++) {
     b.pos.push(position.getX(i), position.getY(i), position.getZ(i))
     b.nor.push(normal.getX(i), normal.getY(i), normal.getZ(i))
-    b.uv.push(uv.getX(i), uv.getY(i))
+    b.uv.push(...(uvAt ? uvAt(position.getX(i), position.getZ(i)) : [uv.getX(i), uv.getY(i)]))
     b.start.push(year)
     b.base.push(base)
   }
@@ -117,20 +127,32 @@ export function Buildings() {
   const uniforms = useMemo(() => ({ uYear: { value: year } }), []) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { uniforms.uYear.value = year }, [uniforms, year])
 
+  // both up front, like Terrain.jsx, so a year scrub swaps without a blank frame
+  const photos = useMemo(() => ['color.jpg', 'color-1890s.jpg'].map((f) => {
+    const t = new THREE.TextureLoader().load(TERRAIN + f)
+    t.colorSpace = THREE.SRGBColorSpace
+    t.anisotropy = 8
+    return t
+  }), [])
+  useEffect(() => () => photos.forEach((t) => t.dispose()), [photos])
+  const photo = photos[year < 1950 ? 1 : 0] // before 1950 the ground is the OS 1893-96 town plan
+
   const meshes = useMemo(() => {
     if (!data) return null
     const geos = build(data)
     return Object.entries(geos).map(([k, geometry]) => {
-      const material = new THREE.MeshStandardMaterial({ ...LOOK[k], ...(FACADES[k] && { map: FACADES[k]() }) })
+      const map = k === 'drape' ? photos[0] : FACADES[k]?.()
+      const material = new THREE.MeshStandardMaterial({ ...LOOK[k], ...(map && { map }) })
       material.onBeforeCompile = eraPatch(uniforms, true)
       material.customProgramCacheKey = () => 'strata-era'
       const depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking })
       depth.onBeforeCompile = eraPatch(uniforms, false)
       return { k, geometry, material, depth }
     })
-  }, [data, uniforms])
+  }, [data, uniforms, photos])
 
-  useEffect(() => () => meshes?.forEach((m) => { m.geometry.dispose(); m.material.map?.dispose(); m.material.dispose(); m.depth.dispose() }), [meshes])
+  useEffect(() => { const m = meshes?.find((m) => m.k === 'drape'); if (m) m.material.map = photo }, [meshes, photo])
+  useEffect(() => () => meshes?.forEach((m) => { m.geometry.dispose(); if (m.k !== 'drape') m.material.map?.dispose(); m.material.dispose(); m.depth.dispose() }), [meshes])
 
   if (!meshes) return null
   return (

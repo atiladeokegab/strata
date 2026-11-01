@@ -11,6 +11,7 @@ import { steelColour } from './geom.js'
 import { createHydraulics, stepHydraulics, SIM_SPEED } from './hydraulics.js'
 import { stageForYear, shown } from './stages.js'
 import * as S from './structures.jsx'
+import * as D from './details.jsx'
 
 // The live sim state, for any panel that wants to show pressure or stored volume. Read-only.
 export const bridgeHydraulics = createHydraulics()
@@ -51,7 +52,9 @@ function Half({ side, rt, st, towerTop }) {
         >
           {!shown('cladding', st.stage) || st.stage === 4 ? <S.TowerFrame /> : null}
           {shown('cladding', st.stage) && <S.TowerCladding topY={towerTop} />}
+          {shown('cladding', st.stage) && <D.TowerDetails />}
           <S.FixedDeck />
+          <D.DeckMarkings />
         </Part>
       )}
       {shown('bascule', st.stage) && (
@@ -59,6 +62,7 @@ function Half({ side, rt, st, towerTop }) {
           <Part id={n ? 'bascule-north' : 'bascule-south'} rt={rt} explode={[0, 10, 6]}>
             <S.PivotFrame sim={sim}>
               <S.BasculeLeaf />
+              <D.BasculeDetails />
             </S.PivotFrame>
           </Part>
           <Part id={id('counterweight')} rt={rt} explode={[0, -10, -4]}>
@@ -82,9 +86,11 @@ function Half({ side, rt, st, towerTop }) {
         <>
           <Part id={id('approach')} rt={rt} explode={[0, -8, -14]}>
             <S.Approach />
+            <D.ApproachDetails />
           </Part>
           <Part id={id('suspension')} rt={rt} explode={[0, 12, -10]}>
             <S.Suspension />
+            <D.SuspensionDetails />
           </Part>
         </>
       )}
@@ -149,6 +155,7 @@ export function TowerBridge(props) {
             clipY={rising(st, 3, S.L.walkY - 0.5, S.L.walkY + S.L.walkH + 0.5)}
           >
             <S.Walkway x={side === 'east' ? S.L.walkX : -S.L.walkX} />
+            <D.WalkwayDetails x={side === 'east' ? S.L.walkX : -S.L.walkX} />
           </Part>
         ))}
       {st.stage < 5 && (

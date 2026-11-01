@@ -37,3 +37,24 @@ export const shown = (kind, stage) => {
   const r = PART_STAGE[kind]
   return stage >= r.from && (r.until === undefined || stage <= r.until)
 }
+
+// Later history, after opening. One table so the year slider, the scene and check.mjs agree.
+// status: years from the Tower Bridge history (wiki-tb); move to sourced events when they land.
+export const ERAS = {
+  walkwaysClosed: 1910, // closed to the public for lack of use
+  electricDrive: 1976, // steam pumping engines replaced by electro-hydraulic drive
+  jubilee: 1977, // red, white and blue paint (see steelColour in geom.js)
+  walkwaysReopened: 1982, // reopened, glazed, as the exhibition
+  nightLighting: 1990, // floodlighting fixtures on the towers
+  olympics: 2012, // Olympic rings hung from the walkways, that year only
+  glassFloor: 2014, // glass floor panels in the walkways
+}
+
+export const eraFor = (year) => ({
+  walkwayOpen: year < ERAS.walkwaysClosed || year >= ERAS.walkwaysReopened,
+  glazed: year >= ERAS.walkwaysReopened,
+  steam: year < ERAS.electricDrive,
+  nightLighting: year >= ERAS.nightLighting,
+  olympics: year === ERAS.olympics,
+  glassFloor: year >= ERAS.glassFloor,
+})

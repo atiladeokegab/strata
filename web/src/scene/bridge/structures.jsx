@@ -296,7 +296,7 @@ export function Accumulators({ sim }) {
 }
 
 // ---- high walkways (span between the towers, built once at the root) ----
-export function Walkway({ x }) {
+export function Walkway({ x, glazed = true, glassFloor = false }) {
   const g = useMemo(() => {
     const z1 = -(L.pierZ + L.towerHalfZ), z0 = -z1, w = 1.6, y0 = L.walkY, y1 = L.walkY + L.walkH
     const gs = []
@@ -324,8 +324,8 @@ export function Walkway({ x }) {
     <>
       <mesh geometry={g.truss} material={M.steel} castShadow />
       <mesh geometry={g.roof} material={M.slate} castShadow />
-      <mesh geometry={g.floor} material={M.white} />
-      <mesh geometry={g.glazing} material={M.glass} />
+      <mesh geometry={g.floor} material={glassFloor ? M.glass : M.white} />
+      {glazed && <mesh geometry={g.glazing} material={M.glass} />}
     </>
   )
 }

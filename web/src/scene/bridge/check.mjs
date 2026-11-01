@@ -1,7 +1,7 @@
 // Self-check for the pure bridge logic: `node web/src/scene/bridge/check.mjs`
 import assert from 'node:assert/strict'
 import { createHydraulics, stepHydraulics, OPEN_TIME_S, SIM_SPEED } from './hydraulics.js'
-import { stageForYear, shown } from './stages.js'
+import { stageForYear, shown, ERAS, eraFor } from './stages.js'
 import { containersOf } from './xray.js'
 import { createShip, stepShip, WAIT_X, HOLD_X } from './shipSim.js'
 import { vesselForYear, needsLift, leafInput, CLEARANCE } from './vessels.js'
@@ -38,6 +38,14 @@ assert.equal(stageForYear(2026).stage, 5)
 assert.ok(shown('cofferdam', 0) && !shown('cofferdam', 1))
 assert.ok(!shown('cladding', 3) && shown('cladding', 5))
 assert.ok(!shown('engine', 4) && shown('engine', 5))
+// later history: thresholds in order, each flag flips exactly at its year
+const yrs = Object.values(ERAS)
+assert.ok(yrs.every((y, i) => y > 1894 && (!i || y > yrs[i - 1])), 'eras after opening, in order')
+assert.ok(eraFor(1900).walkwayOpen && !eraFor(1950).walkwayOpen && eraFor(1982).walkwayOpen && !eraFor(1981).glazed)
+assert.ok(eraFor(1975).steam && !eraFor(1976).steam)
+assert.ok(!eraFor(1989).nightLighting && eraFor(1990).nightLighting)
+assert.ok(eraFor(2012).olympics && !eraFor(2011).olympics && !eraFor(2013).olympics)
+assert.ok(!eraFor(2013).glassFloor && eraFor(2014).glassFloor)
 // traffic: gates hold the queue, spacing holds, the bascules clear, the queue moves on green
 for (const year of [1900, 2026]) {
   const t = createTraffic(year, 7)

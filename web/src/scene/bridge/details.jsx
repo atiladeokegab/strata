@@ -6,7 +6,7 @@ import { beam, box, merge, M } from './geom.js'
 import { L } from './structures.jsx'
 
 // Renders { materialKey: [geometries] } as one merged mesh per material.
-function Meshes({ build, deps = [] }) {
+export function Meshes({ build, deps = [] }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const g = useMemo(() => Object.entries(build()).filter(([, gs]) => gs.length).map(([k, gs]) => [k, merge(gs)]), deps)
   return g.map(([k, geo]) => <mesh key={k} geometry={geo} material={M[k]} castShadow />)

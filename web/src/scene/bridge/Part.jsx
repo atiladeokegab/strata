@@ -11,7 +11,7 @@ const noRaycast = () => {}
 // material clones so highlight and x-ray never leak to other parts, and eases towards its
 // exploded offset. `rt` holds the per-frame refs owned by TowerBridge.
 // clipY (scene-local y) cuts the part off above that height, for parts rising during construction.
-export function Part({ id, rt, home = [0, 0, 0], explode = [0, 0, 0], xray = false, clipY = null, children }) {
+export function Part({ id, rt, home = [0, 0, 0], explode = [0, 0, 0], xray = false, clipY = null, dim = 0, children }) {
   const ref = useRef()
   const mats = useRef([])
   const meshes = useRef([])
@@ -44,9 +44,10 @@ export function Part({ id, rt, home = [0, 0, 0], explode = [0, 0, 0], xray = fal
     const hov = rt.hovered.current === id
     const glow = sel ? 0.45 : hov ? 0.2 : 0
     fadeSel.current += ((xray && rt.fades.current.includes(id) ? 1 : 0) - fadeSel.current) * (1 - Math.exp(-Math.min(dt, 0.1) * 3))
-    const fade = xray ? Math.max(rt.explode.current, fadeSel.current) : 0
-    // a see-through shell lets clicks through to what it contains
-    for (const o of meshes.current) o.raycast = fade > 0.3 ? noRaycast : THREE.Mesh.prototype.raycast
+    const shell = xray ? Math.max(rt.explode.current, fadeSel.current) : 0
+    // a see-through shell lets clicks through to what it contains; a dimmed part stays clickable
+    for (const o of meshes.current) o.raycast = shell > 0.3 ? noRaycast : THREE.Mesh.prototype.raycast
+    const fade = Math.max(shell, dim) // dim: fixed fade, e.g. a closed walkway
     if (clipY !== null) plane.current.set(DOWN, clipY).applyMatrix4(rt.root.current.matrixWorld)
     const clip = clipY === null ? null : [plane.current]
     for (const m of mats.current) {

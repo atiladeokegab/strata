@@ -10,8 +10,9 @@ import { Part } from './Part.jsx'
 import { BasculeDrive } from './BasculeDrive.jsx'
 import { steelColour } from './geom.js'
 import { createHydraulics, stepHydraulics, SIM_SPEED } from './hydraulics.js'
-import { stageForYear, shown } from './stages.js'
+import { stageForYear, shown, eraFor } from './stages.js'
 import { containersOf } from './xray.js'
+import * as H from './history.jsx'
 import * as S from './structures.jsx'
 import * as D from './details.jsx'
 import { BasculeLeafDetail } from './basculeDetail.jsx'
@@ -31,7 +32,7 @@ const dim = (place, id, key, fallback) => place?.parts?.find((p) => p.id === id)
 // Height a rising part has reached this year (scene-local y), or null when not rising.
 const rising = (st, stage, from, to) => (st.stage === stage ? from + (to - from) * st.progress : null)
 
-function Half({ side, rt, st, towerTop }) {
+function Half({ side, rt, st, towerTop, era }) {
   const n = side === 'north'
   const id = (base) => `${base}-${side}`
   const towerId = n ? 'north-tower' : 'south-tower'
@@ -76,6 +77,7 @@ function Half({ side, rt, st, towerTop }) {
         <Part id={towerId} rt={rt} explode={[0, 30, -14]} xray clipY={rising(st, 4, S.L.pierTop, towerTop + 2)}>
           <S.TowerCladding topY={towerTop} />
           <D.TowerDetails />
+          {era.nightLighting && <H.TowerLights />}
         </Part>
       )}
       {shown('bascule', st.stage) && (
@@ -134,6 +136,7 @@ export function TowerBridge(props) {
   const select = useStore((s) => s.select)
   const gl = useThree((s) => s.gl)
   const st = stageForYear(year)
+  const era = eraFor(year)
   const towerTop = S.L.hw + dim(place, 'north-tower', 'height', 65)
   const maxAngle = (dim(place, 'bascule-north', 'max_angle', 86) * Math.PI) / 180
 
@@ -171,8 +174,8 @@ export function TowerBridge(props) {
 
   return (
     <group ref={root} name="tower-bridge" {...props}>
-      <Half side="north" rt={rt} st={st} towerTop={towerTop} />
-      <Half side="south" rt={rt} st={st} towerTop={towerTop} />
+      <Half side="north" rt={rt} st={st} towerTop={towerTop} era={era} />
+      <Half side="south" rt={rt} st={st} towerTop={towerTop} era={era} />
       {year >= 1894 && <Ship rt={rt} year={year} maxAngle={maxAngle} />}
       {shown('walkway', st.stage) &&
         ['east', 'west'].map((side) => (
@@ -182,12 +185,15 @@ export function TowerBridge(props) {
             rt={rt}
             explode={[side === 'east' ? 14 : -14, 20, 0]}
             clipY={rising(st, 3, S.L.walkY - 0.5, S.L.walkY + S.L.walkH + 0.5)}
+            dim={st.stage >= 5 && !era.walkwayOpen ? 0.7 : 0}
           >
-            <S.Walkway x={side === 'east' ? S.L.walkX : -S.L.walkX} />
+            <S.Walkway x={side === 'east' ? S.L.walkX : -S.L.walkX} glazed={era.glazed} glassFloor={era.glassFloor} />
             <D.WalkwayDetails x={side === 'east' ? S.L.walkX : -S.L.walkX} />
+            {st.stage >= 5 && era.walkwayOpen && <H.WalkwayPeople x={side === 'east' ? S.L.walkX : -S.L.walkX} />}
+            {era.olympics && side === 'east' && <H.OlympicRings x={side === 'east' ? S.L.walkX : -S.L.walkX} />}
           </Part>
         ))}
-      {shown('engine', st.stage) && <EngineRoom rt={rt} explode={[14, 6, 20]} />}
+      {shown('engine', st.stage) && <EngineRoom rt={rt} steam={era.steam} explode={[14, 6, 20]} />}
       <TopView stage={st.stage} maxAngle={maxAngle} />
       {st.stage >= 5 && <Traffic rt={rt} year={year} sim={bridgeHydraulics} maxAngle={maxAngle} />}
       {st.stage < 5 && (

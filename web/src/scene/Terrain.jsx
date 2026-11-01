@@ -2,6 +2,7 @@ import { Suspense, use, useEffect, useMemo } from 'react'
 import { useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../store'
+import { LITE } from './look/tier'
 
 // Google Photorealistic 3D Tiles own the ground when they are streaming and LiDAR is off; optional, like Buildings.jsx.
 const google = Object.values(import.meta.glob('./google/state.js', { eager: true }))[0]
@@ -184,7 +185,7 @@ function LidarPoints({ step }) {
 }
 
 /** Real EA 1 m LiDAR DSM of Tower Bridge with aerial imagery draped. `lidar` swaps to a height-coloured point cloud. */
-export default function Terrain({ lidar = false, step = 1 }) {
+export default function Terrain({ lidar = false, step = LITE ? 2 : 1 }) {
   const google = useGoogleShown(lidar)
   return (
     <Suspense fallback={null}>

@@ -83,6 +83,12 @@ def test_unrelated_when_question_does_not_retrieve_arbitrary_events(place):
     assert retrieve(place, "When did zzzzquasar happen?") == []
 
 
+def test_place_name_filter_keeps_the_requested_part_topic(place):
+    place["name"] = "Tower Bridge"
+    evidence = retrieve(place, "Which towers make up Tower Bridge?")
+    assert any(fact["fact_id"] == "north-tower" for fact in evidence)
+
+
 @pytest.fixture
 def sourced_graph():
     return {

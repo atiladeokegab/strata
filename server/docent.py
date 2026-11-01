@@ -30,7 +30,9 @@ def refusal():
 
 def retrieve(place, question, part_id=None):
     sources = {source["id"] for source in place.get("sources", [])}
-    query = terms(question) - terms(place.get("name", ""))
+    name = place.get("name", "")
+    query_text = re.sub(rf"\b{re.escape(name)}\b", "", question, flags=re.I) if name else question
+    query = terms(query_text)
     if query & {"design", "designed", "designer"}:
         query.add("architect")
     candidates = [(document["kind"], record) for document, record in documents(place) if document["kind"] != "source"]

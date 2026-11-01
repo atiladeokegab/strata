@@ -13,11 +13,12 @@ import { stageForYear, shown } from './stages.js'
 import * as S from './structures.jsx'
 import * as D from './details.jsx'
 import { ConstructionSite } from './construction.jsx'
+import { EngineRoom } from './engineRoom.jsx'
 
 // The live sim state, for any panel that wants to show pressure or stored volume. Read-only.
 export const bridgeHydraulics = createHydraulics()
 
-const INTERNAL = /^(counterweight|pivot|hydraulic-engine|accumulator)/
+const INTERNAL = /^(counterweight|pivot|hydraulic-engine|accumulator|engine-room)/
 
 const dim = (place, id, key, fallback) => place?.parts?.find((p) => p.id === id)?.dims?.[key]?.value ?? fallback
 
@@ -164,6 +165,7 @@ export function TowerBridge(props) {
             <D.WalkwayDetails x={side === 'east' ? S.L.walkX : -S.L.walkX} />
           </Part>
         ))}
+      {shown('engine', st.stage) && <EngineRoom rt={rt} explode={[14, 6, 20]} />}
       {st.stage < 5 && (
         <Html position={[0, towerTop + 14, 0]} center zIndexRange={[10, 0]} style={{ pointerEvents: 'none' }}>
           <div className="bridge-stage-label" style={LABEL}>

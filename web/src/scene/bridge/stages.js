@@ -30,6 +30,7 @@ export const PART_STAGE = {
   span: { from: 3 },
   abutment: { from: 0 },
   cladding: { from: 4 },
+  engine: { from: 5 }, // south-bank power house, 1894
 }
 
 export const shown = (kind, stage) => {

@@ -1,7 +1,7 @@
 // The guided tour's card: one glass card with the step's caption, a spotlight on the control it is about, progress dots,
 // Back / Next and Skip. Steps and their live actions live in guide.js. Mount once inside .app.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { useGuide, goTo, stopGuide } from './guide.js'
+import { useGuide, goTo, stopGuide, startGuide } from './guide.js'
 import { useTour } from './tour.js'
 import './guide.css'
 
@@ -34,6 +34,7 @@ export default function Guide() {
   const [auto, setAuto] = useState(true)
 
   useEffect(() => useTour.subscribe((t) => t.playing && stopGuide()), []) // the 60 s story takes over
+  useEffect(() => { if (!useGuide.getState().active) startGuide({ auto: true }) }, []) // first visit: the app opens on the tour
   useEffect(() => { setStop(0); setAuto(true) }, [step])
   useEffect(() => {
     if (!active || !step?.stops || !auto || stop >= step.stops.length - 1) return

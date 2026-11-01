@@ -4,7 +4,7 @@
 // flies there smoothly) and a few shell inputs it fills in like a visitor would.
 import { create } from 'zustand'
 import { useStore, THIS_YEAR } from '../store.js'
-import { stopTour, useScene } from './tour.js'
+import { stopTour, useScene, isTourPlaying } from './tour.js'
 import { liftForShip } from '../scene/bridge/liftSequence.js'
 
 export const useGuide = create(() => ({ active: false, i: 0, steps: [] }))
@@ -32,8 +32,6 @@ const yearStop = (year, note) => ({
   },
 })
 
-const asked = { docent: false } // the docent question is asked once per guide run, not again on Back
-
 // state: what the app should show for the step (anything left out returns to DEFAULT, so Back and Next are clean).
 // cam: a flyTo position (CameraRig looks back at the bridge). spot: the control to point at. when: show the step only if true.
 const DEFAULT = { year: THIS_YEAR, exploded: false, lidar: false, view: 'orbit', selected: null, sheet: false }
@@ -57,7 +55,7 @@ export const STEPS = [
     text: 'The inspector shows its sizes, each with a source and a status: text-attested, measured or inferred.' },
   { id: 'docent', title: 'Ask the docent', spot: '.docent', state: { selected: 'counterweight-north', sheet: true },
     text: 'Ask anything. Answers cite their sources, and the docent says so when it cannot cite one.',
-    run: () => { if (!asked.docent) asked.docent = type('form.ask input', 'How do the counterweights help the bascules open?', true) } },
+    run: () => type('form.ask input', 'How do the counterweights help the bascules open?', true) }, // asked again on every visit, Back included
   { id: 'search', title: 'Search', spot: '.search', state: { sheet: true },
     text: 'Find any part, event or source by name.',
     run: () => type('.search input', 'bascule'), leave: () => type('.search input', '') },
@@ -100,11 +98,15 @@ export const guideSeen = () => { try { return localStorage.getItem(SEEN) === '1'
 const markSeen = () => { try { localStorage.setItem(SEEN, '1') } catch { /* private mode: it just shows again */ } }
 const NEVER = /[?&](embed|capture|film|tour)=1\b/ // film takes, embeds and the 60 s story URL never get the guide
 
-export function startGuide() {
-  if (NEVER.test(location.search)) return
-  stopTour()
-  asked.docent = false
+let pending = false // one start at a time (Home's button and the first-visit offer can both ask)
+// auto: the first-visit offer, which yields to the 60 s story if the visitor chose that instead
+export function startGuide({ auto = false } = {}) {
+  if (NEVER.test(location.search) || pending || (auto && (guideSeen() || isTourPlaying()))) return
+  pending = true
+  if (!auto) stopTour()
   const go = () => {
+    pending = false
+    if (auto && isTourPlaying()) return
     s().setHelp(false)
     const steps = STEPS.filter((x) => !x.when || x.when())
     useGuide.setState({ active: true, i: 0, steps })

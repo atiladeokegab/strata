@@ -10,7 +10,7 @@ export const useStory = create((set) => ({ story: null, open: (story) => set({ s
 
 const pct = (year) => `${((Math.min(Math.max(year, FIRST_YEAR), THIS_YEAR) - FIRST_YEAR) / (THIS_YEAR - FIRST_YEAR)) * 100}%`
 // Construction runs 1886 to the 1894 opening; the data marks those events with a build stage.
-const isBuild = (e) => e.stage != null || (e.year >= 1886 && e.year <= 1894)
+const isBuild = (e) => e.year >= 1886 && e.year <= 1894
 
 export function TimelineMarks() {
   const events = useStore((s) => s.place?.events) || []

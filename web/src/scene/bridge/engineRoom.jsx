@@ -129,7 +129,8 @@ function Shell({ steam }) {
     // made ground under the house, down to the river level
     stone.push(box(30, 9, 26, 32, -4.5, 156), box(30.6, 0.4, 26.6, 32, 0, 156), box(30.3, 0.3, 26.3, 32, -2.4, 156)) // retaining plinth: coping, band
     return {
-      brick: merge(brick), stone: merge(stone), slate: merge(slate), glass: merge(out.glass),
+      // LITE: the dark window glass rides in the slate mesh (one call fewer)
+      brick: merge(brick), stone: merge(stone), slate: merge(LITE ? [...slate, ...out.glass] : slate), glass: LITE ? null : merge(out.glass),
     }
   }, [steam])
   return (
@@ -137,7 +138,7 @@ function Shell({ steam }) {
       <mesh geometry={g.brick} material={m.brick} castShadow receiveShadow />
       <mesh geometry={g.stone} material={m.stone} castShadow />
       <mesh geometry={g.slate} material={m.slate} castShadow />
-      <mesh geometry={g.glass} material={M.glass} />
+      {g.glass && <mesh geometry={g.glass} material={M.glass} />}
     </>
   )
 }
@@ -146,6 +147,12 @@ const UNIT_ROD = new THREE.CylinderGeometry(0.12, 0.12, 1, 6).rotateZ(Math.PI / 
 const CROSSHEAD = new THREE.BoxGeometry(0.8, 1, 1)
 // fire doors on the north ends of the two boilers (axis along z, x 39.6 / 42.2, front at z 156.5)
 const FIRE_DOORS = merge([39.6, 42.2].map((x) => box(0.9, 0.6, 0.08, x, 1.3, 156.4)))
+const WHEEL = (() => {
+  const gs = [new THREE.TorusGeometry(2.6, 0.22, 8, 32), new THREE.CylinderGeometry(0.35, 0.35, 3, 10).rotateX(Math.PI / 2)]
+  for (let i = 0; i < 6; i++) gs.push(box(0.16, 5.2, 0.16).rotateZ((i * Math.PI) / 6))
+  gs.push(box(0.3, CRANK + 0.3, 0.3, 0, CRANK / 2, 1.4)) // crank web on the near face
+  return merge(gs)
+})()
 const _o = new THREE.Object3D()
 // instance i of `m` at p, turned rz about z, stretched sx along x
 const put = (m, i, p, rz, sx = 1) => {
@@ -185,17 +192,14 @@ function Machinery({ sim, steam, third, museum }) {
         const h = 1.55 + 0.15 * Math.sin(i * 2.3)
         iron.push(new THREE.CylinderGeometry(0.2, 0.27, h - 0.3, 8).translate(x, (h - 0.3) / 2, z), new THREE.SphereGeometry(0.14, 8, 6).translate(x, h - 0.12, z))
       })
+    // LITE: the flywheels stand still inside the iron mesh, at the instanced pose for crank 0
+    if (LITE) engines.forEach((z, i) => iron.push(WHEEL.clone().rotateZ(i * Math.PI / 2).translate(FLY_X, ENG_Y, z)))
     return merge(iron)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [third, museum])
-  const wheel = useMemo(() => {
-    const gs = [new THREE.TorusGeometry(2.6, 0.22, 8, 32), new THREE.CylinderGeometry(0.35, 0.35, 3, 10).rotateX(Math.PI / 2)]
-    for (let i = 0; i < 6; i++) gs.push(box(0.16, 5.2, 0.16).rotateZ((i * Math.PI) / 6))
-    gs.push(box(0.3, CRANK + 0.3, 0.3, 0, CRANK / 2, 1.4)) // crank web on the near face
-    return merge(gs)
-  }, [])
 
   useFrame((st, dt) => {
+    if (LITE) return
     if (steam && sim.pumping) crank.current += Math.min(dt, 0.1) * 3
     // one instanced draw per moving part kind: flywheels, crossheads, connecting rods
     engines.forEach((z, i) => {
@@ -211,10 +215,12 @@ function Machinery({ sim, steam, third, museum }) {
     if (fire.current) fire.current.color.setRGB(1, 0.42, 0.08).multiplyScalar((sim.pumping ? 1.5 : 0.7) * (0.85 + 0.15 * Math.sin(crank.current * 7 + st.clock.elapsedTime * 9)))
   })
 
+  // LITE: one static iron mesh; crossheads, rods, fire doors and the ram's weight case are skipped
+  if (LITE) return <mesh geometry={fixed} material={m.iron} castShadow />
   return (
     <>
       <mesh geometry={fixed} material={m.iron} castShadow />
-      <instancedMesh key={`f${engines.length}`} ref={fly} args={[wheel, M.iron, engines.length]} castShadow frustumCulled={false} />
+      <instancedMesh key={`f${engines.length}`} ref={fly} args={[WHEEL, M.iron, engines.length]} castShadow frustumCulled={false} />
       <instancedMesh key={`c${engines.length}`} ref={cross} args={[CROSSHEAD, M.brass, engines.length]} frustumCulled={false} />
       <instancedMesh key={`r${engines.length}`} ref={rod} args={[UNIT_ROD, M.brass, engines.length]} frustumCulled={false} />
       {/* while steaming the boiler fire doors glow, brighter while the pumps run; after 1976 the boilers stand cold.

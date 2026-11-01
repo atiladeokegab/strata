@@ -1,6 +1,7 @@
 // The glass side panel: search, the part inspector and the docent.
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../store'
+import { readDocentStream } from '../lib/docentStream'
 
 const STATUS = { 'text-attested': 'Text-attested', measured: 'Measured', inferred: 'Inferred' }
 const label = (k) => k.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase())
@@ -125,16 +126,18 @@ function Docent() {
     e.preventDefault()
     const question = q.trim()
     if (!question || busy || !place) return
-    setLog((l) => [...l, { who: 'you', text: question }])
+    setLog((l) => [...l, { who: 'you', text: question }, { who: 'docent', text: '' }])
     setQ(''); setBusy(true)
     try {
-      const r = await fetch('/api/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      const r = await fetch('/api/ask', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
         body: JSON.stringify({ place: place.id, ...(selected ? { part: selected } : {}), question }) })
       if (!r.ok) throw new Error([404, 405].includes(r.status) ? 'The docent is not on this server yet.' : `The docent could not answer just now (${r.status}).`)
-      const a = await r.json()
-      setLog((l) => [...l, { who: 'docent', text: a.answer, citations: a.citations || [], refused: a.refused }])
+      const a = await readDocentStream(r, (text) => {
+        setLog((l) => l.map((m, i) => i === l.length - 1 ? { ...m, text: m.text + text } : m))
+      })
+      setLog((l) => l.map((m, i) => i === l.length - 1 ? { ...m, text: a.answer, citations: a.citations || [], refused: a.refused } : m))
     } catch (err) {
-      setLog((l) => [...l, { who: 'docent', text: err.message.startsWith('The docent') ? err.message : 'The docent could not answer just now.', error: true }])
+      setLog((l) => l.map((m, i) => i === l.length - 1 ? { ...m, text: err.message.startsWith('The docent') ? err.message : 'The docent could not answer just now.', error: true } : m))
     } finally { setBusy(false) }
   }
   return (

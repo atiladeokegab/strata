@@ -14,6 +14,7 @@ const Look = makeSlot('Look', ['../scene/Look.jsx'], DefaultLook)
 const Tour = makeSlot('Tour', ['../scene/Tour.jsx'])
 const GoogleTiles = makeSlot('GoogleTiles', ['../scene/GoogleTiles.jsx'])
 const Buildings = makeSlot('Buildings', ['../scene/Buildings.jsx'])
+const Landmarks = makeSlot('Landmarks', ['../scene/Landmarks.jsx'])
 const SUN = [-320, 260, 420] // late-afternoon light from the south-west
 
 function partOf(object, ids) {
@@ -50,6 +51,7 @@ export function Stage() {
         <group rotation-y={WORLD_TURN}>
           <Terrain lidar={lidar} />
           <Water />
+          <Landmarks />{/* grid-aligned like the terrain; its pins select their place */}
         </group>
         <TowerBridge />
       </group>

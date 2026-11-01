@@ -85,11 +85,16 @@ function Inspector() {
   if (!part) {
     return (
       <section className="inspector">
-        <p className="eyebrow">The parts</p>
-        <p className="hint">Tap any part of the bridge, or pick one here.</p>
+        <p className="eyebrow">The bridge</p>
         <div className="parts">
-          {place.parts.map((p) => <button key={p.id} type="button" onClick={() => select(p.id)}>{p.name}</button>)}
+          {place.parts.filter((p) => p.group !== 'surroundings').map((p) => <button key={p.id} type="button" onClick={() => select(p.id)}>{p.name}</button>)}
         </div>
+        {place.parts.some((p) => p.group === 'surroundings') && <>
+          <p className="eyebrow around">Around it</p>
+          <div className="parts">
+            {place.parts.filter((p) => p.group === 'surroundings').map((p) => <button key={p.id} type="button" onClick={() => select(p.id)}>{p.name}</button>)}
+          </div>
+        </>}
       </section>
     )
   }

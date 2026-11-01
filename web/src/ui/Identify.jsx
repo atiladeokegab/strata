@@ -97,17 +97,22 @@ export default function Identify() {
 
             {state.status !== 'pick' && <div className="id-stage">
               {state.photo && <img className="id-photo" src={state.photo} alt="Your photo" />}
-              {res?.is_bridge && res.parts.map(({ id, box }) => (
+              {res?.is_bridge && res.parts.map(({ id, box: b }) => {
+                const c = (v) => Math.min(1, Math.max(0, v)) // a box reaching past the photo edge is clipped by the stage
+                const box = { x0: c(b.x0), y0: c(b.y0), x1: c(b.x1), y1: c(b.y1) }
+                return (
                 <button
                   key={id}
                   className={`id-box${selected === id ? ' id-on' : ''}`}
-                  style={{ left: `${box.x0 * 100}%`, top: `${box.y0 * 100}%`, width: `${(box.x1 - box.x0) * 100}%`, height: `${(box.y1 - box.y0) * 100}%` }}
+                  style={{ left: `${box.x0 * 100}%`, top: `${box.y0 * 100}%`, width: `${(box.x1 - box.x0) * 100}%`, height: `${(box.y1 - box.y0) * 100}%`,
+                    zIndex: Math.round(1000 - (box.x1 - box.x0) * (box.y1 - box.y0) * 1000) }} // smaller boxes on top, so overlapped labels stay visible
                   onClick={() => select(id)}
                   aria-pressed={selected === id}
                 >
                   <span>{name(id)}</span>
                 </button>
-              ))}
+                )
+              })}
               {state.status === 'busy' && (
                 <div className="rm-veil" role="status">
                   <div className="rm-spinner" />
@@ -123,6 +128,13 @@ export default function Identify() {
               <p className="rm-muted id-credit">Photo: <a href={state.sample.source} target="_blank" rel="noreferrer">{state.sample.credit}</a></p>
             )}
 
+            {res?.is_bridge && res.parts.length > 0 && (
+              <div className="id-legend">
+                {res.parts.map(({ id }) => (
+                  <button key={id} type="button" className={selected === id ? 'on' : ''} aria-pressed={selected === id} onClick={() => select(id)}>{name(id)}</button>
+                ))}
+              </div>
+            )}
             {res && (res.is_bridge ? (
               <footer className="id-foot">
                 <p><strong>You stood:</strong> {res.where}</p>

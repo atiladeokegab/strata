@@ -12,6 +12,7 @@ import './App.css'
 
 const PLACE = 'tower-bridge'
 const GoogleCredit = makeSlot('GoogleCredit', ['../scene/GoogleTiles.jsx']) // Google's copyright must show while its tiles do
+const BuildingsCredit = makeSlot('BuildingsCredit', ['../scene/Buildings.jsx']) // OSM ODbL credit while buildings show
 
 function Credit() {
   const lidar = useStore((s) => s.lidar)
@@ -24,6 +25,7 @@ function Credit() {
       <span className={`lidar-tag${lidar ? ' on' : ''}`}>LiDAR</span>
       {meta ? `${meta.source}${meta.licence ? ` · ${meta.licence}` : ''}` : 'Environment Agency 1 m LiDAR, terrain loading'}
       <GoogleCredit />
+      <BuildingsCredit />
     </p>
   )
 }

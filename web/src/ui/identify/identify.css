@@ -21,3 +21,7 @@
 .id-sample:hover, .id-sample:focus-visible { border-color: #00d46a; outline: none; }
 .id-credit { margin: 0; font-size: 0.75rem; }
 .id-credit a { color: inherit; }
+.id-box span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.id-legend { display: flex; flex-wrap: wrap; gap: 6px; }
+.id-legend button { padding: 6px 12px; border-radius: 999px; border: 1px solid rgba(0, 212, 106, .5); background: rgba(0, 212, 106, .08); color: inherit; font: inherit; font-size: 14px; cursor: pointer; }
+.id-legend button.on, .id-legend button:hover { background: #00d46a; color: #08140d; }

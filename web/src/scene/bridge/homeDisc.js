@@ -4,6 +4,6 @@
 // (x, z) lies beyond it, so traffic and river craft don't hang off the edge of the disc.
 import { useThree } from '@react-three/fiber'
 
-export const HOME_DISC_R = 150 // keep equal to PLINTH_R in ui/home/Home.jsx
+export const HOME_DISC_R = 155 // keep equal to PLINTH_R in ui/home/Home.jsx
 export const useHomeDisc = () => useThree((s) => (s.gl?.domElement?.closest?.('.home-stage') ? HOME_DISC_R : 0))
 export const offDisc = (r, x, z, halfLen = 0) => r > 0 && Math.hypot(x, z) > r - halfLen

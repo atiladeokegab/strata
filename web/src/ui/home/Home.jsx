@@ -12,7 +12,7 @@ import './home.css'
 
 const TowerBridge = makeSlot('TowerBridge', ['../scene/bridge/TowerBridge.jsx', '../scene/bridge/index.jsx'], BridgeStandIn)
 
-const PLINTH_R = 150 // metres, in the bridge's own frame: it is 277 m end to end
+const PLINTH_R = 155 // metres, in the bridge's own frame: it is 277 m end to end
 const SCALE = 1.4
 const PLINTH_TOP = -9 // Thames high water, so the piers sink into the plinth
 

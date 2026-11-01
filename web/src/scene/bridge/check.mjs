@@ -615,7 +615,7 @@ console.log('geom materials untextured, all kinded ok')
       }
     })
     delete globalThis.__gl
-    assert.ok(far <= HOME_DISC_R + 1, `home disc: ${who} reaches ${far.toFixed(1)} m, past the ${HOME_DISC_R} m plinth`)
+    assert.ok(far <= HOME_DISC_R, `home disc: ${who} reaches ${far.toFixed(1)} m, past the ${HOME_DISC_R} m plinth`)
     console.log(`home disc structure ok (furthest ${far.toFixed(1)} m, ${who}, plinth ${HOME_DISC_R} m)`)
   }
 

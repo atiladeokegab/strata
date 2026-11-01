@@ -171,22 +171,18 @@ function Docent() {
     e.preventDefault()
     const question = q.trim()
     if (!question || busy || !place) return
-    setLog((l) => [...l, { who: 'you', text: question }])
+    setLog((l) => [...l, { who: 'you', text: question }, { who: 'docent', text: '', live: true }])
     setQ(''); setBusy(true)
     try {
       const r = await fetch('/api/ask', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
         body: JSON.stringify({ place: place.id, ...(selected ? { part: selected } : {}), question }) })
       if (!r.ok) throw new Error([404, 405].includes(r.status) ? 'The docent is not on this server yet.' : `The docent could not answer just now (${r.status}).`)
-      const done = (a) => setLog((l) => [...l.filter((m) => !m.live), { who: 'docent', text: a.answer, citations: a.citations || [], refused: a.refused }])
-      if (!(r.headers.get('content-type') || '').includes('event-stream')) { done(await r.json()); return }
-      let text = ''
-      done(await readDocentStream(r, (t) => {
-        text += t ?? ''
-        setBusy(false)
-        setLog((l) => [...l.filter((m) => !m.live), { who: 'docent', text, live: true }])
-      }))
+      const a = !(r.headers.get('content-type') || '').includes('event-stream') ? await r.json() : await readDocentStream(r, (text) => {
+        setLog((l) => l.map((m, i) => i === l.length - 1 ? { ...m, text: m.text + text } : m))
+      })
+      setLog((l) => l.map((m, i) => i === l.length - 1 ? { ...m, text: a.answer, citations: a.citations || [], refused: a.refused, live: false } : m))
     } catch (err) {
-      setLog((l) => [...l.filter((m) => !m.live), { who: 'docent', text: err.message.startsWith('The docent') ? err.message : 'The docent could not answer just now.', error: true }])
+      setLog((l) => l.map((m, i) => i === l.length - 1 ? { ...m, text: err.message.startsWith('The docent') ? err.message : 'The docent could not answer just now.', error: true, live: false } : m))
     } finally { setBusy(false) }
   }
   return (
@@ -201,7 +197,7 @@ function Docent() {
             {m.citations?.length > 0 && <div className="sources">{m.citations.map((c) => <SourceChip key={c} id={c} />)}</div>}
           </div>
         ))}
-        {busy && <div className="msg reply busy"><span className="dots" aria-label="Thinking"><i /><i /><i /></span></div>}
+        {busy && !log.at(-1)?.text && <div className="msg reply busy"><span className="dots" aria-label="Thinking"><i /><i /><i /></span></div>}
         <div ref={end} />
       </div>
       <form className="ask" onSubmit={ask}>

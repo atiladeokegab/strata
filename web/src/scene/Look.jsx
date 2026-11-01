@@ -11,6 +11,7 @@ import * as THREE from 'three'
 import { useStore } from '../store'
 import { ENV_ROTATION, HAZE, HDRI, SKY_JPG, SUN_COLOR, SUN_DIR, periodGrade } from './look/sun'
 import { pbr, warmMaterialTextures } from './look/textures'
+import { LITE } from './look/tier'
 
 // The sky: Poly Haven's tonemapped 4k JPG (sharp clouds), rotated with the HDRI so the sun lines up.
 function SkyBackground() {
@@ -194,8 +195,8 @@ function Grade({ low }) {
   })
   return (
     <EffectComposer multisampling={0} enableNormalPass={false}>
-      {!low && <N8AO ref={ao} halfRes aoRadius={4} distanceFalloff={1} intensity={2.4} quality="medium" />}
-      <Bloom mipmapBlur intensity={0.3} luminanceThreshold={1} luminanceSmoothing={0.2} />
+      {!low && !LITE && <N8AO ref={ao} halfRes aoRadius={4} distanceFalloff={1} intensity={2.4} quality="medium" />}
+      <Bloom mipmapBlur intensity={LITE ? 0.15 : 0.3} luminanceThreshold={1} luminanceSmoothing={0.2} />
       <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
       <primitive object={fx.sat} dispose={null} />
       <primitive object={fx.bc} dispose={null} />
@@ -228,7 +229,7 @@ export function Look() {
     return () => { scene.fog = fog }
   }, [scene])
 
-  useEffect(() => { if (low) setDpr(1) }, [low, setDpr])
+  useEffect(() => { if (low) setDpr(1); else if (LITE) setDpr(Math.min(window.devicePixelRatio, 1.5)) }, [low, setDpr])
   useEffect(() => warmMaterialTextures(), [])
 
   return (

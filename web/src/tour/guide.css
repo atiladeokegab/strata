@@ -5,13 +5,12 @@
   box-shadow: var(--shadow); animation: guide-in .45s cubic-bezier(.2, .8, .2, 1) both; }
 .guide-card h2 { margin: 0 0 var(--s2); font: 600 var(--t4)/1.2 var(--sans); letter-spacing: -.01em; color: var(--ink); }
 .guide-card p { margin: 0; font-size: var(--t2); line-height: 1.5; color: var(--ink); }
-.guide-card .eyebrow { margin-bottom: var(--s2); padding-right: 40px; }
+.guide-card .eyebrow { margin-bottom: var(--s2); padding-right: 96px; line-height: 32px; }
 .guide-body { animation: guide-fade .35s ease both; }
 .guide-note { margin-top: var(--s2) !important; color: var(--muted) !important; min-height: 3em; animation: guide-fade .35s ease both; }
-.guide-skip { position: absolute; top: 10px; right: 10px; width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 50%;
-  background: none; color: var(--muted); transition: background .15s, color .15s; }
-.guide-skip:hover { background: var(--fill-hover); color: var(--ink); }
-.guide-skip svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; fill: none; }
+.guide-skip { position: absolute; top: var(--s5); right: var(--s5); height: 32px; padding: 0 var(--s3); border: 1px solid var(--line); border-radius: var(--pill);
+  background: var(--fill); color: var(--ink); font: 500 var(--t1)/1 var(--sans); transition: background .15s, border-color .15s; }
+.guide-skip:hover { background: var(--fill-hover); border-color: var(--line-strong); }
 .guide-stops { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s3); }
 .guide-stops .chip { height: 36px; padding: 0 var(--s4); font-size: var(--t2); color: var(--ink); background: var(--fill); border-color: var(--line);
   transition: background .2s, color .2s, border-color .2s; }
@@ -40,6 +39,7 @@
   .guide-card { left: 8px; right: 8px; width: auto; transform: none; bottom: calc(var(--sheet) + 112px); padding: var(--s4); animation-name: guide-in-m; }
   .app.sheet-open .guide-card { bottom: calc(var(--sheet) + 8px); }
   .guide-card h2 { font-size: var(--t3); margin-bottom: var(--s1); }
+  .guide-skip { top: var(--s4); right: var(--s4); }
   .guide-note { min-height: 0; }
   .guide-foot { margin-top: var(--s3); }
   .guide-dots button { width: 9px; }

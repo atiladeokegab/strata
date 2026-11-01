@@ -55,9 +55,7 @@ export default function Guide() {
     <>
       <Spotlight selector={step.spot} />
       <section className={`guide-card glass guide-${step.id}`} role="dialog" aria-label="Guided tour" aria-live="polite">
-        <button type="button" className="guide-skip" onClick={stopGuide} aria-label="Skip the guided tour">
-          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" /></svg>
-        </button>
+        <button type="button" className="guide-skip" onClick={stopGuide}>Skip tour</button>
         <p className="eyebrow">Guided tour · {i + 1} of {steps.length}</p>
         <div className="guide-body" key={step.id}>
           <h2>{step.title}</h2>

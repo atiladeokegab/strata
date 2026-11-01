@@ -4,7 +4,7 @@
 // flies there smoothly) and a few shell inputs it fills in like a visitor would.
 import { create } from 'zustand'
 import { useStore, THIS_YEAR } from '../store.js'
-import { stopTour } from './tour.js'
+import { stopTour, useScene } from './tour.js'
 import { liftForShip } from '../scene/bridge/liftSequence.js'
 
 export const useGuide = create(() => ({ active: false, i: 0, steps: [] }))
@@ -52,7 +52,7 @@ export const STEPS = [
     text: 'Exploded view pulls every part away from the others, so you can see how it fits together.' },
   { id: 'bascules', title: 'Watch it work', spot: '.dock .bascule', cam: [190, 24, 40],
     text: 'Signals to red, the bascules rise on simulated hydraulics, and a ship comes through. Drag the Bascules slider to work them yourself.',
-    run: () => liftForShip({ fast: true }) },
+    run: () => { stopTour(); s().setBascule(0); liftForShip({ fast: true }) } }, // nothing else may drive the camera or the lever during the lift
   { id: 'part', title: 'Tap any part', spot: '.panel', state: { selected: 'counterweight-north', sheet: true },
     text: 'The inspector shows its sizes, each with a source and a status: text-attested, measured or inferred.' },
   { id: 'docent', title: 'Ask the docent', spot: '.docent', state: { selected: 'counterweight-north', sheet: true },
@@ -95,7 +95,13 @@ export function applyStep(step) {
   step.run?.()
 }
 
+const SEEN = 'strata.guide.seen'
+export const guideSeen = () => { try { return localStorage.getItem(SEEN) === '1' } catch { return false } }
+const markSeen = () => { try { localStorage.setItem(SEEN, '1') } catch { /* private mode: it just shows again */ } }
+const NEVER = /[?&](embed|capture|film|tour)=1\b/ // film takes, embeds and the 60 s story URL never get the guide
+
 export function startGuide() {
+  if (NEVER.test(location.search)) return
   stopTour()
   asked.docent = false
   const go = () => {
@@ -104,9 +110,15 @@ export function startGuide() {
     useGuide.setState({ active: true, i: 0, steps })
     applyStep(steps[0])
   }
-  // wait for the place and the lazy photo tools (up to 5 s), so the optional steps are counted
-  const t0 = performance.now()
-  const wait = () => (s().place && (document.querySelector('.id-open') || performance.now() - t0 > 5000) ? go() : setTimeout(wait, 150))
+  // wait on the scene, not a timer: the bridge drawn (a slow phone lights it 4-5 s after Enter), or no WebGL at all;
+  // then give the lazy photo tools up to 2 s more so their optional steps are counted
+  let lit = 0
+  const wait = () => {
+    const ready = s().place && (useScene.getState().ready || document.querySelector('.no-webgl'))
+    if (ready) lit ||= performance.now()
+    if (ready && (document.querySelector('.id-open') || performance.now() - lit > 2000)) go()
+    else setTimeout(wait, 150)
+  }
   wait()
 }
 
@@ -123,6 +135,7 @@ export function stopGuide() {
   if (!active) return
   steps[i]?.leave?.()
   useGuide.setState({ active: false })
+  markSeen()
   const st = s() // hand back a clean app, keeping the camera where it is
   if (st.view === 'walk') st.setView('orbit')
   st.setExploded(false); st.setLidar(false); st.setYear(THIS_YEAR); st.setSheet(false)

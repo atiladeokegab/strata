@@ -48,6 +48,31 @@ function MovePad() {
   )
 }
 
+const FILM = 'https://drive.google.com/file/d/1uNi3PW-jJgSrKpRLj1RA3SoMRMLxtWnQ/view?usp=sharing'
+const hasWebGL = () => { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')) } catch { return false } }
+
+// three throws "Error creating WebGL context" outside React, so watch for it as well as checking up front
+function useNoWebGL() {
+  const [none, setNone] = useState(() => !hasWebGL())
+  useEffect(() => {
+    const hit = (m) => /WebGL context/i.test(String(m)) && setNone(true)
+    const onError = (e) => hit(e.message || e.error?.message)
+    const onReject = (e) => hit(e.reason?.message || e.reason)
+    addEventListener('error', onError); addEventListener('unhandledrejection', onReject)
+    return () => { removeEventListener('error', onError); removeEventListener('unhandledrejection', onReject) }
+  }, [])
+  return none
+}
+
+function NoWebGL() {
+  return (
+    <div className="no-webgl glass" role="alert">
+      <p>Your browser couldn't start 3D. Try Chrome, or watch the film:</p>
+      <a className="primary" href={FILM} target="_blank" rel="noreferrer">Watch the film</a>
+    </div>
+  )
+}
+
 function AutoEnter({ go }) {
   useEffect(() => { go() }, []) // eslint-disable-line react-hooks/exhaustive-deps
   return null
@@ -73,16 +98,17 @@ export default function App() {
   const load = () => { setError(false); loadPlace(PLACE).catch(() => setError(true)) }
   useEffect(load, []) // eslint-disable-line react-hooks/exhaustive-deps
   const sheet = useStore((s) => s.sheet)
+  const noGL = useNoWebGL()
   const enter = () => {
     setEntered(true)
     const film = /[?&](tour|capture)=1/.test(location.search)
     if (!film && !helpSeen()) useStore.getState().setHelp(true)
   }
   // no WebGL (old phone, locked-down browser): skip the 3D landing; the panel, timeline and docent still work
-  if (!entered) return <Guard name="Home" fallback={<AutoEnter go={enter} />}><Home onEnter={enter} /></Guard>
+  if (!entered && !noGL) return <Guard name="Home" fallback={<AutoEnter go={enter} />}><Home onEnter={enter} /></Guard>
   return (
     <div className={`app view-${view}${sheet ? ' sheet-open' : ''}`}>
-      <Guard name="Stage" fallback={<p className="no-webgl">This browser can't draw the 3D bridge. The facts, timeline and docent below still work.</p>}><Stage /></Guard>
+      {noGL ? <NoWebGL /> : <Guard name="Stage" fallback={<NoWebGL />}><Stage /></Guard>}
       <Panel />
       <Dock />
       <Controls>

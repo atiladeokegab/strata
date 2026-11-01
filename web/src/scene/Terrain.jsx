@@ -2,6 +2,7 @@ import { Suspense, use, useEffect, useLayoutEffect, useMemo, useState } from 're
 import { useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../store'
+import { GOOGLE_FROM } from './google/state'
 import { bareEarth, keepApproaches } from './bareEarth.js'
 import { LITE } from './look/tier'
 import { GroundStandIn } from '../ui/StandIns'
@@ -168,7 +169,7 @@ function heightfieldRaycast(t) {
 // Invisible stand-in that answers raycasts for both looks (a Points cloud is not a mesh to walk on).
 function Ground() {
   const t = useLoaded(loadTerrain) ?? use(loadLow())
-  const bare = useStore((s) => s.year < 1950 || !s.lidar) // stand on the ground the mesh shows, not on tree crowns
+  const bare = useStore((s) => s.year < GOOGLE_FROM || !s.lidar) // stand on the ground the mesh shows, not on tree crowns
   const raycast = useMemo(() => heightfieldRaycast(bare ? { ...t, heights: t.old } : t), [t, bare])
   return <mesh name="terrain-ground" raycast={raycast} frustumCulled={false}><bufferGeometry /></mesh>
 }
@@ -179,8 +180,9 @@ function Ground() {
 // warmer still to offset the blue sky fill, measured on a still) and its ink as dark brown, with a
 // little of the sheet's own hue kept (blue water, tinted blocks). The tone runs on gamma-encoded colour
 // because the map sample is linear here; ERA_GAIN sets how bright the paper sits under the scene light.
-// ERA is 1 while the old map is draped; then the ground is bare earth (aOld), flat-lit.
-const ERA = { value: 0 }
+// ERA is 1 while the old map is draped. BARE is 1 before Google's tiles (GOOGLE_FROM): the ground is bare earth
+// (aOld), flat-lit, and the dated buildings (Buildings.jsx) stand on it instead of today's LiDAR roofs.
+const ERA = { value: 0 }, BARE = { value: 0 }
 const ERA_GAIN = '1.0'
 const ERA_GRADE = `
   vec3 eraGrade(vec3 c) {
@@ -193,10 +195,11 @@ const ERA_GRADE = `
 
 function facades(shader) {
   shader.uniforms.uEra = ERA
+  shader.uniforms.uBare = BARE
   shader.vertexShader = shader.vertexShader
-    .replace('#include <common>', '#include <common>\nvarying float vUp;\nuniform float uEra;\nattribute float aOld;')
-    .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\nif (uEra > 0.5 && position.y - aOld > 0.3) objectNormal = vec3(0.0, 1.0, 0.0);\nvUp = objectNormal.y;')
-    .replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed.y = mix(transformed.y, aOld, uEra);')
+    .replace('#include <common>', '#include <common>\nvarying float vUp;\nuniform float uBare;\nattribute float aOld;')
+    .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\nif (uBare > 0.5 && position.y - aOld > 0.3) objectNormal = vec3(0.0, 1.0, 0.0);\nvUp = objectNormal.y;')
+    .replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed.y = mix(transformed.y, aOld, uBare);')
   shader.fragmentShader = shader.fragmentShader
     .replace('#include <common>', `#include <common>\nvarying float vUp;\nuniform float uEra;${ERA_GRADE}`)
     .replace(
@@ -355,11 +358,13 @@ function TerrainMesh({ t, hole, name = 'terrain' }) {
     tex.anisotropy = gl.capabilities.getMaxAnisotropy()
     return tex
   }), [gl, t])
+  const bare = useStore((s) => s.year < GOOGLE_FROM)
   const map = maps[old ? 1 : 0]
   useEffect(() => { ERA.value = old ? 1 : 0 }, [old])
+  useEffect(() => { BARE.value = bare ? 1 : 0 }, [bare])
   useEffect(() => () => geometry.dispose(), [geometry])
   return (
-    <mesh name={name} geometry={geometry} raycast={noRaycast} castShadow={!old} receiveShadow>{/* the shadow pass draws the raw DSM */}
+    <mesh name={name} geometry={geometry} raycast={noRaycast} castShadow={!bare} receiveShadow>{/* the shadow pass draws the raw DSM */}
       {/* where the outer tile overlaps the near one, the near one wins the depth test */}
       <meshStandardMaterial map={map} roughness={0.92} metalness={0} polygonOffset={!!hole} polygonOffsetFactor={1} polygonOffsetUnits={1} onBeforeCompile={facades} customProgramCacheKey={() => 'terrain-facades'} />
     </mesh>

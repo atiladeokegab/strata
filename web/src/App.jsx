@@ -13,7 +13,7 @@ import { SceneLoading } from './ui/SceneLoading'
 import './App.css'
 
 const PLACE = 'tower-bridge'
-// Map Tiles terms: Google's attribution shows in full whenever its tiles do (never ellipsised); hidden before 1950 with the tiles
+// Map Tiles terms: Google's attribution shows in full whenever its tiles do (never ellipsised); hidden before GOOGLE_FROM (2012) with the tiles
 const google = Object.values(import.meta.glob('./scene/google/state.js', { eager: true }))[0]
 const GoogleCredit = google ? function GoogleCredit({ lidar }) {
   const shown = google.useGoogleShown(lidar)

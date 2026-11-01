@@ -90,7 +90,7 @@ export default function Identify() {
                 <div className="rm-veil" role="status">
                   <div className="rm-spinner" />
                   <p>Looking for the bridge in your photo…</p>
-                  <p className="rm-muted">this takes about 10 seconds</p>
+                  <p className="rm-muted">this takes 5 to 12 seconds</p>
                 </div>
               )}
               {state.status === 'error' && (
@@ -101,7 +101,7 @@ export default function Identify() {
             {res && (res.is_bridge ? (
               <footer className="id-foot">
                 <p><strong>You stood:</strong> {res.where}</p>
-                <p className="rm-muted">{res.parts.length ? 'Tap a part to learn about it.' : 'No parts were clear enough to box.'}</p>
+                <p className="rm-muted">{res.parts.length ? "Tap a part to learn about it." : "No parts were clear enough to box."} Seen by {res.model}.</p>
                 {flyTo && <button className="id-fly" onClick={fly}>Fly to where you stood</button>}
               </footer>
             ) : (

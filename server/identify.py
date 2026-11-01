@@ -2,6 +2,7 @@
 import base64
 import binascii
 import json
+from concurrent.futures import ThreadPoolExecutor
 from functools import cache
 from pathlib import Path
 
@@ -11,7 +12,9 @@ from pydantic import BaseModel
 
 ROOT = Path(__file__).resolve().parent.parent
 # Timed on 2 Commons photos: sol/low ~11 s, both right; terra/low ~5 s but wrong bank on one; sol default ~24 s.
-MODEL, EFFORT = "gpt-6.1-sol", "low"
+# So both run at once: terra's answer wins if it passes sane(), otherwise we wait for sol.
+FAST, SURE = ("gpt-6.1-terra", "low"), ("gpt-6.1-sol", "low")
+POOL = ThreadPoolExecutor(max_workers=8)
 MAX_BYTES = 6 * 1024 * 1024
 MAGIC = {"jpeg": (b"\xff\xd8\xff",), "png": (b"\x89PNG\r\n\x1a\n",), "webp": (b"RIFF",)}
 
@@ -92,6 +95,51 @@ def clamp(v: float) -> float:
     return min(1.0, max(0.0, float(v)))
 
 
+def ask(model, effort, prompt, image, known):
+    r = client().responses.create(
+        model=model,
+        reasoning={"effort": effort},
+        input=[{"role": "user", "content": [
+            {"type": "input_text", "text": prompt},
+            {"type": "input_image", "image_url": image},
+        ]}],
+        text={"format": {"type": "json_schema", "name": "identify", "schema": SCHEMA, "strict": True}},
+    )
+    out = json.loads(r.output_text)
+    is_bridge = out["is_bridge"] is True
+    return {
+        "is_bridge": is_bridge,
+        "parts": [
+            {"id": p["id"], "box": {k: clamp(p["box"][k]) for k in ("x0", "y0", "x1", "y1")}}
+            for p in out["parts"] if is_bridge and p["id"] in known
+        ],
+        "camera": {k: float(out["camera"][k]) for k in ("x", "y", "z")},
+        "where": out["where"],
+        "model": model,
+    }
+
+
+def sane(r) -> bool:
+    """Does the camera agree with the photo? Catches the fast model's mirrored or in-the-river guesses."""
+    if not r["is_bridge"]:
+        return False  # a "no" is cheap for the sure model to confirm, and a wrong "no" is the worst answer
+    x, _, z = r["camera"].values()
+    if abs(z) < 110 and abs(x) > 20:
+        return False  # on the open river, not a bank or the bridge
+    box = {p["id"]: p["box"] for p in r["parts"]}
+    n, s = box.get("north-tower"), box.get("south-tower")
+    if n and s:
+        cx = lambda b: (b["x0"] + b["x1"]) / 2
+        h = lambda b: b["y1"] - b["y0"]
+        # looking west from the east side, the south tower is on the left; looking east, the north one is
+        if abs(x) > 30 and (cx(s) < cx(n)) != (x > 0):
+            return False
+        # the nearer tower looks taller
+        if abs(z) > 50 and abs(h(s) - h(n)) > 0.15 * max(h(s), h(n)) and (h(s) > h(n)) != (z > 0):
+            return False
+    return True
+
+
 @router.post("/api/identify")
 def identify(body: IdentifyIn):
     decode(body.image)
@@ -105,26 +153,14 @@ If it is, list each of these parts that is visible in the photo, by id, with a t
 Then estimate where the photographer stood: `where` in plain words (bank, side, rough distance, height if raised),
 and `camera` as a position in this frame:
 {FRAME}"""
+    fast, sure = (POOL.submit(ask, *m, prompt, body.image, known) for m in (FAST, SURE))
     try:
-        r = client().responses.create(
-            model=MODEL,
-            reasoning={"effort": EFFORT},
-            input=[{"role": "user", "content": [
-                {"type": "input_text", "text": prompt},
-                {"type": "input_image", "image_url": body.image},
-            ]}],
-            text={"format": {"type": "json_schema", "name": "identify", "schema": SCHEMA, "strict": True}},
-        )
-        out = json.loads(r.output_text)
+        r = fast.result()
+        if sane(r):
+            return r  # shortcut: sol keeps running and is billed; cancel it if cost matters
+    except Exception:
+        pass
+    try:
+        return sure.result()
     except Exception as e:  # the model or the network; the client sees a plain 502
         raise HTTPException(502, f"vision model failed: {type(e).__name__}")
-    is_bridge = out["is_bridge"] is True
-    return {
-        "is_bridge": is_bridge,
-        "parts": [
-            {"id": p["id"], "box": {k: clamp(p["box"][k]) for k in ("x0", "y0", "x1", "y1")}}
-            for p in out["parts"] if is_bridge and p["id"] in known
-        ],
-        "camera": {k: float(out["camera"][k]) for k in ("x", "y", "z")},
-        "where": out["where"],
-    }

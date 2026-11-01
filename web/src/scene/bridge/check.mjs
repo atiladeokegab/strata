@@ -674,3 +674,24 @@ console.log('geom materials untextured, all kinded ok')
   assert.ok(roadY(RAMP_FOOT - 10, drop, sp) === roadY(RAMP_FOOT - 10, drop), 'ramp itself unchanged')
   console.log('street terrain checks ok')
 }
+
+// Abutment towers: clear of the road (nothing in |x| < 9.5 below 6 m), and the chain ends
+// (x=±walkX, y=15 and the top chord at 16.8, z=spanEnd) land on the iron anchorage.
+{
+  const { abutmentTower, ROAD_CLEAR } = await import('./abutment.js')
+  const spanEnd = -138.5, z = spanEnd - 5, walkX = 10.5
+  for (const sx of [-1, 1]) {
+    const o = { stone: [], slate: [], granite: [], gold: [], iron: [], windows: [], doors: [] }
+    abutmentTower(sx, z, o, { hw: -9, walkX })
+    for (const [k, gs] of Object.entries(o))
+      for (const g of gs) {
+        const p = g.getAttribute('position')
+        for (let i = 0; i < p.count; i++)
+          assert.ok(!(Math.abs(p.getX(i)) < ROAD_CLEAR.halfX && p.getY(i) < ROAD_CLEAR.belowY), `abutment ${k} intrudes over the road at x=${p.getX(i).toFixed(2)} y=${p.getY(i).toFixed(2)}`)
+      }
+    const anchor = new THREE.Box3()
+    o.iron.forEach((g) => (g.computeBoundingBox(), anchor.union(g.boundingBox)))
+    for (const y of [15, 16.8]) assert.ok(anchor.containsPoint(new THREE.Vector3(sx * walkX, y, spanEnd)), `chain end at y=${y} lands on the anchorage`)
+  }
+  console.log('abutment checks ok')
+}

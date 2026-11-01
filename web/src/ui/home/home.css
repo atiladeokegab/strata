@@ -11,7 +11,15 @@
 .home-title { margin: 0; font-weight: 400; }
 .home-word { display: block; font: 400 clamp(56px, 8vw, 104px)/.95 var(--serif); letter-spacing: -.02em; }
 .home-sub { display: block; margin-top: 18px; font: 400 clamp(19px, 1.7vw, 24px)/1.35 var(--serif); color: var(--muted); max-width: 26rem; }
-.home-enter { margin-top: 36px; display: inline-flex; align-items: center; gap: 12px; padding: 14px 22px;
+.home-actions { margin-top: 36px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.home-story { display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 14px 22px; border-radius: 999px; border: 0;
+  background: var(--gold); color: #14120e; font-weight: 600; letter-spacing: .01em; cursor: pointer; transition: transform 200ms, filter 200ms; }
+.home-story:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.home-story svg { width: 14px; height: 14px; fill: currentColor; }
+.home-card { cursor: default; }
+.home-card .soon { margin-left: 6px; padding: 2px 7px; border: 1px solid var(--line); border-radius: 999px; font: 500 10px/1 var(--mono);
+  font-style: normal; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); vertical-align: middle; }
+.home-enter { display: inline-flex; align-items: center; gap: 12px; padding: 14px 22px;
   border-radius: 999px; border: 1px solid var(--gold); background: rgba(218, 183, 104, .12); color: var(--ink);
   font-weight: 500; letter-spacing: .01em; transition: background 200ms, transform 200ms; }
 .home-enter:hover { background: rgba(218, 183, 104, .24); transform: translateY(-1px); }

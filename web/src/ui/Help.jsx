@@ -1,6 +1,6 @@
 // First-visit "How to use" card. Dismissal is remembered per browser; the "?" button in the map controls reopens it.
 import { useStore } from '../store'
-import { useTour, startTour } from '../tour/tour.js'
+import { useTour, startTour, stopTour } from '../tour/tour.js'
 
 const KEY = 'strata.help.seen'
 export const helpSeen = () => { try { return localStorage.getItem(KEY) === '1' } catch { return false } }
@@ -32,6 +32,16 @@ export function Help() {
         <button type="button" className="secondary" onClick={close}>Got it</button>
       </div>
     </section>
+  )
+}
+
+export function StoryButton() {
+  const playing = useTour((s) => s.playing)
+  return (
+    <button type="button" className="story-btn glass" onClick={playing ? stopTour : startTour}>
+      <svg viewBox="0 0 16 16" aria-hidden="true">{playing ? <path d="M4 3h3v10H4zM9 3h3v10H9z" /> : <path d="M4 2.5v11l9-5.5z" />}</svg>
+      {playing ? 'Stop the story' : 'Play the 60 s story'}
+    </button>
   )
 }
 

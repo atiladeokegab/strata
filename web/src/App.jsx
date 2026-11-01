@@ -8,7 +8,7 @@ const Reimagine = lazy(() => import('./ui/Reimagine'))
 const Identify = lazy(() => import('./ui/Identify'))
 import Home from './ui/home/Home'
 import { Guard, makeSlot } from './ui/slots'
-import { Help, HelpButton, helpSeen } from './ui/Help'
+import { Help, HelpButton, StoryButton, helpSeen } from './ui/Help'
 import './App.css'
 
 const PLACE = 'tower-bridge'
@@ -116,7 +116,7 @@ export default function App() {
           <Reimagine />
           <Identify />
         </Suspense>
-        <HelpButton />
+        <div className="ctl-row"><StoryButton /><HelpButton /></div>
       </Controls>
       <Help />
       <Credit />

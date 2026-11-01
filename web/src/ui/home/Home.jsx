@@ -5,6 +5,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { ACESFilmicToneMapping, CanvasTexture, SRGBColorSpace } from 'three'
 import { makeSlot } from '../slots'
+import { startTour } from '../../tour/tour.js'
 import { BridgeStandIn } from '../StandIns'
 import { pbr } from '../../scene/look/textures'
 import './home.css'
@@ -134,18 +135,23 @@ export default function Home({ onEnter }) {
         <p className="home-eyebrow">A museum of places</p>
         <h1 className="home-title">
           <span className="home-word">Strata</span>
-          <span className="home-sub">famous places rebuilt from real LiDAR and their own history</span>
+          <span className="home-sub">History is text and flat photos. Strata lets visitors, students and teachers watch a landmark being built, from real LiDAR and sourced history.</span>
         </h1>
-        <button type="button" className="home-enter" onClick={onEnter}>
-          Enter Tower Bridge <span aria-hidden="true">→</span>
-        </button>
+        <div className="home-actions">
+          <button type="button" className="home-story" onClick={() => { onEnter(); startTour() }}>
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" /></svg>Play the 60 s story
+          </button>
+          <button type="button" className="home-enter" onClick={onEnter}>
+            Enter Tower Bridge <span aria-hidden="true">→</span>
+          </button>
+        </div>
       </div>
       <aside className="home-next" aria-label="Coming next">
         <p className="home-next-label">Coming next</p>
         <ul>
           {NEXT.map((p) => (
             <li key={p.name} className="home-card">
-              <strong>{p.name}</strong>
+              <strong>{p.name} <em className="soon">Soon</em></strong>
               <span>{p.line}</span>
             </li>
           ))}

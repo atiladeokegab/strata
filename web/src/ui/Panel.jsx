@@ -162,7 +162,7 @@ function PlaceCard() {
       <p className="where">{[place.location?.label || place.location?.name || 'River Thames, London', opened && `Opened ${opened.year}`].filter(Boolean).join(' · ')}</p>
       <button type="button" className="primary" onClick={touring ? stopTour : startTour}>
         <svg viewBox="0 0 16 16" aria-hidden="true">{touring ? <path d="M4 3h3v10H4zM9 3h3v10H9z" /> : <path d="M4 2.5v11l9-5.5z" />}</svg>
-        {touring ? 'Stop the story' : 'Play the story'}
+        {touring ? 'Stop the story' : 'Play the 60 s story'}
       </button>
     </section>
   )

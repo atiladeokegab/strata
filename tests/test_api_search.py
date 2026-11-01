@@ -105,5 +105,5 @@ def test_supplied_client_is_reused_and_not_closed(monkeypatch):
 
     asyncio.run(run())
     assert len(calls) == 2
-    assert len(calls[0][1]) == 5
+    assert len(calls[0][1]) == len(list(module.documents(place())))
     assert calls[1][1] == ["north tower"]

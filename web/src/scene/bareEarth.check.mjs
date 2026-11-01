@@ -1,6 +1,6 @@
 // Self-check: `node web/src/scene/bareEarth.check.mjs`
 import assert from 'node:assert/strict'
-import { bareEarth, LIFT } from './bareEarth.js'
+import { bareEarth, keepApproaches, LIFT } from './bareEarth.js'
 
 const w = 200, h = 150, ground = (x, y) => 5 + x * 0.02 // a gentle slope
 const hs = new Float32Array(w * h)
@@ -12,4 +12,12 @@ assert.ok(Math.abs(out[70 * w + 100] - ground(100, 70)) < LIFT + 0.6, 'the build
 assert.equal(out[70 * w + 10], -2, 'the river stays down')
 assert.ok(Math.abs(out[20 * w + 150] - ground(150, 20)) < 1e-4, 'open ground is untouched')
 assert.ok(out.every((v, i) => v <= hs[i]), 'never above the DSM')
+// a raised approach road on the bridge axis (axis due north, origin mid-grid): kept; off the corridor: still opened
+const meta = { bridge_axis_deg: 0, bbox_osgb: [0, 0, 400, 400], origin_osgb: [200, 200] }, W = 400
+const dsm = new Float32Array(W * W).fill(0), at = (along, across) => (200 - along) * W + 200 + across
+for (let a = 100; a < 200; a++) for (let c = -8; c <= 8; c++) dsm[at(a, c)] = 7 // viaduct, 17 m wide
+const kept = keepApproaches(bareEarth(dsm, W, W, 30), dsm, W, meta)
+assert.equal(kept[at(150, 0)], 7, 'approach road keeps its DSM height')
+assert.ok(kept[at(150, 30)] <= 0, 'beside the corridor is still bare earth')
+assert.ok(kept[at(50, 0)] <= LIFT, 'inside the bridge cut is untouched')
 console.log('bareEarth ok')

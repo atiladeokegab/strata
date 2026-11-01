@@ -2,7 +2,7 @@ import { Suspense, use, useEffect, useLayoutEffect, useMemo, useState } from 're
 import { useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../store'
-import { bareEarth } from './bareEarth.js'
+import { bareEarth, keepApproaches } from './bareEarth.js'
 import { LITE } from './look/tier'
 
 // Google Photorealistic 3D Tiles own the ground when they are streaming and LiDAR is off; optional, like Buildings.jsx.
@@ -31,7 +31,7 @@ export function loadTerrain() {
     const meta = await (await fetch(BASE + 'meta.json')).json()
     const { heights, w, h } = await decodeHeights(BASE + 'height.png', meta)
     // before 1950: the DSM without its modern buildings (see bareEarth.js)
-    return { meta, heights, old: bareEarth(heights, w, h), w, h, base: BASE }
+    return { meta, heights, old: keepApproaches(bareEarth(heights, w, h), heights, w, meta), w, h, base: BASE }
   })()
   return cache
 }

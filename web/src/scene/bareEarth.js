@@ -31,3 +31,19 @@ export function bareEarth(heights, w, h, r = 30) {
   for (let i = 0; i < open.length; i++) open[i] = Math.min(heights[i], open[i] + LIFT)
   return open
 }
+
+// The approach roads are raised on viaducts and embankments (1894 onwards), which the opening above takes for
+// buildings and sinks ~7 m, leaving the bridge's ramp ends in mid-air. Keep the DSM along both approaches.
+export const APPROACH = { from: 133, to: 320, half: 20 } // m along / either side of the bridge axis
+
+export function keepApproaches(old, heights, w, meta) {
+  const t = (meta.bridge_axis_deg * Math.PI) / 180, ae = Math.sin(t), an = Math.cos(t)
+  const [minE, , , maxN] = meta.bbox_osgb, [oE, oN] = meta.origin_osgb
+  const res = (meta.bbox_osgb[2] - minE) / w
+  for (let k = 0; k < old.length; k++) {
+    const dE = minE + ((k % w) + 0.5) * res - oE, dN = maxN - (Math.floor(k / w) + 0.5) * res - oN
+    const along = Math.abs(dE * ae + dN * an), across = Math.abs(dE * an - dN * ae)
+    if (along >= APPROACH.from && along < APPROACH.to && across < APPROACH.half) old[k] = heights[k]
+  }
+  return old
+}

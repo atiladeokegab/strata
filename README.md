@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/img/banner.png" alt="Strata: Tower Bridge drawn as a LiDAR point cloud, coloured by height" width="100%">
+  <img src="docs/img/banner.png" alt="Strata: an illustration of Tower Bridge in the style of a point cloud, coloured by height" width="100%">
 </p>
 
 <p align="center">
@@ -17,15 +17,31 @@
 <p align="center"><img src="docs/img/demo.gif" alt="Strata demo: flying over Tower Bridge, opening the bascules, scrubbing 1886 to today" width="100%"></p>
 -->
 
-## Why
+## Who it's for
 
-You can read about how Tower Bridge was built. You can't watch it.
+Visitors, students and teachers who want to see how a landmark was built and how it works, not just read about it.
+
+## The problem
+
+You can read about how Tower Bridge was built. You can't watch it. The history of a place comes as text and flat photos.
 
 The books give you numbers: 65 m towers, bascules that lift to 86 degrees, eight years of work from 1886 to 1894. What they can't give you is the place itself, in three dimensions, changing over time, with the machine inside it moving.
 
 Strata rebuilds a famous place from the ground up. The ground is real: the Environment Agency's 1 m LiDAR survey of London. The structure on it is built from sourced part data. Its history lives in a graph you can scrub through, and a docent answers your questions only with numbers it can cite.
 
 First exhibit: **Tower Bridge**, with the Tower of London, the Thames and Shad Thames around it.
+
+## Try it
+
+<!-- TODO(live): the Cloud Run URL goes here once the deploy lands. -->
+**Live demo:** coming shortly.
+
+1. Open the link and let the terrain load. You start in orbit view over Tower Bridge.
+2. Drag to orbit, scroll to zoom, or switch to top-down or walk with the view switcher.
+3. Click any part of the bridge to open it in the inspector, with the source and status of every figure.
+4. Toggle exploded view to take the bridge apart, and use the bascule control to open the roadway.
+5. Drag the timeline from 1886 to today.
+6. Ask the docent in the side panel, for example "How long did it take to build?"
 
 ## What you can do
 
@@ -44,6 +60,15 @@ First exhibit: **Tower Bridge**, with the Tower of London, the Thames and Shad T
 ### Coming next
 
 Everything in "What you can do" above is being built today and lands here as it reaches `main`: LiDAR terrain and point-cloud view, the procedural bridge and exploded view, the hydraulic bascules, the timeline with historic maps, the SurrealDB history graph, search, and the docent.
+
+## What we built today
+
+Everything in this repo was built on 1 November 2026 at DevDay London, by one person working with a team of AI coding agents: the LiDAR terrain pipeline, the procedural bridge, the hydraulic simulation, the history graph and its data, the API and docent, and the web app.
+
+## Use of Codex
+
+<!-- TODO(codex): one concrete example from docs/codex.md once it lands. -->
+Two of the agents that built Strata ran on Codex. Their log of concrete Codex moments, with session ids, is in [docs/codex.md](docs/codex.md).
 
 ## Data is law
 
@@ -86,14 +111,19 @@ flowchart LR
 - **Part ids are the shared key.** Scene meshes are named by part id, and clicking a mesh selects that part in the inspector and the docent.
 - **Place data** follows one shape everywhere: `{id, name, location, parts, events, sources}`, served from SurrealDB once seeded, with the JSON file as the fallback.
 
-## Data credits
+## Credits
+
+Existing code, data and ideas this project stands on:
 
 - **Terrain height:** Environment Agency LiDAR Composite DSM, 1 m. © Environment Agency copyright and/or database right. Licensed under the [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/).
 - **Imagery and historic maps:** credited here as the terrain builder records them in `web/public/terrain/tower-bridge/meta.json`.
 - **History and dimensions:** each figure cites its own source in `data/places/tower-bridge.json`.
-- **Inspiration:** [Mechanica](https://github.com/Caleb0796/mechanica), MIT licence.
+- **Idea:** [Mechanica](https://github.com/Caleb0796/mechanica), MIT licence: data is law, sourced numbers with a status, mechanisms driven by simulated state.
+- **3D:** [three.js](https://threejs.org/) (MIT), [React Three Fiber](https://github.com/pmndrs/react-three-fiber) (MIT) and [drei](https://github.com/pmndrs/drei) (MIT).
+- **Web and server:** [React](https://react.dev/), [Vite](https://vite.dev/), [zustand](https://github.com/pmndrs/zustand), [FastAPI](https://fastapi.tiangolo.com/) and [SurrealDB](https://surrealdb.com/).
+- **Banner:** an illustration drawn in code (`docs/img/banner.html`), not a render of the survey data.
 
-## Run locally
+## Setup
 
 You need [uv](https://docs.astral.sh/uv/) and Node 20 or later.
 

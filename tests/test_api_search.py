@@ -7,8 +7,10 @@ from server import search as module
 def place():
     return {"id": "test", "parts": [
         {"id": "tower", "name": "North tower", "summary": "Tall stone tower", "sources": ["a"]},
-        {"id": "leaf", "name": "Bascule leaf", "summary": "Counterweighted opening roadway", "sources": ["b"]}],
-        "events": [{"year": 1894, "title": "Opened", "text": "Bridge opened to traffic", "sources": ["a"]}],
+        {"id": "leaf", "name": "Bascule leaf", "summary": "Counterweighted opening roadway", "sources": ["b"]},
+        {"id": "engine-house", "name": "Engine house", "summary": "Steam-powered hydraulic machinery raised the bridge.", "sources": ["b"]}],
+        "events": [{"year": 1894, "title": "Opened", "text": "Bridge opened to traffic", "sources": ["a"]},
+                   {"year": 1893, "title": "Horse-drawn traffic", "text": "Horse-drawn carriages crossed the bridge.", "sources": ["a"]}],
         "sources": [{"id": "a", "title": "Tower facts", "url": "https://example.test/a"},
                     {"id": "b", "title": "Bascule facts", "url": "https://example.test/b"}]}
 
@@ -17,6 +19,16 @@ def test_keyword_search_keeps_response_shape_and_handles_opened():
     results = module.search(place(), "when did it open?")
     assert results[0] == {"kind": "event", "id": "1894", "title": "1894 · Opened", "snippet": "Bridge opened to traffic"}
     assert set(results[0]) == {"kind", "id", "title", "snippet"}
+
+
+def test_keyword_search_splits_hyphens_and_matches_powered():
+    data = place()
+    horses = module.search(data, "where did horses cross?")
+    assert any(item["kind"] == "event" and item["title"].endswith("Horse-drawn traffic") for item in horses)
+    powered = module.search(data, "what powered the bridge?")
+    assert any(item["kind"] == "part" and item["id"] == "engine-house" for item in powered)
+    tower = module.search(data, "north towers")
+    assert tower[0]["kind"] == "part" and tower[0]["id"] == "tower"
 
 
 def test_semantic_search_uses_startup_cache(monkeypatch):

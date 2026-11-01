@@ -58,6 +58,84 @@ def test_citation_required_for_each_sentence(place):
     assert validate_answer("It is 65 m tall [bridge-guide]. It is made of gold.", evidence)["refused"]
 
 
+def test_missing_key_returns_extractive_cited_fallback(monkeypatch, place):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    async def collect():
+        return [event async for event in answer_events(place, "How is the north tower built?")]
+    events = asyncio.run(collect())
+    assert events[-1][0] == "done" and not events[-1][1]["refused"]
+    assert events[-1][1]["citations"] == ["bridge-guide"]
+    assert events[-1][1]["answer"] == "Granite tower [bridge-guide]."
+    assert not validate_answer(events[-1][1]["answer"], retrieve(place, "How is the north tower built?"))["refused"]
+
+
+def test_fallback_cites_each_extracted_sentence(monkeypatch, place):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    place["parts"][0]["summary"] = "Granite tower. It rises from the north river pier."
+    async def collect():
+        return [event async for event in answer_events(place, "How is the north tower built?")]
+    result = asyncio.run(collect())[-1][1]
+    assert result["answer"].count("[bridge-guide]") == 2
+    assert not result["refused"]
+
+
+@pytest.mark.parametrize("failure", ["refuse", "error"])
+def test_model_refusal_or_error_uses_relevant_fallback(monkeypatch, place, failure):
+    monkeypatch.setenv("OPENAI_API_KEY", "fake")
+    class Stream:
+        async def __aenter__(self): return self
+        async def __aexit__(self, *args): pass
+        def __aiter__(self): return self.events()
+        async def events(self):
+            if failure == "refuse":
+                yield SimpleNamespace(type="response.output_text.delta", delta="REFUSE")
+    class Client:
+        def __init__(self, **kwargs): self.responses = self
+        async def __aenter__(self): return self
+        async def __aexit__(self, *args): pass
+        async def create(self, **kwargs):
+            if failure == "error":
+                raise TimeoutError()
+            return Stream()
+    monkeypatch.setattr("server.docent.AsyncOpenAI", Client)
+    async def collect():
+        return [event async for event in answer_events(place, "How is the north tower built?")]
+    events = asyncio.run(collect())
+    assert not events[-1][1]["refused"]
+    assert events[-1][1]["answer"] == "Granite tower [bridge-guide]."
+
+
+def test_fallback_chooses_power_fact_over_year_only_event(monkeypatch, place):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    place["events"].append({"year": 1894, "title": "Tower Bridge opened", "text": "The bridge opened on 30 June.", "sources": ["bridge-guide"]})
+    place["facts"] = [{"id": "power-source", "title": "Power source", "text": "Steam-powered hydraulic machinery lifts the bascules.", "source": "bridge-guide", "status": "text-attested"}]
+    async def collect():
+        return [event async for event in answer_events(place, "How was the bridge powered?")]
+    result = asyncio.run(collect())[-1][1]
+    assert "Steam-powered hydraulic machinery" in result["answer"]
+    assert "1894" not in result["answer"]
+
+
+def test_fabricated_citation_still_refuses_without_fallback(monkeypatch, place):
+    monkeypatch.setenv("OPENAI_API_KEY", "fake")
+    class Stream:
+        async def __aenter__(self): return self
+        async def __aexit__(self, *args): pass
+        def __aiter__(self): return self.events()
+        async def events(self):
+            yield SimpleNamespace(type="response.output_text.delta", delta="Granite tower [invented-source].")
+    class Client:
+        def __init__(self, **kwargs): self.responses = self
+        async def __aenter__(self): return self
+        async def __aexit__(self, *args): pass
+        async def create(self, **kwargs): return Stream()
+    monkeypatch.setattr("server.docent.AsyncOpenAI", Client)
+    async def collect():
+        return [event async for event in answer_events(place, "How is the north tower built?")]
+    result = asyncio.run(collect())[-1][1]
+    assert result["refused"] and result["citations"] == []
+
+
 def test_construction_duration_beats_generic_history(place):
     place["name"] = "Tower Bridge"
     place["events"].extend({"year": year, "title": "Construction", "text": "Tower Bridge construction continued.", "sources": ["bridge-guide"]} for year in range(1886, 1894))
@@ -87,6 +165,17 @@ def test_place_name_filter_keeps_the_requested_part_topic(place):
     place["name"] = "Tower Bridge"
     evidence = retrieve(place, "Which towers make up Tower Bridge?")
     assert any(fact["fact_id"] == "north-tower" for fact in evidence)
+
+
+def test_how_question_prefers_operation_over_opening_width(place, monkeypatch):
+    from server.docent import ask
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    place["facts"] = [
+        {"id": "width", "text": "The bascule opening is 200 feet wide.", "source": "bridge-guide", "status": "text-attested"},
+        {"id": "operation", "text": "Steam powers hydraulic engines that pivot the bascules open.", "source": "bridge-guide", "status": "text-attested"},
+    ]
+    result = asyncio.run(ask(place, "How do the bascules open?"))
+    assert not result["refused"] and "hydraulic" in result["answer"]
 
 
 @pytest.fixture

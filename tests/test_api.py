@@ -92,7 +92,6 @@ def test_cited_json_answer_and_model_setting(client, fake_model, monkeypatch):
     "The tower is 999999 m tall [wiki-tb].",
     "The tower is tall [invented-source].",
     "The tower is tall.",
-    "REFUSE",
 ])
 def test_refuses_uncited_or_invented_answers(client, fake_model, text):
     fake_model["text"] = text
@@ -105,6 +104,13 @@ def test_unsupported_number_with_valid_source(client, fake_model, number):
     source = client.get("/api/places/tower-bridge").json()["sources"][0]["id"]
     fake_model["text"] = f'The tower is {number} tall [{source}].'
     assert client.post("/api/ask", json={"question": "How tall is the tower?"}).json()["refused"]
+
+
+def test_model_refusal_uses_relevant_verified_dimension(client, fake_model):
+    fake_model["text"] = "REFUSE"
+    result = client.post("/api/ask", json={"question": "How tall is the north tower?"}).json()
+    assert not result["refused"] and result["citations"]
+    assert "65" in result["answer"]
 
 
 def test_unrelated_question_never_calls_model(client, fake_model):

@@ -1,6 +1,7 @@
 // The full-screen 3D world: sky, light, camera views and the scene slots. Clicking a mesh selects the part it belongs to.
 import { useEffect } from 'react'
-import { Canvas } from '@react-three/fiber'
+import { Canvas, useThree } from '@react-three/fiber'
+import { Raycaster, Vector3 } from 'three'
 import { Sky } from '@react-three/drei'
 import { useStore } from '../store'
 import { CameraRig } from './CameraRig'
@@ -24,24 +25,54 @@ function partOf(object, ids) {
 }
 
 // Scene labels (drei <Html> buttons in .stage) hide while they overlap the on-screen controls,
-// so they never crowd or sit under the buttons.
+// or, with the bascules up, while their anchor is behind or inside a raised leaf.
 const CLEAR_OF = '.controls, .credit, .dock, .embed-open'
 const overlaps = (a, b, m = 6) => a.left < b.right + m && a.right > b.left - m && a.top < b.bottom + m && a.bottom > b.top - m
-function useLabelsClear() {
+const LEAF = /^bascule-(north|south)$/
+const ray = new Raycaster()
+const at = new Vector3()
+
+// screen points (px) of label anchors a raised leaf hides: one ray per landmark, tested against the leaf meshes only
+export function behindLeaves(scene, camera, canvas) {
+  if (useStore.getState().bascule < 0.02) return []
+  const leaves = []
+  scene.traverseVisible((o) => { if (o.isMesh && LEAF.test(o.name)) leaves.push(o) })
+  const marks = scene.getObjectByName('landmarks')
+  if (!leaves.length || !marks) return []
+  const box = canvas.getBoundingClientRect()
+  const hidden = []
+  for (const g of marks.children) {
+    const anchor = g.children[0] // drei <Html>'s own group, at the label's anchor
+    if (!anchor) continue
+    anchor.getWorldPosition(at)
+    ray.set(camera.position, at.clone().sub(camera.position).normalize())
+    ray.far = camera.position.distanceTo(at)
+    if (!ray.intersectObjects(leaves, false).length) continue
+    at.project(camera)
+    hidden.push([box.left + ((at.x + 1) / 2) * box.width, box.top + ((1 - at.y) / 2) * box.height])
+  }
+  return hidden
+}
+
+function LabelGuard() {
+  const { scene, camera, gl } = useThree()
   useEffect(() => {
     const id = setInterval(() => {
       const keep = [...document.querySelectorAll(CLEAR_OF)].map((el) => el.getBoundingClientRect())
+      const hidden = behindLeaves(scene, camera, gl.domElement)
       for (const b of document.querySelectorAll('.stage button')) {
         const r = b.getBoundingClientRect()
-        b.style.visibility = keep.some((k) => overlaps(r, k)) ? 'hidden' : ''
+        const cx = (r.left + r.right) / 2, cy = (r.top + r.bottom) / 2 // labels are centred on their anchor
+        const off = keep.some((k) => overlaps(r, k)) || hidden.some(([x, y]) => Math.abs(x - cx) < 4 && Math.abs(y - cy) < 4)
+        b.style.visibility = off ? 'hidden' : ''
       }
     }, 150)
     return () => clearInterval(id)
-  }, [])
+  }, [scene, camera, gl])
+  return null
 }
 
 export function Stage() {
-  useLabelsClear()
   const place = useStore((s) => s.place)
   const select = useStore((s) => s.select)
   const lidar = useStore((s) => s.lidar)
@@ -58,6 +89,7 @@ export function Stage() {
       <Look />
       <Tour />
       <CameraRig />
+      <LabelGuard />
       <GoogleTiles />{/* outside the click group: Google meshes and OSM buildings are never parts */}
       <Buildings />
       <group

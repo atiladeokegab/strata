@@ -5,6 +5,7 @@
 <p align="center">
   <a href="https://platform.openai.com/"><img alt="OpenAI" src="https://img.shields.io/badge/OpenAI-gpt--6.1--sol-412991?logo=openai&logoColor=white"></a>
   <a href="https://threejs.org/"><img alt="three.js" src="https://img.shields.io/badge/three.js-R3F-000000?logo=threedotjs&logoColor=white"></a>
+  <a href="https://platform.openai.com/docs/guides/images"><img alt="OpenAI image" src="https://img.shields.io/badge/OpenAI-gpt--image--2.5--flare-412991?logo=openai&logoColor=white"></a>
   <a href="https://surrealdb.com/"><img alt="SurrealDB" src="https://img.shields.io/badge/SurrealDB-graph-FF00A0?logo=surrealdb&logoColor=white"></a>
   <a href="https://fastapi.tiangolo.com/"><img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-API-009688?logo=fastapi&logoColor=white"></a>
   <a href="https://environment.data.gov.uk/survey"><img alt="Environment Agency LiDAR" src="https://img.shields.io/badge/LiDAR-Environment%20Agency%201%20m-00703C"></a>
@@ -52,15 +53,19 @@ First exhibit: **Tower Bridge**, with the Tower of London, the Thames and Shad T
 
 ### On `main` today
 
-- Tower Bridge place data with sourced dimensions and dated events (`data/places/tower-bridge.json`)
-- FastAPI server: `GET /api/health` and `GET /api/places/{id}`
-- The React three.js web app scaffold, its shared store (place, selection, view, year, exploded, bascule) and the `/api` dev proxy
-- The procedural Tower Bridge (`web/src/scene/bridge/`): meshes named by part id, click to select, exploded view, bascules driven by a weighted-accumulator hydraulic simulation, and construction stages from 1886 to 1894. It is not yet mounted in the app.
-- A Cloud Run deploy: a multi-stage Dockerfile that builds the web app, and `make deploy`
+- **The app:** a full-screen 3D stage with a glass side panel (search, part inspector, docent chat), orbit, top-down and walk views, a timeline, and bascule, exploded and LiDAR controls. Live at the link under [Try it](#try-it).
+- **The bridge:** a procedural Tower Bridge with every mesh named by its part id. Click a part to select it, explode the structure, open the bascules on a weighted-accumulator hydraulic simulation, and watch construction rise stage by stage from 1886 to 1894.
+- **Place data:** Tower Bridge parts with sourced dimensions and dated events, served by FastAPI at `GET /api/places/{id}`.
+- **Reimagine (server side):** `POST /api/reimagine` uses OpenAI's image model to turn a capture of the 3D view into a period photograph of the chosen year. Its panel is built but not yet wired into the app.
+- **Deploy:** a multi-stage Dockerfile that builds the web app, and `make deploy` to Cloud Run.
 
 ### Coming next
 
-Everything in "What you can do" above is being built today and lands here as it reaches `main`: LiDAR terrain and point-cloud view, the procedural bridge and exploded view, the hydraulic bascules, the timeline with historic maps, the SurrealDB history graph, search, and the docent.
+- LiDAR terrain and the point-cloud view. The ground and river are placeholders until the terrain assets land.
+- Historic maps draped on the ground before 1950.
+- The SurrealDB history graph.
+- The search and docent endpoints, `/api/search` and `/api/ask`. Their panels are in the app.
+- Reimagine in the app: "See it in 1894".
 
 ## What we built today
 

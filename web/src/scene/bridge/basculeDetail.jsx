@@ -18,7 +18,7 @@ const GIRDERS = [-7.5, -3, 3, 7.5]
 const bottom = (z) => TOP - 0.06 - 4.4 + (3.4 * Math.max(0, z)) / LEN
 
 // The shared kinded materials; Look.jsx textures them, and Part tints the 'steel' fascia by year.
-const mats = () => ({ soffit: M.white, fascia: M.steel, iron: M.iron, road: M.road })
+const mats = () => ({ soffit: M.white, fascia: M.steel, iron: M.iron })
 
 function build() {
   const soffit = [], fascia = [], iron = [], bolts = [], tailBars = []
@@ -112,13 +112,14 @@ function build() {
   }
   iron.push(box(17, 0.3, 0.3, 0, bottom(0) + 0.6, tz - 0.15))
 
-  const out = { soffit, fascia, iron }
-  if (LITE) {
-    // lite: BasculeLeaf draws nothing; its girders, rails, racks and deck join these meshes (-3 calls per leaf)
-    const p = leafParts()
-    fascia.push(...p.steel), soffit.push(...p.white), iron.push(...p.iron), (out.road = p.road)
-  }
-  return { ...Object.fromEntries(Object.entries(out).map(([k, gs]) => [k, merge(gs)])), bolts: merge(bolts), tailBars: merge(tailBars) }
+  return { soffit, fascia, iron, bolts, tailBars } // geometry lists, merged by the callers
+}
+
+// lite: every static piece of the leaf (this file's and BasculeLeaf's) as kit lists; BasculeDetails
+// (details.jsx) draws them with its own lamps and footways, one mesh per material.
+export function leafKit() {
+  const { soffit, fascia, iron } = build(), p = leafParts()
+  return { white: [...soffit, ...p.white], steel: [...fascia, ...p.steel], iron: [...iron, ...p.iron], road: p.road }
 }
 
 const BOLT_DRAW = 0.6 // m the nose bolts withdraw
@@ -126,7 +127,11 @@ const TAIL_HINGE = [0, bottom(0) + 0.6, -14 + 0.4]
 
 // sim.bolts (hydraulics.js stepBolts): 1 = nose bolts shot and tail bars engaged, 0 = clear.
 export function BasculeLeafDetail({ sim }) {
-  const { bolts, tailBars, ...fixed } = useMemo(build, [])
+  const { bolts, tailBars, ...fixed } = useMemo(() => {
+    const { bolts, tailBars, ...rest } = build()
+    const all = LITE ? { bolts, tailBars } : { ...rest, bolts, tailBars } // lite: the static rest is in leafKit()
+    return Object.fromEntries(Object.entries(all).map(([k, gs]) => [k, merge(gs)]))
+  }, [])
   const m = mats()
   const boltRef = useRef(), tailRef = useRef()
   useFrame(() => {

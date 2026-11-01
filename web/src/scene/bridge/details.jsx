@@ -7,6 +7,7 @@ import { L } from './structures.jsx'
 import { KERB_X, KERB_W, FOOTWAY_H, FOOTWAY_OUT } from './roadway.js'
 import { balustrade, BAL_X, BAL_Y } from './balustrade.js'
 import { LITE } from '../look/tier.js'
+import { leafKit } from './basculeDetail.jsx'
 import { walkwayKnees, walkwayLamps } from './walkway.js'
 import { POST_X, POST_Z } from './trafficSim.js'
 
@@ -251,14 +252,17 @@ export function BasculeDetails({ era }) {
   return (
     <Meshes
       deps={[era?.blackout, era?.woodBlocks, era?.gasLamps]}
-      materials={lanternFor(era)}
+      materials={{ ...lanternFor(era), soffit: M.white }}
       build={() => {
         const o = kit()
         for (const z of [-31, -21, -11]) for (const x of [-9, 9]) lamp(o, x, 0.05, z, era)
         if (!era?.woodBlocks) dashes(o, L.pivotZ + 0.5, -0.5)
         footways(o, L.pierZ + L.towerHalfZ, 0, era)
         for (const gs of Object.values(o)) gs.forEach((g) => g.translate(0, -L.pivotY, -L.pivotZ))
-        return o
+        if (!LITE) return o
+        const leaf = leafKit() // lite: the leaf's static structure joins these meshes (basculeDetail.jsx)
+        if (era?.blackout) (leaf.soffit = leaf.white), delete leaf.white // blackout 'white' is the band paint
+        return join(o, leaf)
       }}
     />
   )

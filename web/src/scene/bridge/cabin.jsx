@@ -27,7 +27,7 @@ function wall(o, len, alongX, at, n) {
 
 function shell() {
   const o = { stone: [], white: [], slate: [] }
-  o.stone.push(box(W + 0.4, 0.3, D + 0.4, 0, -0.15, 0)) // plinth on the pier top
+  o.stone.push(box(W + 0.4, 0.3, D + 0.4, 0, -0.1, 0)) // plinth, 5 cm proud of the pier top (no z-fight)
   wall(o, W, true, D / 2 - T / 2, 3) // front, onto the opening
   wall(o, W, true, -D / 2 + T / 2, 2)
   for (const s of [-1, 1]) wall(o, D - 2 * T, false, s * (W / 2 - T / 2), 2)

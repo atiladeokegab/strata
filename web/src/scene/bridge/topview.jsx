@@ -130,7 +130,7 @@ function LeafAngles({ sim }) {
     const deg = `${Math.round((sim.angle * 180) / Math.PI)}°`
     tags.current.forEach((t, i) => t && (t.textContent = `${i ? 'S' : 'N'} leaf ${deg}`))
   })
-  return [[34, -12], [-34, 12]].map(([x, z], i) => (
+  return [[62, -20], [-62, 20]].map(([x, z], i) => (
     <Html key={i} position={[x, WATER, z]} center zIndexRange={[20, 10]} style={{ pointerEvents: 'none' }}>
       <div ref={(r) => (tags.current[i] = r)} style={{ ...TAG, border: '1px solid rgba(255,181,71,0.6)' }} />
     </Html>
@@ -187,7 +187,7 @@ function Mains({ sim }) {
   return (
     <>
       <mesh geometry={geo} material={mat} renderOrder={2} />
-      <Html position={[72, 8, 156]} center zIndexRange={[20, 10]} style={{ pointerEvents: 'none' }}>
+      <Html position={[35, 8, 185]} center zIndexRange={[20, 10]} style={{ pointerEvents: 'none' }}>
         <div ref={chip} style={{ ...TAG, border: '1px solid rgba(95,212,255,0.5)' }} aria-live="off" />
       </Html>
     </>
@@ -239,7 +239,7 @@ function Works({ st }) {
 }
 function Caption({ st, year }) {
   return (
-    <Html position={[0, WATER, L.pierZ - 52]} center zIndexRange={[20, 10]} style={{ pointerEvents: 'none' }}>
+    <Html position={[0, WATER, L.spanEnd - 20]} center zIndexRange={[20, 10]} style={{ pointerEvents: 'none' }}>
       <div style={{ ...TAG, font: '500 13px/1.2 system-ui, sans-serif', padding: '4px 10px' }}>
         <span style={{ opacity: 0.7 }}>{year} · stage {st.stage + 1} of 5 · </span>
         {st.label} · {Math.round(buildDone(st) * 100)}% built

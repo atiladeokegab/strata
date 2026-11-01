@@ -6,6 +6,7 @@ import { containersOf } from './xray.js'
 import { createShip, stepShip, WAIT_X, HOLD_X } from './shipSim.js'
 import { createTraffic, stepTraffic, TYPES, STOP_U, BASCULE_U } from './trafficSim.js'
 import { vesselForYear, needsLift, leafInput, CLEARANCE } from './vessels.js'
+import { createRiver, stepRiver, gap, CRAFT, CLEAR } from './riverSim.js'
 
 const MAX = (86 * Math.PI) / 180
 const run = (s, target, seconds) => {
@@ -100,4 +101,23 @@ assert.ok(cat.x < HOLD_X - 100, `the clipper passes with the bascules closed, at
 const tall = createShip()
 for (let t = 0; t < 120; t += 0.05) stepShip(tall, leafInput(vesselForYear(1950), 0), 0.05)
 assert.ok(tall.x === WAIT_X, 'the tug waits for the bascules')
+
+// River craft: all fit under the closed deck, and none comes within CLEAR of the big vessel,
+// whatever the year's vessel and with the bascules cycling open and shut.
+for (const k in CRAFT) assert.ok(CRAFT[k].airDraft < CLEARANCE, `${k} fits under the closed deck`)
+for (const y of [1900, 1940, 1960, 1985, 2026]) {
+  const v = vesselForYear(y)
+  const big = createShip()
+  const river = createRiver(y)
+  const foot = { x: 0, bow: v.bow, stern: v.stern }
+  let moved = 0
+  for (let t = 0; t < 900; t += 0.05) {
+    stepShip(big, leafInput(v, (t % 140) < 90 ? 1 : 0), 0.05)
+    foot.x = big.x
+    stepRiver(river, foot, 0.05)
+    for (const c of river) assert.ok(gap(c, foot) >= CLEAR, `${y} ${c.type} at ${c.x.toFixed(1)},${c.z.toFixed(1)} is within ${CLEAR} m of the ${v.kind} at ${big.x.toFixed(1)}`)
+    moved = Math.max(moved, big.x < 0 ? 1 : 0)
+  }
+  assert.ok(moved, `${y}: the ${v.kind} actually passed the craft`)
+}
 console.log('ship checks ok')

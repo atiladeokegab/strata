@@ -226,15 +226,23 @@ const dashTexture = () => {
   return t
 }
 
-function Flow({ rt }) {
+const WATER = '#5fd4ff', OIL = '#ffae3a' // steam-era water mains; oil from 1976 (electro-hydraulic)
+// The river main lifted to just above the water, shown as a ghost while the north pier is x-rayed or exploded.
+const GHOST = [[0, L.hw + 0.5, 30], [0, L.hw + 0.5, -30]]
+
+function Flow({ rt, steam }) {
   const sim = rt.sim
-  const ref = useRef()
+  const ref = useRef(), ghostRef = useRef(), ghost = useRef(0)
   const m = useMemo(() => {
-    const mk = (base) => new THREE.MeshStandardMaterial({ color: '#26333a', roughness: 0.5, metalness: 0.6, emissive: '#5fd4ff', emissiveMap: dashTexture(), emissiveIntensity: base })
-    return { supply: mk(0), drive: mk(0), river: mk(0.15) }
+    const mk = (base) => new THREE.MeshStandardMaterial({ color: '#26333a', roughness: 0.5, metalness: 0.6, emissiveMap: dashTexture(), emissiveIntensity: base })
+    const river = mk(0.15)
+    const ghost = new THREE.MeshBasicMaterial({ map: river.emissiveMap, transparent: true, depthWrite: false, opacity: 0 })
+    return { supply: mk(0), drive: mk(0), river, ghost }
   }, [])
+  const colour = steam ? WATER : OIL
+  for (const mat of Object.values(m)) (mat.emissive ?? mat.color).set(colour)
   const geo = useMemo(
-    () => ({ supply: merge(PATHS.supply.map((p) => tube(p, 0.26))), drive: merge(PATHS.drive.map((p) => tube(p, 0.26))), river: tube(PATHS.river, 0.3) }),
+    () => ({ supply: merge(PATHS.supply.map((p) => tube(p, 0.26))), drive: merge(PATHS.drive.map((p) => tube(p, 0.26))), river: tube(PATHS.river, 0.3), ghost: tube(GHOST, 0.35) }),
     [],
   )
   useFrame((_, dt) => {
@@ -246,26 +254,40 @@ function Flow({ rt }) {
       mat.emissiveIntensity = base + level * 2.5
       mat.emissiveMap.offset.x -= level * 1.2 * Math.min(dt, 0.1) // dashes run start -> end of each path
     }
+    const on = Math.max(rt.explode.current, rt.fades.current.includes('pier-north') ? 1 : 0)
+    const x = (ghost.current += (on - ghost.current) * Math.min(1, dt * 3))
+    ghostRef.current.visible = x > 0.02
+    m.ghost.opacity = x * (0.3 + 0.4 * supply)
   })
   return (
-    <group ref={ref}>
-      {Object.keys(geo).map((k) => <mesh key={k} geometry={geo[k]} material={m[k]} />)}
-    </group>
+    <>
+      <group ref={ref}>
+        {['supply', 'drive', 'river'].map((k) => <mesh key={k} geometry={geo[k]} material={m[k]} />)}
+      </group>
+      <mesh ref={ghostRef} geometry={geo.ghost} material={m.ghost} renderOrder={2} />
+    </>
   )
 }
 
-// steam=false: electro-hydraulic era (from 1976), steam engines stand idle and the stack is cold.
+// Electro-hydraulic pump house added in 1976, against the east wall.
+function PumpHouse() {
+  const m = mats()
+  const g = useMemo(() => ({ brick: box(3, 3.2, 5, H.x1 + 1.8, 1.6, 153), slate: box(3.6, 0.4, 5.6, H.x1 + 1.8, 3.4, 153), iron: box(0.4, 1.6, 1, H.x1 + 3.4, 1.6, 153) }), [])
+  return Object.entries(g).map(([k, geo]) => <mesh key={k} geometry={geo} material={m[k]} castShadow />)
+}
+
 export function EngineRoom({ rt, explode = [14, 6, 20], steam = true }) {
   return (
     <>
       <Part id="engine-room" rt={rt} explode={explode} xray>
         <Shell />
+        {!steam && <PumpHouse />}
       </Part>
       <Part id="engine-room" rt={rt} explode={explode}>
         <Machinery sim={rt.sim} steam={steam} />
       </Part>
       {steam && <Smoke sim={rt.sim} />}
-      <Flow rt={rt} />
+      <Flow rt={rt} steam={steam} />
     </>
   )
 }

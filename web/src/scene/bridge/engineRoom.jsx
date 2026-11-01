@@ -51,7 +51,7 @@ function archWindow(out, { w = 1.6, sill = 2.4, spring = 6.2, depth }, place) {
 const atZ = (x, z) => (g) => g.translate(x, 0, z)
 const atX = (x, z) => (g) => g.rotateY(Math.PI / 2).translate(x, 0, z)
 
-function Shell() {
+function Shell({ steam }) {
   const m = mats()
   const g = useMemo(() => {
     const { x0, x1, z0, z1, wall, t } = H
@@ -124,12 +124,14 @@ function Shell() {
     for (const [y, s] of [[C.h - 1.4, 2.9], [C.h - 0.9, 3.2], [C.h - 0.3, 3.5]]) brick.push(box(s, 0.5, s, C.x, y, C.z))
     stone.push(box(3.6, 0.3, 3.6, C.x, C.h + 0.1, C.z))
 
+    // 1976: the electric pump house against the east gable (brick, slate cap, iron starter cabinet)
+    if (!steam) brick.push(box(3, 3.2, 5, H.x1 + 1.8, 1.6, 153)), slate.push(box(3.6, 0.4, 5.6, H.x1 + 1.8, 3.4, 153), box(0.4, 1.6, 1, H.x1 + 3.4, 1.6, 153))
     // made ground under the house, down to the river level
     stone.push(box(30, 9, 26, 32, -4.5, 156), box(30.6, 0.4, 26.6, 32, 0, 156), box(30.3, 0.3, 26.3, 32, -2.4, 156)) // retaining plinth: coping, band
     return {
       brick: merge(brick), stone: merge(stone), slate: merge(slate), glass: merge(out.glass),
     }
-  }, [])
+  }, [steam])
   return (
     <>
       <mesh geometry={g.brick} material={m.brick} castShadow receiveShadow />
@@ -142,6 +144,8 @@ function Shell() {
 
 const UNIT_ROD = new THREE.CylinderGeometry(0.12, 0.12, 1, 6).rotateZ(Math.PI / 2).translate(0.5, 0, 0)
 const CROSSHEAD = new THREE.BoxGeometry(0.8, 1, 1)
+// fire doors on the north ends of the two boilers (axis along z, x 39.6 / 42.2, front at z 156.5)
+const FIRE_DOORS = merge([39.6, 42.2].map((x) => box(0.9, 0.6, 0.08, x, 1.3, 156.4)))
 const _o = new THREE.Object3D()
 // instance i of `m` at p, turned rz about z, stretched sx along x
 const put = (m, i, p, rz, sx = 1) => {
@@ -149,9 +153,9 @@ const put = (m, i, p, rz, sx = 1) => {
   m.setMatrixAt(i, _o.matrix)
 }
 
-function Machinery({ sim, steam, third }) {
+function Machinery({ sim, steam, third, museum }) {
   const m = mats()
-  const fly = useRef(), cross = useRef(), rod = useRef(), ram = useRef()
+  const fly = useRef(), cross = useRef(), rod = useRef(), ram = useRef(), fire = useRef()
   const engines = third ? ENGINES : ENGINES.slice(0, 2)
   const crank = useRef(0)
   const fixed = useMemo(() => {
@@ -174,9 +178,16 @@ function Machinery({ sim, steam, third }) {
         beam([x + 4.1, -2, 151], [x, -2, 146], 0.22), beam([x, -2, 146], [x, -2, 56], 0.22, 8),
       )
     iron.push(beam([37, 0.6, engines[0]], [37, 0.6, engines.at(-1)], 0.18), beam([ACC.x, 0.6, 151], [ACC.x, 0.6, ACC.z + 1], 0.18)) // pumps on the main; branch to the ram
+    // from 1982 the engine rooms are a museum: visitors in the aisles between the engines (inferred).
+    // Dark silhouettes in the iron mesh, so they cost no draw call.
+    if (museum)
+      [[23, 148], [27.5, 153], [31, 148.4], [35.5, 153.2], [24, 158], [30, 158.3], [36, 163], [33, 164.5]].forEach(([x, z], i) => {
+        const h = 1.55 + 0.15 * Math.sin(i * 2.3)
+        iron.push(new THREE.CylinderGeometry(0.2, 0.27, h - 0.3, 8).translate(x, (h - 0.3) / 2, z), new THREE.SphereGeometry(0.14, 8, 6).translate(x, h - 0.12, z))
+      })
     return merge(iron)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [third])
+  }, [third, museum])
   const wheel = useMemo(() => {
     const gs = [new THREE.TorusGeometry(2.6, 0.22, 8, 32), new THREE.CylinderGeometry(0.35, 0.35, 3, 10).rotateX(Math.PI / 2)]
     for (let i = 0; i < 6; i++) gs.push(box(0.16, 5.2, 0.16).rotateZ((i * Math.PI) / 6))
@@ -184,7 +195,7 @@ function Machinery({ sim, steam, third }) {
     return merge(gs)
   }, [])
 
-  useFrame((_, dt) => {
+  useFrame((st, dt) => {
     if (steam && sim.pumping) crank.current += Math.min(dt, 0.1) * 3
     // one instanced draw per moving part kind: flywheels, crossheads, connecting rods
     engines.forEach((z, i) => {
@@ -197,6 +208,7 @@ function Machinery({ sim, steam, third }) {
     })
     for (const m of [fly.current, cross.current, rod.current]) m.instanceMatrix.needsUpdate = true
     ram.current.position.y = ACC.base + 3 + sim.stored * ACC.travel
+    if (fire.current) fire.current.color.setRGB(1, 0.42, 0.08).multiplyScalar((sim.pumping ? 1.5 : 0.7) * (0.85 + 0.15 * Math.sin(crank.current * 7 + st.clock.elapsedTime * 9)))
   })
 
   return (
@@ -205,6 +217,13 @@ function Machinery({ sim, steam, third }) {
       <instancedMesh key={`f${engines.length}`} ref={fly} args={[wheel, M.iron, engines.length]} castShadow frustumCulled={false} />
       <instancedMesh key={`c${engines.length}`} ref={cross} args={[CROSSHEAD, M.brass, engines.length]} frustumCulled={false} />
       <instancedMesh key={`r${engines.length}`} ref={rod} args={[UNIT_ROD, M.brass, engines.length]} frustumCulled={false} />
+      {/* while steaming the boiler fire doors glow, brighter while the pumps run; after 1976 the boilers stand cold.
+          affordance: Part leaves its own material alone (no fade, no highlight) */}
+      {steam && (
+        <mesh geometry={FIRE_DOORS} userData={{ affordance: true }}>
+          <meshBasicMaterial ref={fire} toneMapped={false} />
+        </mesh>
+      )}
       {/* the loaded weight case rides the ram: up = stored, down = drawn */}
       <mesh ref={ram} position={[ACC.x, 0, ACC.z]} material={M.iron} castShadow>
         <cylinderGeometry args={[1.9, 1.9, 4, 16]} />
@@ -338,21 +357,14 @@ function Flow({ rt, steam }) {
 }
 
 // Electro-hydraulic pump house added in 1976, against the east wall.
-function PumpHouse() {
-  const m = mats()
-  const g = useMemo(() => ({ brick: box(3, 3.2, 5, H.x1 + 1.8, 1.6, 153), slate: box(3.6, 0.4, 5.6, H.x1 + 1.8, 3.4, 153), iron: box(0.4, 1.6, 1, H.x1 + 3.4, 1.6, 153) }), [])
-  return Object.entries(g).map(([k, geo]) => <mesh key={k} geometry={geo} material={m[k]} castShadow />)
-}
-
-export function EngineRoom({ rt, explode = [14, 6, 20], steam = true, third = true }) {
+export function EngineRoom({ rt, explode = [14, 6, 20], steam = true, third = true, museum = false }) {
   return (
     <>
       <Part id="engine-room" rt={rt} explode={explode} xray>
-        <Shell />
-        {!steam && <PumpHouse />}
+        <Shell steam={steam} />
       </Part>
       <Part id="engine-room" rt={rt} explode={explode}>
-        <Machinery sim={rt.sim} steam={steam} third={third} />
+        <Machinery sim={rt.sim} steam={steam} third={third} museum={museum} />
       </Part>
       {steam && <Smoke sim={rt.sim} />}
       <Flow rt={rt} steam={steam} />

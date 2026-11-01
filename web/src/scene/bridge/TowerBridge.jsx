@@ -203,7 +203,7 @@ export function TowerBridge(props) {
             {era.olympics && side === 'east' && <H.OlympicRings x={side === 'east' ? S.L.walkX : -S.L.walkX} />}
           </Part>
         ))}
-      {shown('engine', st.stage) && <EngineRoom rt={rt} steam={era.steam} third={era.thirdEngine} explode={[14, 6, 20]} />}
+      {shown('engine', st.stage) && <EngineRoom rt={rt} steam={era.steam} third={era.thirdEngine} museum={era.engineMuseum} explode={[14, 6, 20]} />}
       <TopView st={st} year={year} maxAngle={maxAngle} sim={bridgeHydraulics} />
       {/* traffic rides no part, so it would float over the exploded decks; hide it but keep its sim */}
       {st.stage >= 5 && (

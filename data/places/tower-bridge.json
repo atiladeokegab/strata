@@ -347,6 +347,181 @@
       "sources": [
         "tb-engine"
       ]
+    },
+    {
+      "id": "tower-of-london",
+      "name": "Tower of London",
+      "group": "surroundings",
+      "dims": {},
+      "summary": "William the Conqueror's fortress on the north bank; the White Tower at its centre was begun in the 1070s. The bridge's Gothic towers were dressed in stone partly so they would sit beside it.",
+      "sources": [
+        "hrp-tower",
+        "wiki-tower-of-london"
+      ],
+      "osgb": [
+        533624.1,
+        180551.2
+      ],
+      "years": [
+        1078,
+        null
+      ],
+      "located": "inferred: map position converted from WGS84 to OSGB36"
+    },
+    {
+      "id": "st-katharine-docks",
+      "name": "St Katharine Docks",
+      "group": "surroundings",
+      "dims": {},
+      "summary": "Thomas Telford's enclosed docks just downstream of the Tower, opened in 1828. They worked as part of the Port of London until 1968 and are now a marina with housing and shops.",
+      "sources": [
+        "wiki-st-katharine-docks"
+      ],
+      "osgb": [
+        533916.3,
+        180425.4
+      ],
+      "years": [
+        1828,
+        null
+      ],
+      "located": "inferred: map position converted from WGS84 to OSGB36"
+    },
+    {
+      "id": "butlers-wharf",
+      "name": "Butler's Wharf",
+      "group": "surroundings",
+      "dims": {},
+      "summary": "The great warehouse on the south bank beside the bridge, completed in 1873 to store goods landed in the Port of London: tea, grain, spices. The warehouses of Shad Thames around it are now flats and restaurants.",
+      "sources": [
+        "wiki-butlers-wharf",
+        "southwark-area"
+      ],
+      "osgb": [
+        533882.9,
+        180112.9
+      ],
+      "years": [
+        1873,
+        null
+      ],
+      "located": "inferred: map position converted from WGS84 to OSGB36"
+    },
+    {
+      "id": "shad-thames-stairs",
+      "name": "Shad Thames and Horselydown",
+      "group": "surroundings",
+      "dims": {},
+      "summary": "The riverside street of warehouses behind Butler's Wharf, linked by iron bridges overhead. River stairs here at Horselydown led down to the watermen's boats.",
+      "sources": [
+        "wiki-shad-thames",
+        "southwark-area"
+      ],
+      "osgb": [
+        533756.8,
+        180154.1
+      ],
+      "years": [
+        1873,
+        null
+      ],
+      "located": "inferred: map position converted from WGS84 to OSGB36"
+    },
+    {
+      "id": "pool-of-london",
+      "name": "Pool of London",
+      "group": "surroundings",
+      "dims": {},
+      "summary": "The stretch of the Thames from London Bridge downstream, where tall-masted ships moored to unload. Tower Bridge opens so that they could still reach the Upper Pool, between London Bridge and Cherry Garden Pier.",
+      "sources": [
+        "wiki-pool-of-london",
+        "tb-timeline"
+      ],
+      "osgb": [
+        533348.7,
+        180354.8
+      ],
+      "years": [
+        null,
+        null
+      ],
+      "located": "inferred: map position converted from WGS84 to OSGB36"
+    },
+    {
+      "id": "irongate-stairs-wharf",
+      "name": "Irongate Stairs",
+      "group": "surroundings",
+      "dims": {},
+      "summary": "River stairs and wharves on the north bank right beside the bridge's north approach. A Science Museum engineering drawing from the bridge works records the loads on the adjoining steam-navigation warehouse wall.",
+      "sources": [
+        "smg-irongate"
+      ],
+      "osgb": [
+        533772.5,
+        180349.3
+      ],
+      "years": [
+        null,
+        null
+      ],
+      "located": "inferred: map position converted from WGS84 to OSGB36"
+    },
+    {
+      "id": "city-hall",
+      "name": "City Hall",
+      "group": "surroundings",
+      "dims": {},
+      "summary": "Foster + Partners' leaning glass building on the south bank, opened in 2002 as the home of the Mayor of London and the London Assembly. City Hall moved to the Royal Docks in January 2022.",
+      "sources": [
+        "wiki-city-hall-london"
+      ],
+      "osgb": [
+        533450.6,
+        180179.5
+      ],
+      "years": [
+        2002,
+        null
+      ],
+      "located": "inferred: map position converted from WGS84 to OSGB36"
+    },
+    {
+      "id": "the-shard",
+      "name": "The Shard",
+      "group": "surroundings",
+      "dims": {},
+      "summary": "Renzo Piano's glass spire at London Bridge, completed in 2012: at 310 m the tallest building in the United Kingdom.",
+      "sources": [
+        "wiki-the-shard"
+      ],
+      "osgb": [
+        532903.2,
+        180131.7
+      ],
+      "years": [
+        2012,
+        null
+      ],
+      "located": "inferred: map position converted from WGS84 to OSGB36"
+    },
+    {
+      "id": "hms-belfast",
+      "name": "HMS Belfast",
+      "group": "surroundings",
+      "dims": {},
+      "summary": "A Royal Navy cruiser launched in 1938 that served in the Second World War, moored in the Pool of London as a museum ship since October 1971; part of the Imperial War Museum since 1978.",
+      "sources": [
+        "wiki-hms-belfast"
+      ],
+      "osgb": [
+        533251.0,
+        180374.5
+      ],
+      "years": [
+        1971,
+        null
+      ],
+      "located": "inferred: map position converted from WGS84 to OSGB36"
     }
   ],
   "events": [
@@ -576,6 +751,54 @@
       "title": "The history of City Bridge Foundation",
       "url": "https://www.towerbridge.org.uk/stories/the-history-of-city-bridge-foundation",
       "kind": "primary institutional"
+    },
+    {
+      "id": "wiki-tower-of-london",
+      "title": "Wikipedia: Tower of London",
+      "url": "https://en.wikipedia.org/wiki/Tower_of_London",
+      "kind": "encyclopedia"
+    },
+    {
+      "id": "wiki-st-katharine-docks",
+      "title": "Wikipedia: St Katharine Docks",
+      "url": "https://en.wikipedia.org/wiki/St_Katharine_Docks",
+      "kind": "encyclopedia"
+    },
+    {
+      "id": "wiki-butlers-wharf",
+      "title": "Wikipedia: Butler's Wharf",
+      "url": "https://en.wikipedia.org/wiki/Butler%27s_Wharf",
+      "kind": "encyclopedia"
+    },
+    {
+      "id": "wiki-shad-thames",
+      "title": "Wikipedia: Shad Thames",
+      "url": "https://en.wikipedia.org/wiki/Shad_Thames",
+      "kind": "encyclopedia"
+    },
+    {
+      "id": "wiki-pool-of-london",
+      "title": "Wikipedia: Pool of London",
+      "url": "https://en.wikipedia.org/wiki/Pool_of_London",
+      "kind": "encyclopedia"
+    },
+    {
+      "id": "wiki-city-hall-london",
+      "title": "Wikipedia: City Hall, London",
+      "url": "https://en.wikipedia.org/wiki/City_Hall,_London",
+      "kind": "encyclopedia"
+    },
+    {
+      "id": "wiki-the-shard",
+      "title": "Wikipedia: The Shard",
+      "url": "https://en.wikipedia.org/wiki/The_Shard",
+      "kind": "encyclopedia"
+    },
+    {
+      "id": "wiki-hms-belfast",
+      "title": "Wikipedia: HMS Belfast",
+      "url": "https://en.wikipedia.org/wiki/HMS_Belfast",
+      "kind": "encyclopedia"
     }
   ],
   "people": [

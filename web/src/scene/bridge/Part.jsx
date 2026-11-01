@@ -1,0 +1,76 @@
+import { useLayoutEffect, useRef } from 'react'
+import { useFrame } from '@react-three/fiber'
+import * as THREE from 'three'
+
+const HIGHLIGHT = new THREE.Color('#ffb547')
+const tmp = new THREE.Vector3()
+const DOWN = new THREE.Vector3(0, -1, 0)
+
+// One clickable part. Every mesh inside is named by the part id (the shared key), gets its own
+// material clones so highlight and x-ray never leak to other parts, and eases towards its
+// exploded offset. `rt` holds the per-frame refs owned by TowerBridge.
+// clipY (scene-local y) cuts the part off above that height, for parts rising during construction.
+export function Part({ id, rt, home = [0, 0, 0], explode = [0, 0, 0], xray = false, clipY = null, children }) {
+  const ref = useRef()
+  const mats = useRef([])
+  const plane = useRef(new THREE.Plane(new THREE.Vector3(0, -1, 0), 0))
+
+  useLayoutEffect(() => {
+    const list = []
+    ref.current.traverse((o) => {
+      o.name = id
+      o.userData.partId = id
+      if (!o.isMesh) return
+      if (!o.userData.ownMat) {
+        o.material = o.material.clone()
+        o.userData.ownMat = true
+      }
+      list.push(o.material)
+    })
+    mats.current = list
+  })
+
+  useFrame((_, dt) => {
+    const g = ref.current
+    const e = rt.explode.current
+    tmp.set(home[0] + explode[0] * e, home[1] + explode[1] * e, home[2] + explode[2] * e)
+    g.position.lerp(tmp, 1 - Math.exp(-dt * 6))
+    const sel = rt.selected.current === id
+    const hov = rt.hovered.current === id
+    const glow = sel ? 0.45 : hov ? 0.2 : 0
+    const fade = xray ? rt.xray.current : 0
+    if (clipY !== null) plane.current.set(DOWN, clipY).applyMatrix4(rt.root.current.matrixWorld)
+    const clip = clipY === null ? null : [plane.current]
+    for (const m of mats.current) {
+      m.emissive.copy(HIGHLIGHT)
+      m.emissiveIntensity = glow
+      if (m.userData.kind === 'steel') m.color.set(rt.steel.current)
+      m.transparent = fade > 0.01
+      m.opacity = 1 - 0.7 * fade
+      m.depthWrite = fade < 0.5
+      m.clippingPlanes = clip
+    }
+  })
+
+  return (
+    <group
+      ref={ref}
+      position={home}
+      onClick={(e) => {
+        e.stopPropagation()
+        rt.select(id)
+      }}
+      onPointerOver={(e) => {
+        e.stopPropagation()
+        rt.hovered.current = id
+        document.body.style.cursor = 'pointer'
+      }}
+      onPointerOut={() => {
+        if (rt.hovered.current === id) rt.hovered.current = null
+        document.body.style.cursor = ''
+      }}
+    >
+      {children}
+    </group>
+  )
+}

@@ -2,8 +2,9 @@
 import assert from 'node:assert/strict'
 import { createHydraulics, stepHydraulics, OPEN_TIME_S, SIM_SPEED, BOLT_SETTLE_S, BOLT_TRAVEL_S, DRAW_UP, LIFT_DRAW, createCars, stepCars, carHeight, gaugePsi, PRESSURE_PSI } from './hydraulics.js'
 import { stageForYear, shown, STAGES, ERAS, eraFor, resolveYears } from './stages.js'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { containersOf } from './xray.js'
+import { PART_IDS } from './parts.js'
 import { createShip, stepShip, WAIT_X, HOLD_X } from './shipSim.js'
 import { vesselForYear, needsLift, leafInput, CLEARANCE } from './vessels.js'
 import { createRiver, stepRiver, gap, CRAFT, CLEAR } from './riverSim.js'
@@ -144,6 +145,30 @@ assert.deepEqual(containersOf('cabin-controls-south'), ['cabin-south'])
 assert.equal(gaugePsi(createHydraulics()), PRESSURE_PSI)
 const sag = gaugePsi({ stored: 0, valve: 1 })
 assert.ok(sag > 0 && sag < PRESSURE_PSI / 2, `empty accumulator sags the gauge, got ${sag}`)
+// every <Part id> rendered in bridge/*.jsx is listed in PART_IDS
+{
+  const dir = new URL('.', import.meta.url)
+  const has = (x) => assert.ok(PART_IDS.includes(x), `PART_IDS is missing ${x}`)
+  for (const f of readdirSync(dir).filter((f) => f.endsWith('.jsx'))) {
+    const src = readFileSync(new URL(f, dir), 'utf8')
+    const parts = src.match(/<Part\b[^>]*?\bid=(\{[^}]*\}|"[^"]*")/g) ?? []
+    assert.equal(parts.length, (src.match(/<Part\b/g) ?? []).length, `${f}: a <Part> without a scannable id`)
+    for (const m of parts) {
+      const v = m.slice(m.indexOf('id=') + 3)
+      let lit
+      if ((lit = v.match(/^"(.*)"$/))) has(lit[1])
+      else if ((lit = v.match(/^\{id\('([^']+)'\)\}$/))) [`${lit[1]}-north`, `${lit[1]}-south`].forEach(has)
+      else if ((lit = v.match(/^\{`([^$`]*)\$\{/))) assert.ok(PART_IDS.some((p) => p.startsWith(lit[1])), `PART_IDS has no ${lit[1]}*`)
+      else {
+        const q = (x) => [...x.matchAll(/'([^']+)'/g)].map((a) => a[1])
+        const name = v.match(/^\{(\w+)\}$/)?.[1]
+        const ids = name ? q(src.match(new RegExp(`const ${name} = (.*)`))?.[1] ?? '') : q(v)
+        assert.ok(ids.length, `${f}: cannot resolve ${m}`)
+        ids.forEach(has)
+      }
+    }
+  }
+}
 console.log('bridge checks ok')
 
 // Ship: waits for the leaves, holds short of the bridge if they drop, but a committed ship keeps going.

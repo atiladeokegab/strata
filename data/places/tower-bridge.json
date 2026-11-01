@@ -812,6 +812,13 @@
       "title": "Wikipedia: HMS Belfast",
       "url": "https://en.wikipedia.org/wiki/HMS_Belfast",
       "kind": "encyclopedia"
+    },
+    {
+      "id": "tb-royal-connections",
+      "title": "Royal connections to Tower Bridge",
+      "url": "https://www.towerbridge.org.uk/stories/royal-connections-to-tower-bridge",
+      "kind": "primary institutional",
+      "locator": "The second Elizabethan era"
     }
   ],
   "people": [
@@ -963,6 +970,30 @@
       "status": "text-attested",
       "locator": "29 July 1894 section",
       "source_excerpt": "From July, an estimated 8,000 horse-drawn vehicles and 60,000 pedestrians are crossing the Bridge daily."
+    },
+    {
+      "id": "original-bascule-weight",
+      "title": "How heavy is an original bascule?",
+      "text": "The 1894 engineering account reports about 1,200 tons for each moving bascule leaf, including its counterbalance. This is the historical quantity as reported, not a modern metric measurement.",
+      "value": 1200,
+      "unit": "historical tons",
+      "source": "tb-history",
+      "sources": [
+        "tb-history"
+      ],
+      "status": "text-attested",
+      "locator": "J. E. Tuit, The Tower Bridge (1894), The Hydraulic Machinery, printed p. 99"
+    },
+    {
+      "id": "blue-jubilee-paint",
+      "title": "Why is Tower Bridge painted blue?",
+      "text": "Tower Bridge was painted red, white and blue in 1977 to celebrate Queen Elizabeth II’s Silver Jubilee.",
+      "source": "tb-royal-connections",
+      "sources": [
+        "tb-royal-connections"
+      ],
+      "status": "text-attested",
+      "locator": "The second Elizabethan era"
     }
   ]
 }

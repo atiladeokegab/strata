@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../store'
 
 const LABEL = { idle: 'Talk to the docent', connecting: 'Connecting…', listening: 'Listening', speaking: 'Speaking', error: 'Try again' }
-const DOT = { idle: '#888', connecting: '#c9a227', listening: '#3fb27f', speaking: '#5b8def', error: '#d0544b' }
 
 export default function Voice() {
   const [state, setState] = useState('idle')
@@ -109,25 +108,17 @@ export default function Voice() {
 
   const live = state === 'listening' || state === 'speaking' || state === 'connecting'
   return (
-    <section aria-label="Talk to the docent" style={{ display: 'grid', gap: 8 }}>
-      <button
-        onClick={() => (live ? (stop(), setState('idle')) : start())}
-        aria-pressed={live}
-        style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 999, cursor: 'pointer' }}
-      >
-        <span aria-hidden style={{
-          width: 10, height: 10, borderRadius: '50%', background: DOT[state],
-          animation: live ? 'strata-voice-breathe 2.4s ease-in-out infinite' : 'none',
-        }} />
+    <section aria-label="Talk to the docent" className="voice-ui">
+      <button type="button" className="voice-btn" onClick={() => (live ? (stop(), setState('idle')) : start())} aria-pressed={live}>
+        <span aria-hidden className={`voice-dot ${state}`} />
         <span>{LABEL[state]}</span>
-        {live && <span style={{ marginLeft: 'auto', opacity: 0.6, fontSize: 12 }}>Stop</span>}
+        {live && <span className="voice-stop">Stop</span>}
       </button>
-      <style>{'@keyframes strata-voice-breathe{0%,100%{opacity:.45;transform:scale(.85)}50%{opacity:1;transform:scale(1.15)}}@media (prefers-reduced-motion: reduce){[aria-label="Talk to the docent"] span{animation:none!important}}'}</style>
-      {error && <p role="alert" style={{ margin: 0, color: DOT.error, fontSize: 13 }}>{error}</p>}
+      {error && <p role="alert" className="voice-err">{error}</p>}
       {lines.length > 0 && (
-        <ol aria-live="polite" style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 6, maxHeight: 240, overflowY: 'auto', fontSize: 14, textAlign: 'left' }}>
+        <ol aria-live="polite" className="voice-log">
           {lines.map((l) => (
-            <li key={l.id}><strong style={{ opacity: 0.7 }}>{l.who === 'you' ? 'You' : 'Docent'}:</strong> {l.text}</li>
+            <li key={l.id}><strong>{l.who === 'you' ? 'You' : 'Docent'}:</strong> {l.text}</li>
           ))}
         </ol>
       )}

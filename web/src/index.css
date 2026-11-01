@@ -1,15 +1,43 @@
+/* Design tokens: the only place colours, sizes, radii and shadows are defined. */
 :root {
-  --ink: #eee8da; --muted: #a69f8f; --gold: #dab768; --gold-dim: rgba(218, 183, 104, .24);
-  --glass: rgba(16, 15, 13, .72); --panel-w: 400px; --gap: 16px; --line: rgba(238, 232, 218, .1);
-  --serif: "Newsreader", Georgia, serif; --sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
-  color: var(--ink); background: #0b0b09; font: 16px/1.5 var(--sans);
+  /* surfaces */
+  --bg: #0a0a0b;
+  --surface: rgba(15, 15, 17, .9);
+  --surface-solid: #121214;
+  --fill: rgba(255, 255, 255, .06);
+  --fill-hover: rgba(255, 255, 255, .1);
+  --fill-on: rgba(255, 255, 255, .14);
+  --line: rgba(255, 255, 255, .08);
+  --line-strong: rgba(255, 255, 255, .16);
+  /* text */
+  --ink: #ededee;
+  --muted: #9a9aa0;
+  --on-ink: #0a0a0b;
+  /* one accent, for the selected or active state only */
+  --accent: #d6b36e;
+  --accent-dim: rgba(214, 179, 110, .35);
+  --danger: #e07a6b;
+  /* type: 12 labels, 14 body, 16 emphasis, 24 / 32 headings */
+  --t1: 12px; --t2: 14px; --t3: 16px; --t4: 24px; --t5: 32px;
+  --sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  /* space (4 / 8 grid), radius, elevation */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px;
+  --r: 8px;
+  --shadow: 0 4px 16px rgba(0, 0, 0, .28);
+  --blur: blur(12px);
+  /* layout */
+  --panel-w: 380px; --gap: 16px; --pad: 20px;
+  /* aliases still read by the 3D scene labels */
+  --gold: var(--accent); --gold-dim: var(--accent-dim); --glass: var(--surface); --serif: var(--sans);
+
+  color: var(--ink); background: var(--bg); font: 400 var(--t2)/1.5 var(--sans);
   font-synthesis: none; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; color-scheme: dark;
 }
 * { box-sizing: border-box; }
-html, body, #root { margin: 0; height: 100%; overflow: hidden; background: #0b0b09; }
+html, body, #root { margin: 0; height: 100%; overflow: hidden; background: var(--bg); }
 button, input { font: inherit; color: inherit; }
 button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 button:disabled { cursor: default; opacity: .45; }
 a { color: inherit; }
-:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

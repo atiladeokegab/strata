@@ -27,21 +27,44 @@ export const labelSize = (text) => ({ w: 14 + text.length * 7, h: 22 })
 
 const hit = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
 
+// Does segment (x1,y1)-(x2,y2) pass through rect r? Liang-Barsky clip.
+export function crosses(x1, y1, x2, y2, r) {
+  let t0 = 0, t1 = 1
+  const dx = x2 - x1, dy = y2 - y1
+  for (const [p, q] of [[-dx, x1 - r.x], [dx, r.x + r.w - x1], [-dy, y1 - r.y], [dy, r.y + r.h - y1]]) {
+    if (p === 0) { if (q < 0) return false; continue }
+    const t = q / p
+    if (p < 0) t0 = Math.max(t0, t)
+    else t1 = Math.min(t1, t)
+    if (t0 > t1) return false
+  }
+  return true
+}
+
 // items: [{id, x, y, w, h}] in screen px (anchor point, label size), in priority order.
-// -> {id: {dx, dy}} for labels that fit, offset of the label centre from its anchor;
-// labels whose anchor is off screen or that cannot avoid an earlier label are left out.
+// -> {id: {dx, dy}} for labels that fit, offset of the label centre from its anchor.
+// A spot is clear when its label misses every other label, anchor dot and leader line, and its
+// own leader (anchor to label edge) misses every other label and anchor dot. Labels whose anchor
+// is off screen or that find no clear spot are left out.
 export function placeLabels(items, width, height) {
-  const placed = items.map((it) => ({ x: it.x - DOT / 2, y: it.y - DOT / 2, w: DOT, h: DOT }))
+  const dots = items.map((it) => ({ id: it.id, x: it.x - DOT / 2, y: it.y - DOT / 2, w: DOT, h: DOT }))
+  const boxes = []
+  const leaders = []
   const out = {}
   for (const it of items) {
     if (it.x < 0 || it.y < 0 || it.x > width || it.y > height) continue
+    const others = dots.filter((d) => d.id !== it.id)
     for (const [ux, uy] of DIRS) {
       // sideways labels move out by half their width so the leader keeps its length
       const dx = ux * (GAP + it.w / 2 - 20), dy = uy * GAP
       const r = { x: it.x + dx - it.w / 2, y: it.y + dy - it.h / 2, w: it.w, h: it.h }
       if (r.x < 0 || r.y < 0 || r.x + r.w > width || r.y + r.h > height) continue
-      if (placed.some((p) => hit(p, r))) continue
-      placed.push(r)
+      if (boxes.some((p) => hit(p, r)) || others.some((p) => hit(p, r))) continue
+      if (leaders.some((l) => crosses(l[0], l[1], l[2], l[3], r))) continue
+      const seg = [it.x, it.y, it.x + dx * 0.7, it.y + dy * 0.7] // stop short of its own label
+      if (boxes.some((p) => crosses(...seg, p))) continue
+      boxes.push(r)
+      leaders.push(seg)
       out[it.id] = { dx, dy }
       break
     }

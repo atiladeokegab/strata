@@ -1,6 +1,7 @@
 // <TopView />: what the sky view adds. Clickable part callouts with leader lines (placed by the
 // pure placeLabels so they never overlap, hidden when the camera is far), a 50 m scale bar, a
-// north arrow, and a faint swing envelope for each bascule drawn flat on the water.
+// north arrow, a faint swing envelope for each bascule drawn flat on the water, the hydraulic
+// mains with a live pressure chip, and the ship's track and road gates as dashed lines.
 import { useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
@@ -10,6 +11,9 @@ import { shown } from './stages.js'
 import { L } from './structures.jsx'
 import { CALLOUTS, labelSize, placeLabels } from './callouts.js'
 import { box, merge } from './geom.js'
+import { OPEN_TIME_S, PRESSURE_PSI } from './hydraulics.js'
+import { WAIT_X, END_X } from './shipSim.js'
+import { GATE_U } from './trafficSim.js'
 
 const FAR = 900 // metres from the bridge centre beyond which callouts hide
 const WATER = L.hw + 0.25
@@ -92,21 +96,21 @@ function MapMarks() {
   )
 }
 
-// Each leaf sweeps up to maxAngle about its pivot; drawn rabatted onto the water like a door swing.
+// Each leaf sweeps up to maxAngle about its pivot; drawn rabatted onto the water like a door
+// swing: the closed leaf's 18 m wide footprint plus the sector its outer edge sweeps.
 function SwingGhosts({ maxAngle }) {
   const geo = useMemo(() => {
-    const r = -L.pivotZ
-    const sector = (sign) =>
-      new THREE.RingGeometry(r - 0.6, r, 48, 1, 0, maxAngle)
-        .rotateX(-Math.PI / 2)
-        .rotateY(sign > 0 ? -Math.PI / 2 : Math.PI / 2)
-        .translate(0, WATER, sign * L.pivotZ)
-    const fill = (sign) =>
-      new THREE.CircleGeometry(r, 48, 0, maxAngle)
-        .rotateX(-Math.PI / 2)
-        .rotateY(sign > 0 ? -Math.PI / 2 : Math.PI / 2)
-        .translate(0, WATER - 0.05, sign * L.pivotZ)
-    return { edge: merge([sector(1), sector(-1)]), fill: merge([fill(1), fill(-1)]) }
+    const r = -L.pivotZ, half = 9
+    // north leaf: pivot at z=pivotZ, tip at z=0; the sector hinges on its east edge
+    const leaf = (sign) => {
+      const foot = new THREE.PlaneGeometry(half * 2, r).rotateX(-Math.PI / 2).translate(0, WATER - 0.05, sign * (L.pivotZ / 2))
+      const fan = new THREE.CircleGeometry(r, 48, 0, maxAngle).rotateX(-Math.PI / 2).rotateY(-Math.PI / 2).translate(half, WATER - 0.05, L.pivotZ)
+      const arc = new THREE.RingGeometry(r - 0.6, r, 48, 1, 0, maxAngle).rotateX(-Math.PI / 2).rotateY(-Math.PI / 2).translate(half, WATER, L.pivotZ)
+      if (sign < 0) [fan, arc].forEach((g) => g.rotateY(Math.PI)) // south half is the north turned 180°
+      return { fill: [foot, fan], edge: [arc] }
+    }
+    const n = leaf(1), so = leaf(-1)
+    return { fill: merge([...n.fill, ...so.fill]), edge: merge([...n.edge, ...so.edge]) }
   }, [maxAngle])
   return (
     <>
@@ -116,7 +120,79 @@ function SwingGhosts({ maxAngle }) {
   )
 }
 
-export function TopView({ stage, maxAngle }) {
+// Hydraulic mains in plan: engine room -> approach main -> south pier, then under the river to
+// the north pier. Same cyan glow and running dashes as the engine room's Flow, driven the same way.
+const OMEGA_MAX = (86 * Math.PI) / 180 / OPEN_TIME_S
+// shortcut: schematic, drawn 13 m east of the centreline so the deck does not hide it (the real
+// mains run under the approach at x 7.4 and along the riverbed at x 0)
+const MX = 17
+const MAINS = [[37, 151], [MX, 151], [MX, -L.pierZ], [MX, L.pierZ]]
+const DASH_M = 4
+function ribbons(pts, w) {
+  const gs = []
+  for (let i = 1; i < pts.length; i++) {
+    const [x0, z0] = pts[i - 1], [x1, z1] = pts[i]
+    const len = Math.hypot(x1 - x0, z1 - z0)
+    const g = new THREE.PlaneGeometry(len, w).rotateX(-Math.PI / 2)
+    const uv = g.attributes.uv
+    for (let j = 0; j < uv.count; j++) uv.setX(j, uv.getX(j) * (len / DASH_M))
+    gs.push(g.rotateY(-Math.atan2(z1 - z0, x1 - x0)).translate((x0 + x1) / 2, WATER + 0.15, (z0 + z1) / 2))
+  }
+  return merge(gs)
+}
+let DASH
+function dashTexture() {
+  if (!DASH) {
+    const c = Object.assign(document.createElement('canvas'), { width: 64, height: 4 })
+    const x = c.getContext('2d'), grad = x.createLinearGradient(0, 0, 64, 0)
+    grad.addColorStop(0, '#163a48'); grad.addColorStop(0.35, '#fff'); grad.addColorStop(0.55, '#fff'); grad.addColorStop(0.7, '#163a48')
+    x.fillStyle = grad
+    x.fillRect(0, 0, 64, 4)
+    DASH = new THREE.CanvasTexture(c)
+    DASH.wrapS = THREE.RepeatWrapping
+  }
+  return DASH
+}
+function Mains({ sim }) {
+  const geo = useMemo(() => ribbons(MAINS, 2.2), [])
+  const mat = useMemo(() => new THREE.MeshBasicMaterial({ color: '#5fd4ff', map: dashTexture(), transparent: true, depthWrite: false }), [])
+  const chip = useRef()
+  useFrame((_, dt) => {
+    const drive = Math.min(1, Math.abs(sim.omega) / OMEGA_MAX)
+    const supply = Math.min(1, drive + (sim.pumping ? 0.35 : 0))
+    mat.opacity = 0.35 + 0.65 * supply
+    mat.map.offset.x -= (0.15 + supply * 1.2) * Math.min(dt, 0.1) // dashes run engine room -> north pier
+    if (chip.current) {
+      const psi = sim.stored > 0 ? `${PRESSURE_PSI} psi` : 'pumps only'
+      chip.current.textContent = `${psi} · stored ${Math.round(sim.stored * 100)}% · ${sim.pumping ? 'pumping' : 'pumps idle'}`
+    }
+  })
+  return (
+    <>
+      <mesh geometry={geo} material={mat} renderOrder={2} />
+      <Html position={[72, 8, 156]} center zIndexRange={[20, 10]} style={{ pointerEvents: 'none' }}>
+        <div ref={chip} style={{ ...TAG, border: '1px solid rgba(95,212,255,0.5)' }} aria-live="off" />
+      </Html>
+    </>
+  )
+}
+
+// The ship's track down the river centreline and the road gates, as faint dashed lines; the
+// gates sit inside the towers, so they draw over them (over).
+function Dashed({ pts, color, dash = 4, y = WATER + 0.2, over = false }) {
+  const line = useMemo(() => {
+    const g = new THREE.BufferGeometry().setFromPoints(pts.map(([x, z]) => new THREE.Vector3(x, y, z)))
+    const l = new THREE.Line(g, new THREE.LineDashedMaterial({ color, dashSize: dash, gapSize: dash, transparent: true, opacity: over ? 0.9 : 0.6, depthTest: !over }))
+    l.renderOrder = over ? 3 : 0
+    l.computeLineDistances()
+    return l
+  }, [pts, color, dash, y, over])
+  return <primitive object={line} />
+}
+const TRACK = [[WAIT_X, 0], [END_X, 0]]
+const GATES = [-1, 1].map((d) => [[-16, d * GATE_U], [16, d * GATE_U]]) // a little wider than the deck so they show past the labels
+
+export function TopView({ stage, maxAngle, sim }) {
   const view = useStore((s) => s.view)
   const select = useStore((s) => s.select)
   if (view !== 'top') return null
@@ -125,6 +201,13 @@ export function TopView({ stage, maxAngle }) {
       <Callouts stage={stage} select={select} />
       <MapMarks />
       {shown('bascule', stage) && <SwingGhosts maxAngle={maxAngle} />}
+      {shown('engine', stage) && <Mains sim={sim} />}
+      {stage >= 5 && (
+        <>
+          <Dashed pts={TRACK} color="#f3efe6" dash={6} />
+          {GATES.map((g, i) => <Dashed key={i} pts={g} color="#ff6b5a" dash={1.2} y={0.6} over />)}
+        </>
+      )}
     </>
   )
 }

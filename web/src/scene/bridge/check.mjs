@@ -160,7 +160,7 @@ for (const y of [1900, 1940, 1960, 1985, 2026]) {
 }
 console.log('ship checks ok')
 
-import { placeLabels, labelSize, CALLOUTS } from './callouts.js'
+import { placeLabels, labelSize, CALLOUTS, crosses } from './callouts.js'
 const lab = (id, x, y) => ({ id, x, y, ...labelSize('North tower') })
 const pl = placeLabels([lab('a', 500, 400), lab('b', 502, 401), lab('c', 900, 400), lab('off', -5, 400)], 1400, 900)
 assert.ok(pl.a && pl.b && pl.c && !pl.off, 'labels for on-screen anchors, none for off-screen')
@@ -169,6 +169,13 @@ assert.ok(Math.abs(box('a').x - box('b').x) >= labelSize('North tower').w || Mat
 const crowd = placeLabels(Array.from({ length: 20 }, (_, i) => lab(`k${i}`, 700, 450)), 1400, 900)
 assert.ok(Object.keys(crowd).length <= 8 && Object.keys(crowd).length >= 3, 'a crowd keeps only labels that fit')
 assert.equal(new Set(CALLOUTS.map((c) => c.id)).size, CALLOUTS.length)
+assert.ok(crosses(0, 0, 10, 10, { x: 4, y: 4, w: 2, h: 2 }) && !crosses(0, 0, 10, 0, { x: 4, y: 4, w: 2, h: 2 }))
+// no leader line may cross another label, on a crowded column of anchors like the top view's
+const col = Array.from({ length: 9 }, (_, i) => ({ id: `c${i}`, x: 700 + (i % 2) * 26, y: 150 + i * 40, ...labelSize('South bascule') }))
+const cp = placeLabels(col, 1400, 900)
+const rects = Object.entries(cp).map(([id, o]) => { const it = col.find((c) => c.id === id); return { id, x: it.x + o.dx - it.w / 2, y: it.y + o.dy - it.h / 2, w: it.w, h: it.h, ax: it.x, ay: it.y, ex: it.x + o.dx * 0.7, ey: it.y + o.dy * 0.7 } })
+for (const a of rects) for (const b of rects) if (a !== b) assert.ok(!crosses(a.ax, a.ay, a.ex, a.ey, b), `leader of ${a.id} crosses label ${b.id}`)
+assert.ok(Object.keys(cp).length >= 5, 'most of the column still gets labels')
 console.log('callout checks ok')
 // lift for a ship: the full cycle over the real hydraulic, ship and traffic sims, wired as in the app
 const liftCycle = (scale) => {

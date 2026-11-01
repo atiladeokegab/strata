@@ -196,7 +196,7 @@ export function TowerBridge(props) {
           </Part>
         ))}
       {shown('engine', st.stage) && <EngineRoom rt={rt} steam={era.steam} explode={[14, 6, 20]} />}
-      <TopView stage={st.stage} maxAngle={maxAngle} />
+      <TopView stage={st.stage} maxAngle={maxAngle} sim={bridgeHydraulics} />
       {st.stage >= 5 && <Traffic rt={rt} year={year} sim={bridgeHydraulics} maxAngle={maxAngle} />}
       {st.stage >= 5 && <LiftControls year={year} towerTop={towerTop} style={LABEL} />}
       {st.stage < 5 && (

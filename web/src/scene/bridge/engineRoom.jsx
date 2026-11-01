@@ -31,7 +31,8 @@ const mats = () =>
 const H = { x0: 20, x1: 44, z0: 146, z1: 166, wall: 9, t: 0.6 }
 const ENGINES = [150.5, 155.5] // z of each horizontal engine's axis
 const ENG_Y = 1.6, CRANK = 0.9, FLY_X = 33.5
-const ACC = { x: 40.5, z: 161, base: 0.5, travel: 9 }
+// accumulator tower: built against the east face (world x 16) of the south abutment's east tower, at street level
+const ACC = { x: 18.9, z: 143.8, base: -2.9, travel: 9, foot: -3.4 }
 const CHIMNEY = { x: 41.5, z: 149, h: 32 }
 
 // ---- Victorian dressing: arched bays between brick pilasters, stone dressings, gables, ventilator ----
@@ -100,10 +101,11 @@ function Shell() {
     slate.push(new THREE.ExtrudeGeometry(cap, { depth: vw + 0.6, bevelEnabled: false }).rotateY(Math.PI / 2).translate(vx0 - 0.3, vy + 0.95, cz))
 
     // accumulator tower: corner pilasters, tall arched lights, corbelled stone parapet, slate pyramid and finial
-    const A = 2.5, top = 18
-    brick.push(box(2 * A, top, 0.5, ACC.x, top / 2, ACC.z - A), box(2 * A, top, 0.5, ACC.x, top / 2, ACC.z + A))
-    brick.push(box(0.5, top, 2 * A, ACC.x - A, top / 2, ACC.z), box(0.5, top, 2 * A, ACC.x + A, top / 2, ACC.z))
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) brick.push(box(0.8, top, 0.8, ACC.x + sx * A, top / 2, ACC.z + sz * A))
+    const A = 2.5, top = 18, f = ACC.foot, th = top - f, ym = (top + f) / 2
+    brick.push(box(2 * A, th, 0.5, ACC.x, ym, ACC.z - A), box(2 * A, th, 0.5, ACC.x, ym, ACC.z + A))
+    brick.push(box(0.5, th, 2 * A, ACC.x - A, ym, ACC.z), box(0.5, th, 2 * A, ACC.x + A, ym, ACC.z))
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) brick.push(box(0.8, th, 0.8, ACC.x + sx * A, ym, ACC.z + sz * A))
+    stone.push(box(2 * A + 1, 1.2, 2 * A + 1, ACC.x, f + 0.6, ACC.z)) // plinth on the street
     for (const s of [-1, 1]) {
       archWindow(out, { w: 1.1, sill: wall + 1.5, spring: top - 2.6, depth: 0.5 }, atZ(ACC.x, ACC.z + s * A))
       archWindow(out, { w: 1.1, sill: wall + 1.5, spring: top - 2.6, depth: 0.5 }, atX(ACC.x + s * A, ACC.z))
@@ -166,7 +168,7 @@ function Machinery({ sim, steam }) {
         beam([H.x0, 0.6, 151], [x + 4.1, 0.6, 151], 0.22), beam([x + 4.1, 0.6, 151], [x + 4.1, -2, 151], 0.22),
         beam([x + 4.1, -2, 151], [x, -2, 146], 0.22), beam([x, -2, 146], [x, -2, 56], 0.22, 8),
       )
-    iron.push(beam([37, 0.6, ENGINES[0]], [37, 0.6, 151], 0.18), beam([37, 0.6, ENGINES[1]], [38, 0.6, ACC.z], 0.18))
+    iron.push(beam([37, 0.6, ENGINES[0]], [37, 0.6, ENGINES[1]], 0.18), beam([ACC.x, 0.6, 151], [ACC.x, 0.6, ACC.z + 1], 0.18)) // pumps on the main; branch to the ram
     return { iron: merge(iron), boiler: merge(boiler) }
   }, [])
   const wheel = useMemo(() => {

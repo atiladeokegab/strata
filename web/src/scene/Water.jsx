@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { Water as WaterSurface } from 'three/examples/jsm/objects/Water.js'
 import { useTerrain } from './Terrain.jsx'
+import { SUN_COLOR, SUN_DIR } from './look/sun.js'
 
 function Surface({ sun }) {
   const { meta } = useTerrain()
@@ -18,7 +19,7 @@ function Surface({ sun }) {
       textureWidth: 1024,
       textureHeight: 1024,
       waterNormals: normals,
-      sunColor: 0xfff1dc,
+      sunColor: SUN_COLOR,
       waterColor: 0x10302b, // the Thames is a muddy green-brown, not a pool blue
       distortionScale: 0.6,
       alpha: 1,
@@ -42,7 +43,7 @@ function Surface({ sun }) {
   return <primitive object={water} />
 }
 
-const SUN = [0.5, 0.6, 0.35]
+const SUN = SUN_DIR.toArray() // the Look's sun, so the glints sit under the real light
 
 /** The Thames at the LiDAR water level, with slow animated reflections. `sun` should match the scene's key light. */
 export default function Water({ sun = SUN }) {

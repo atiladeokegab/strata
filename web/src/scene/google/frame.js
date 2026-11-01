@@ -21,7 +21,8 @@ export const GAP = { floor: -12, deck: [12, 150], piers: [30, 62] } // [half wid
 const DISCARD = `
   if (vStrataWorld.y > ${GAP.floor.toFixed(1)} && (
     (abs(vStrataWorld.x) < ${GAP.deck[0].toFixed(1)} && abs(vStrataWorld.z) < ${GAP.deck[1].toFixed(1)}) ||
-    (abs(vStrataWorld.x) < ${GAP.piers[0].toFixed(1)} && abs(vStrataWorld.z) < ${GAP.piers[1].toFixed(1)}))) discard;`
+    (abs(vStrataWorld.x) < ${GAP.piers[0].toFixed(1)} && abs(vStrataWorld.z) < ${GAP.piers[1].toFixed(1)}) ||
+    (vStrataWorld.x > 14.0 && vStrataWorld.x < 49.5 && vStrataWorld.z > 138.5 && vStrataWorld.z < 171.5))) discard; // our engine house + accumulator (south bank)`
 
 // Adds the gap discard to a tile material (world-space test, so it holds however the tileset is placed).
 export function cutGap(material) {

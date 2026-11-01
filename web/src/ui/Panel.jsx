@@ -5,6 +5,7 @@ import { useTour, startTour, stopTour } from '../tour/tour.js'
 const Voice = lazy(() => import('./Voice'))
 import { StoryCard } from './TimelineMarks'
 import { readDocentStream } from '../lib/docentStream'
+import Archive from './Archive'
 
 const STATUS = { 'text-attested': 'Text-attested', measured: 'Measured', inferred: 'Inferred' }
 const label = (k) => k.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase())
@@ -236,6 +237,7 @@ export function Panel() {
         <PlaceCard />
         <StoryCard />
         <Inspector />
+        <Archive />
         <Docent />
       </div>
     </aside>

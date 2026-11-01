@@ -8,6 +8,7 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { beam, box, merge, M } from './geom.js'
 import { pbr } from '../look/textures.js'
+import { LITE } from '../look/tier.js'
 import { Part } from './Part.jsx'
 import { L } from './structures.jsx'
 import { OPEN_TIME_S } from './hydraulics.js'
@@ -35,14 +36,16 @@ const CHIMNEY = { x: 41.5, z: 149, h: 32 }
 
 // ---- Victorian dressing: arched bays between brick pilasters, stone dressings, gables, ventilator ----
 // Half-disc in the xy plane (top half), axis along z: the head of a round-arched window.
-const archHead = (r, depth) => new THREE.CylinderGeometry(r, r, depth, 14, 1, false, Math.PI / 2, Math.PI).rotateX(Math.PI / 2)
+const SEG = LITE ? 5 : 12 // arch segments; phones get the coarse arch
+const archHead = (r, depth) => new THREE.CylinderGeometry(r, r, depth, SEG, 1, false, Math.PI / 2, Math.PI).rotateX(Math.PI / 2)
 // One round-arched window in a wall facing z (rotY 0) or x (rotY π/2), centred at u along the wall.
 function archWindow(out, { w = 1.6, sill = 2.4, spring = 6.2, depth }, place) {
   const r = w / 2
   out.glass.push(place(box(w, spring - sill, depth + 0.1, 0, (sill + spring) / 2, 0)), place(archHead(r, depth + 0.1).translate(0, spring, 0)))
   // stone: sill, the arch ring as a thin half-annulus, keystone
   out.stone.push(place(box(w + 0.5, 0.22, depth + 0.35, 0, sill - 0.11, 0)))
-  const ring = new THREE.CylinderGeometry(r + 0.28, r + 0.28, depth + 0.2, 14, 1, false, Math.PI / 2, Math.PI).rotateX(Math.PI / 2)
+  if (LITE) return
+  const ring = new THREE.CylinderGeometry(r + 0.28, r + 0.28, depth + 0.2, SEG, 1, false, Math.PI / 2, Math.PI).rotateX(Math.PI / 2)
   out.stone.push(place(ring.translate(0, spring, 0)), place(box(0.36, 0.5, depth + 0.3, 0, spring + r + 0.18, 0)))
 }
 // placers: wall along x at z (faces ±z) or along z at x (faces ±x)
@@ -69,7 +72,7 @@ function Shell() {
       const x = x0 + i * bay
       for (const z of [z0, z1]) brick.push(box(0.7, wall - 1.1, t + 0.35, x, 1.1 + (wall - 1.1) / 2, z))
       if (i < bays) for (const z of [z0, z1]) archWindow(out, { depth: t }, atZ(x + bay / 2, z))
-      for (const z of [z0, z1]) for (let k = 0; k < 2; k++) stone.push(box(0.25, 0.3, 0.3, x + bay * (0.25 + k * 0.5), wall - 0.45, z + Math.sign(z - cz) * 0.4)) // corbels
+      if (!LITE) for (const z of [z0, z1]) for (let k = 0; k < 2; k++) stone.push(box(0.25, 0.3, 0.3, x + bay * (0.25 + k * 0.5), wall - 0.45, z + Math.sign(z - cz) * 0.4)) // corbels
     }
     // gable ends: brick triangle, stone coping on the rakes, kneelers, an oculus, three tall windows below
     for (const x of [x0, x1]) {
@@ -92,7 +95,7 @@ function Shell() {
     slate.push(new THREE.ExtrudeGeometry(roofShape, { depth: w - 0.2, bevelEnabled: false }).rotateY(Math.PI / 2).translate(x0 + 0.1, wall + 0.35, cz))
     const vx0 = x0 + 4, vx1 = x1 - 8, vw = vx1 - vx0, vy = wall + rise + 0.2
     brick.push(box(vw, 1.1, 2.4, (vx0 + vx1) / 2, vy + 0.4, cz))
-    for (let x = vx0 + 0.6; x < vx1; x += 1.2) out.glass.push(box(0.7, 0.6, 2.5, x, vy + 0.45, cz)) // louvres
+    if (!LITE) for (let x = vx0 + 0.6; x < vx1; x += 1.2) out.glass.push(box(0.7, 0.6, 2.5, x, vy + 0.45, cz)) // louvres
     const cap = new THREE.Shape([new THREE.Vector2(-1.7, 0), new THREE.Vector2(1.7, 0), new THREE.Vector2(0, 1)])
     slate.push(new THREE.ExtrudeGeometry(cap, { depth: vw + 0.6, bevelEnabled: false }).rotateY(Math.PI / 2).translate(vx0 - 0.3, vy + 0.95, cz))
 
@@ -108,7 +111,7 @@ function Shell() {
     stone.push(box(2 * A + 1, 0.3, 2 * A + 1, ACC.x, wall + 1.2, ACC.z)) // band at the eaves line
     stone.push(box(2 * A + 0.9, 0.4, 2 * A + 0.9, ACC.x, top - 0.6, ACC.z), box(2 * A + 1.4, 0.7, 2 * A + 1.4, ACC.x, top, ACC.z))
     slate.push(new THREE.ConeGeometry(3.9, 4.5, 4).rotateY(Math.PI / 4).translate(ACC.x, top + 2.6, ACC.z))
-    const finial = [beam([ACC.x, top + 4.6, ACC.z], [ACC.x, top + 6.4, ACC.z], 0.07, 6), new THREE.SphereGeometry(0.22, 8, 6).translate(ACC.x, top + 5.1, ACC.z)]
+    slate.push(beam([ACC.x, top + 4.6, ACC.z], [ACC.x, top + 6.4, ACC.z], 0.07, 6), new THREE.SphereGeometry(0.22, 8, 6).translate(ACC.x, top + 5.1, ACC.z)) // finial: dark lead, rides the slate draw call
 
     // chimney: stone base, tapering square brick shaft with stone bands, corbelled cap and iron rim
     const C = CHIMNEY
@@ -124,7 +127,7 @@ function Shell() {
     // made ground under the house, down to the river level
     const bank = box(30, 9, 26, 32, -4.5, 156)
     return {
-      brick: merge(brick), stone: merge(stone), slate: merge(slate), granite: bank, glass: merge(out.glass), iron: merge(finial),
+      brick: merge(brick), stone: merge(stone), slate: merge(slate), granite: bank, glass: merge(out.glass),
     }
   }, [])
   return (
@@ -134,7 +137,6 @@ function Shell() {
       <mesh geometry={g.slate} material={m.slate} castShadow />
       <mesh geometry={g.granite} material={m.granite} receiveShadow />
       <mesh geometry={g.glass} material={M.glass} />
-      <mesh geometry={g.iron} material={m.iron} />
     </>
   )
 }

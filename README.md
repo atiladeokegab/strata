@@ -65,7 +65,7 @@ First exhibit: **Tower Bridge**, London.
 
 Everything in this repo was built at the DevDay Community Hackathon London on 1 November 2026, by one person working with a team of AI coding agents.
 
-- **The terrain:** 1.5 km square of real Environment Agency 1 m LiDAR around the bridge, draped with aerial imagery, with a raw point-cloud view and the Thames at its surveyed level.
+- **The terrain:** 1.5 km square of real Environment Agency 1 m LiDAR around the bridge, draped with aerial imagery today and with the 1893 to 1896 OS London Town Plan before 1950, with a raw point-cloud view and the Thames at its surveyed level.
 - **The app shell:** a museum-of-places Home stage, a full-screen 3D stage, a calm glass panel with the place card, search, part inspector and docent, orbit, top-down and walk views, fly-to-part, a phone move pad, and a timeline with story markers and sourced story cards.
 - **The bridge:** a procedural Tower Bridge whose meshes are named by part id, from the towers' parapets, pinnacles and turrets down to the bascule girders, chains and anchor plates. It explodes into its parts, and its cladding x-rays to show the steel frame.
 - **The interiors:** the Victorian stairs and hydraulic lifts inside the towers.
@@ -145,7 +145,6 @@ flowchart LR
 ## Coming next
 
 - The surrounding city: buildings and Google 3D tiles. The slots and the on-screen Google credit are in the app.
-- Historic maps draped on the ground before 1950. The 1890s OS Town Plan is already mosaicked onto the LiDAR grid.
 - More places. The Home stage already lists Stonehenge, Hadrian's Wall and the Tower of London.
 
 ## Setup
@@ -179,7 +178,7 @@ Existing code, data and ideas this project stands on. File-by-file detail and li
 - **Google Photorealistic 3D Tiles:** © Google and its data providers. The attribution shows on screen whenever the tiles do. The tiles layer is coming next.
 - **Aerial imagery:** Esri World Imagery, © Esri, Maxar, Earthstar Geographics and the GIS User Community, under the Esri World Imagery terms of use.
 - **Sky and light:** [Poly Haven](https://polyhaven.com/a/evening_road_01_puresky) `evening_road_01_puresky`, CC0.
-- **Historic map:** OS London Town Plan, five feet to the mile, 1893 to 1896. Reproduced with the permission of the [National Library of Scotland](https://maps.nls.uk/) (CC BY).
+- **Historic map:** OS London Town Plan, five feet to the mile, 1893 to 1896. Reproduced with the permission of the [National Library of Scotland](https://maps.nls.uk/) (CC BY), draped on the ground before 1950.
 - **Archive photographs:** 10 photographs from Wikimedia Commons (public domain, CC0 and CC BY-SA 3.0), credited on screen and in THIRD_PARTY_NOTICES.md.
 - **History and dimensions:** each figure cites its own source in `data/places/tower-bridge.json`.
 - **3D:** [three.js](https://threejs.org/) (MIT), [React Three Fiber](https://github.com/pmndrs/react-three-fiber) (MIT) and [drei](https://github.com/pmndrs/drei) (MIT).

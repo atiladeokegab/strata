@@ -38,11 +38,23 @@ export function TowerDetails() {
       build={() => {
         const z0 = L.pierZ, hx = L.towerHalfX, hz = L.towerHalfZ, y0 = L.bodyTop + 0.35
         const stone = [], granite = [], glass = [], white = [], gold = []
+        // slender crocketed pinnacles: shaft, gabletted cap, tall needle with crockets up its angles
         const pinnacle = (x, z, big) => {
-          const s = big ? 1 : 0.8
-          stone.push(box(0.8 * s, 2.2 * s, 0.8 * s, x, y0 + 1.1 * s, z))
-          stone.push(cone(0.65 * s, 2.4 * s, 4, x, y0 + 2.2 * s + 1.2 * s, z))
-          gold.push(new THREE.SphereGeometry(0.16, 6, 4).translate(x, y0 + 4.7 * s, z))
+          const s = big ? 1 : 0.8, h = 2.6 * s, n = 4.2 * s
+          stone.push(box(0.7 * s, h, 0.7 * s, x, y0 + h / 2, z))
+          granite.push(box(0.9 * s, 0.2, 0.9 * s, x, y0 + h, z))
+          stone.push(cone(0.5 * s, n, 4, x, y0 + h + n / 2, z))
+          if (!LITE) for (const f of [0.25, 0.5, 0.75]) {
+            const r = 0.5 * s * (1 - f) * Math.SQRT1_2 + 0.08 // a cone corner sits on the axis-aligned diagonal after its π/4 turn
+            for (const [dx, dz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) stone.push(box(0.16, 0.16, 0.16, x + dx * r, y0 + h + n * f, z + dz * r))
+          }
+          gold.push(new THREE.SphereGeometry(0.14, 6, 4).translate(x, y0 + h + n + 0.1, z))
+        }
+        // string courses between the window tiers, and a corbel table under the parapet
+        for (const y of [20.8, 34.6]) granite.push(box(2 * hx + 0.5, 0.3, 2 * hz + 0.5, 0, y, z0))
+        if (!LITE) {
+          for (let x = -9.8; x <= 9.8; x += 1.4) for (const sz of [-1, 1]) granite.push(box(0.3, 0.45, 0.4, x, L.bodyTop - 0.6, z0 + sz * (hz + 0.35)))
+          for (let dz = -5.6; dz <= 5.6; dz += 1.4) for (const sx of [-1, 1]) granite.push(box(0.4, 0.45, 0.3, sx * (hx + 0.35), L.bodyTop - 0.6, z0 + dz))
         }
         // crenellated parapet between the turrets: a low wall with merlons on top
         for (const sz of [-1, 1]) {
@@ -67,11 +79,14 @@ export function TowerDetails() {
             const z = z0 + sz * (hz + 0.15)
             hood((u, v) => [x + u, y + v, z])
             glass.push(box(0.92, 0.92, 0.3, 0, 0, 0).rotateZ(Math.PI / 4).translate(x, y + 1.7, z0 + sz * (hz + 0.05)))
+            // tracery: mullion, transom and a projecting sill
+            granite.push(box(0.14, 3.4, 0.12, x, y, z0 + sz * (hz + 0.26)), box(1.3, 0.12, 0.12, x, y + 0.5, z0 + sz * (hz + 0.26)), box(1.7, 0.18, 0.4, x, y - 1.8, z0 + sz * (hz + 0.2)))
           }
           for (const dz of [-4, 0, 4]) for (const sx of [-1, 1]) {
             const x = sx * (hx + 0.15)
             hood((u, v) => [x, y + v, z0 + dz + u])
             glass.push(box(0.3, 0.92, 0.92, 0, 0, 0).rotateX(Math.PI / 4).translate(sx * (hx + 0.05), y + 1.7, z0 + dz))
+            granite.push(box(0.12, 3.4, 0.14, sx * (hx + 0.26), y, z0 + dz), box(0.12, 0.12, 1.3, sx * (hx + 0.26), y + 0.5, z0 + dz), box(0.4, 0.18, 1.7, sx * (hx + 0.2), y - 1.8, z0 + dz))
           }
         }
         // buttress ribs on the turret angles, stepping in halfway up

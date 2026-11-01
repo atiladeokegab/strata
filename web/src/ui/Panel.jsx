@@ -5,6 +5,7 @@ import { bridgeHydraulics } from '../scene/bridge/TowerBridge.jsx'
 import { useTour, startTour, stopTour } from '../tour/tour.js'
 import Voice from './Voice'
 import { readDocentStream } from '../lib/docentStream'
+import History from './History'
 
 const STATUS = { 'text-attested': 'Text-attested', measured: 'Measured', inferred: 'Inferred' }
 const label = (k) => k.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase())
@@ -229,6 +230,7 @@ export function Panel() {
       <div className="scroll">
         <PlaceCard />
         <Inspector />
+        <History />
         <Docent />
       </div>
     </aside>

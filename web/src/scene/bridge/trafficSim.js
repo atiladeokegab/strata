@@ -10,6 +10,7 @@ export const START_U = -140
 export const END_U = 140
 const ACCEL = 2 // m/s²
 const BRAKE = 3 // m/s², comfortable deceleration used to plan the stop
+const CLEAR_RUN = 40 // m beyond the leaf over which road users keep hurrying
 const CLEAR_V = 5 // m/s; shortcut: everyone on a leaf hurries off at least this fast so a lift starts within ~15 s (time-compressed like SIM_SPEED)
 
 // len (m), vmax (m/s), gap = minimum bumper-to-bumper spacing (m)
@@ -53,19 +54,22 @@ export function createTraffic(year, seed = 1) {
 }
 
 // Advance dt seconds. closed = signals red: nothing that has not reached its gate may cross it;
-// anything already past the gate carries on and clears the bascule.
-export function stepTraffic(t, dt, closed) {
+// anything already past the gate carries on and clears the bascule. hurry > 1 runs the clock of
+// those clearing a leaf that much faster (the film's fast lift); everyone else keeps real time.
+export function stepTraffic(t, dt, closed, hurry = 1) {
   for (const L of t.lanes) {
     let lead = null
     for (const v of L.list) {
       const ty = TYPES[v.type]
       let limit = lead ? lead.u - TYPES[lead.type].len - ty.gap : Infinity
       if (closed && v.u <= STOP_U) limit = Math.min(limit, STOP_U)
-      const hurry = closed && v.u > -BASCULE_U && v.u - ty.len < BASCULE_U ? 1.5 : 1
-      const want = Math.min(hurry > 1 ? Math.max(ty.vmax * hurry, CLEAR_V) : ty.vmax * v.pace, Math.sqrt(2 * BRAKE * Math.max(0, limit - v.u)))
-      v.v = want > v.v ? Math.min(want, v.v + ACCEL * dt) : want
+      // past the gate and not yet clear of the far tower: hurry, so a slow cart ahead never holds a leaf
+      const clearing = closed && v.u > STOP_U && v.u - ty.len < BASCULE_U + CLEAR_RUN
+      const vdt = clearing ? dt * hurry : dt
+      const want = Math.min(clearing ? Math.max(ty.vmax * 1.5, CLEAR_V) : ty.vmax * v.pace, Math.sqrt(2 * BRAKE * Math.max(0, limit - v.u)))
+      v.v = want > v.v ? Math.min(want, v.v + ACCEL * vdt) : want
       // hard constraint on top of the braking curve: never into the vehicle ahead or past a closed gate
-      v.u = Math.max(v.u, Math.min(v.u + v.v * dt, limit))
+      v.u = Math.max(v.u, Math.min(v.u + v.v * vdt, limit))
       lead = v
     }
     while (L.list.length && L.list[0].u - TYPES[L.list[0].type].len > END_U) L.list.shift()

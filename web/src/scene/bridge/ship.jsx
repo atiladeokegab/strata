@@ -10,7 +10,7 @@ import { beam, box, merge } from './geom.js'
 import { L } from './structures.jsx'
 import { pbr } from '../look/textures.js'
 import { createShip, stepShip, CRUISE } from './shipSim.js'
-import { liftSpeed } from './liftSequence.js'
+import { lift, liftSpeed, applyShipWarp } from './liftSequence.js'
 import { vesselForYear, leafInput } from './vessels.js'
 import { RiverCraft } from './river.jsx'
 
@@ -318,6 +318,7 @@ export function Ship({ rt, year, maxAngle }) {
   useFrame(({ clock }, dt) => {
     dt = Math.min(dt, 0.1)
     const s = shipState
+    applyShipWarp(lift, s, CRUISE)
     const sdt = dt * liftSpeed()
     stepShip(s, leafInput(vessel, rt.sim.angle / maxAngle), sdt)
     const t = clock.elapsedTime

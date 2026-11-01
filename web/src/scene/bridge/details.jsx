@@ -108,6 +108,14 @@ export function TowerDetails() {
           white.push(new THREE.ExtrudeGeometry(shieldShape(), { depth: 0.2, bevelEnabled: false }).translate(0, y, sz > 0 ? zf + 0.2 : zf - 0.4))
           gold.push(box(0.28, 2.4, 0.1, 0, y - 0.1, zf + sz * 0.45), box(1.6, 0.28, 0.1, 0, y + 0.55, zf + sz * 0.45))
         }
+        // gold leaf: shields on the turrets' river faces, cresting up the roof hips, gilt dormer finials
+        const crest = new THREE.ExtrudeGeometry(shieldShape(), { depth: 0.08, bevelEnabled: false }).scale(0.6, 0.6, 1)
+        for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+          const t = sx * (sz > 0 ? Math.PI / 8 : (7 * Math.PI) / 8) // the octagon face nearest the river
+          gold.push(crest.clone().rotateY(t).translate(sx * 12 + 3.03 * Math.sin(t), 30, z0 + sz * 9 + 3.03 * Math.cos(t)))
+          if (!LITE) for (let f = 0.15; f < 0.9; f += 0.1) gold.push(cone(0.1, 0.45, 4, sx * hx * (1 - f), L.bodyTop + 7 * f + 0.2, z0 + sz * hz * (1 - f)))
+        }
+        for (const sz of [-1, 1]) for (const x of [-5, 5]) gold.push(new THREE.SphereGeometry(0.13, 6, 4).translate(x, L.bodyTop + 6.5, z0 + sz * (hz - 2.2)))
         return { stone, granite, glass, white, gold }
       }}
     />

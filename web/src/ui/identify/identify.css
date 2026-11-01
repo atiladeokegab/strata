@@ -1,0 +1,12 @@
+.id-open { display: inline-block; }
+.id-stage { position: relative; width: fit-content; max-width: 100%; margin: 0 auto; border-radius: 10px; overflow: hidden; background: #000; }
+.id-stage:not(:has(img)) { min-height: 200px; min-width: 280px; }
+.id-photo { display: block; max-width: 100%; max-height: 66vh; }
+.id-box { position: absolute; padding: 0; border: 2px solid #00d46a; border-radius: 4px; background: rgba(0, 212, 106, 0.08); cursor: pointer; }
+.id-box span { position: absolute; left: 0; top: 0; padding: 1px 6px; border-radius: 0 0 4px 0; background: #00d46a; color: #08140d; font-size: 0.75rem; white-space: nowrap; }
+.id-box:hover, .id-box:focus-visible, .id-on { background: rgba(0, 212, 106, 0.28); outline: none; }
+.id-on { border-color: #fff; }
+.id-on span { background: #fff; }
+.id-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; }
+.id-foot p { margin: 0; flex: 1 1 60%; }
+.id-fly { padding: 0.5em 1.2em; border-radius: 8px; border: 0; background: #f4f4f5; color: #141416; font: inherit; cursor: pointer; }

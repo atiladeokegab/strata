@@ -15,11 +15,12 @@ import * as D from './details.jsx'
 import { ConstructionSite } from './construction.jsx'
 import { EngineRoom } from './engineRoom.jsx'
 import { Ship } from './ship.jsx'
+import { Stairs, Lifts } from './interiors.jsx'
 
 // The live sim state, for any panel that wants to show pressure or stored volume. Read-only.
 export const bridgeHydraulics = createHydraulics()
 
-const INTERNAL = /^(counterweight|pivot|hydraulic-engine|accumulator|engine-room)/
+const INTERNAL = /^(counterweight|pivot|hydraulic-engine|accumulator|engine-room|stairs|lift|north-tower|south-tower)/
 
 const dim = (place, id, key, fallback) => place?.parts?.find((p) => p.id === id)?.dims?.[key]?.value ?? fallback
 
@@ -48,14 +49,27 @@ function Half({ side, rt, st, towerTop }) {
       )}
       {shown('frame', st.stage) && (
         <Part id={towerId} rt={rt} explode={[0, 4, -14]} clipY={rising(st, 1, S.L.pierTop, towerTop)}>
-          {!shown('cladding', st.stage) || st.stage === 4 ? <S.TowerFrame /> : null}
+          <S.TowerFrame />
           <S.FixedDeck />
           <D.DeckMarkings />
         </Part>
       )}
-      {/* same part id: cladding rises over the finished frame without clipping the steel */}
+      {/* interiors ride with the frame; separate Parts so they are clickable through the x-rayed shell */}
+      {shown('frame', st.stage) && (
+        <>
+          <Part id={id('stairs')} rt={rt} explode={[0, 4, -14]} clipY={rising(st, 1, S.L.pierTop, towerTop)}>
+            <Stairs />
+          </Part>
+          <Part id={id('lift')} rt={rt} explode={[0, 4, -14]} clipY={rising(st, 1, S.L.pierTop, towerTop)}>
+            <Lifts />
+          </Part>
+        </>
+      )}
+      {/* same part id: cladding rises; exploded, the stone shell lifts clear of the steel skeleton.
+          the frame is always drawn so it shows through the x-rayed shell */}
+      {/* cladding rises over the finished frame without clipping the steel */}
       {shown('cladding', st.stage) && (
-        <Part id={towerId} rt={rt} explode={[0, 4, -14]} clipY={rising(st, 4, S.L.pierTop, towerTop + 2)}>
+        <Part id={towerId} rt={rt} explode={[0, 30, -14]} xray clipY={rising(st, 4, S.L.pierTop, towerTop + 2)}>
           <S.TowerCladding topY={towerTop} />
           <D.TowerDetails />
         </Part>

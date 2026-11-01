@@ -22,7 +22,7 @@ export const L = {
   walkY: 35,
   walkH: 4.3,
   spanEnd: -138.5, // side span meets the shore abutment
-  rackR: 6,
+  rackR: 4, // racks stay inside the pier at 86° (6 poked out of its inner face); pinion follows
 }
 
 // ---- piers and cofferdams ----

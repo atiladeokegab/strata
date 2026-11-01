@@ -2,7 +2,8 @@
 
 uv run --with pyproj --with pillow --with numpy python scripts/history/fetch_1890s.py  ->  web/public/terrain/tower-bridge/color-1890s.jpg
 Same bbox and 1 m pixels as color.jpg (row 0 north), so Terrain.jsx can swap it in for years before 1950.
-Tiles: National Library of Scotland, https://maps.nls.uk/os/townplans-england/ (CC BY 4.0).
+Tiles: OS London Five-foot to the mile 1893-96, "Reproduced with the permission of the National Library of Scotland"
+(CC-BY, https://maps.nls.uk/copyright.html); credit it on screen with a link to https://maps.nls.uk/.
 """
 import io
 import json

@@ -16,7 +16,7 @@ export const FRAME_ROTATION_Y = Math.PI + THREE.MathUtils.degToRad(ORIGIN.bearin
 
 // Google's own bridge is cut out so ours stands in the gap: a narrow box along the deck and side spans, and a wider
 // one over the piers and towers. Only above the floor, so the tiles' Thames (at about y = -13.5) stays.
-export const GAP = { floor: -12, deck: [12, 140], piers: [30, 62] } // [half width x, half length z], m
+export const GAP = { floor: -12, deck: [12, 150], piers: [30, 62] } // [half width x, half length z], m; deck reaches past the shore abutments (Google's stand at 136-143)
 
 const DISCARD = `
   if (vStrataWorld.y > ${GAP.floor.toFixed(1)} && (

@@ -10,7 +10,7 @@ import { Part } from './Part.jsx'
 import { BasculeDrive } from './BasculeDrive.jsx'
 import { steelColour } from './geom.js'
 import { createHydraulics, stepHydraulics, SIM_SPEED } from './hydraulics.js'
-import { stageForYear, shown, eraFor } from './stages.js'
+import { stageForYear, shown, eraFor, resolveYears } from './stages.js'
 import { containersOf } from './xray.js'
 import * as H from './history.jsx'
 import * as S from './structures.jsx'
@@ -137,8 +137,9 @@ export function TowerBridge(props) {
   const exploded = useStore((s) => s.exploded)
   const select = useStore((s) => s.select)
   const gl = useThree((s) => s.gl)
-  const st = stageForYear(year)
-  const era = eraFor(year)
+  const years = useMemo(() => resolveYears(place?.events), [place])
+  const st = stageForYear(year, years.stages)
+  const era = eraFor(year, years.eras)
   const towerTop = S.L.hw + dim(place, 'north-tower', 'height', 65)
   const maxAngle = (dim(place, 'bascule-north', 'max_angle', 86) * Math.PI) / 180
 

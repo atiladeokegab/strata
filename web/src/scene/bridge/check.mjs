@@ -1,7 +1,8 @@
 // Self-check for the pure bridge logic: `node web/src/scene/bridge/check.mjs`
 import assert from 'node:assert/strict'
 import { createHydraulics, stepHydraulics, OPEN_TIME_S, SIM_SPEED, BOLT_SETTLE_S, BOLT_TRAVEL_S, DRAW_UP, LIFT_DRAW, createCars, stepCars, carHeight } from './hydraulics.js'
-import { stageForYear, shown, ERAS, eraFor } from './stages.js'
+import { stageForYear, shown, ERAS, eraFor, resolveYears } from './stages.js'
+import { readFileSync } from 'node:fs'
 import { containersOf } from './xray.js'
 import { createShip, stepShip, WAIT_X, HOLD_X } from './shipSim.js'
 import { vesselForYear, needsLift, leafInput, CLEARANCE } from './vessels.js'
@@ -62,6 +63,33 @@ assert.ok(eraFor(1975).steam && !eraFor(1976).steam)
 assert.ok(!eraFor(1989).nightLighting && eraFor(1990).nightLighting)
 assert.ok(eraFor(2012).olympics && !eraFor(2011).olympics && !eraFor(2013).olympics)
 assert.ok(!eraFor(2013).glassFloor && eraFor(2014).glassFloor)
+// data is law: a sourced event year overrides the constant; no event, or an inferred one, falls back
+const src = ['s']
+const fake = resolveYears([
+  { year: 1911, title: 'High-level walkways close', sources: src },
+  { year: 1975, title: 'Electric power replaces steam', sources: src },
+  { year: 2015, title: 'Glass floor panels installed', sources: src },
+  { year: 1885, title: 'Stage 1: river foundations begin', sources: src },
+  { year: 1895, title: 'Stage 9: tested and opened', sources: src },
+  { year: 1989, title: 'Floodlighting installed', sources: src, status: 'inferred' },
+  { year: 2011, title: 'Olympic rings hung', sources: [] },
+])
+assert.deepEqual(fake.eras.walkwaysClosed, { year: 1911, status: 'sourced' })
+assert.ok(eraFor(1910, fake.eras).walkwayOpen && !eraFor(1911, fake.eras).walkwayOpen)
+assert.ok(eraFor(1975, fake.eras).steam === false && !eraFor(2014, fake.eras).glassFloor && eraFor(2015, fake.eras).glassFloor)
+assert.deepEqual(fake.eras.nightLighting, { year: ERAS.nightLighting, status: 'inferred' }, 'inferred event is not law')
+assert.deepEqual(fake.eras.olympics, { year: ERAS.olympics, status: 'inferred' }, 'unsourced event is not law')
+assert.deepEqual(fake.eras.walkwaysReopened, { year: ERAS.walkwaysReopened, status: 'inferred' })
+assert.ok(fake.stages[0].from === 1885 && fake.stages[0].status === 'sourced' && fake.stages[1].status === 'inferred')
+assert.ok(fake.stages[5].from === 1895 && fake.stages[4].to === 1894 && stageForYear(1894, fake.stages).stage === 4)
+// an out-of-order sourced stage year is refused, so stageForYear stays monotonic
+assert.equal(resolveYears([{ year: 1900, title: 'river foundations begin', sources: src }]).stages[0].status, 'inferred')
+// the real data: every threshold it dates is sourced and agrees with the year it gives
+const tb = JSON.parse(readFileSync(new URL('../../../../data/places/tower-bridge.json', import.meta.url)))
+const real = resolveYears(tb.events)
+for (const k of ['walkwaysClosed', 'electricDrive', 'walkwaysReopened']) assert.equal(real.eras[k].status, 'sourced', k)
+assert.ok(real.stages[0].status === 'sourced' && real.stages[5].status === 'sourced')
+assert.deepEqual(resolveYears(null).eras.glassFloor, { year: ERAS.glassFloor, status: 'inferred' })
 // traffic: gates hold the queue, spacing holds, the bascules clear, the queue moves on green
 for (const year of [1900, 2026]) {
   const t = createTraffic(year, 7)

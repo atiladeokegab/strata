@@ -7,6 +7,7 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { beam, box, merge, M } from './geom.js'
 import { walkwayTruss, walkwayInfill } from './walkway.js'
+import { LITE } from '../look/tier.js'
 
 export const L = {
   hw: -9, // Thames high water below the roadway
@@ -140,7 +141,7 @@ export function TowerCladding({ topY }) {
       for (let k = 0; k < 8; k++) {
         const t = (k * Math.PI) / 4 + Math.PI / 8, s = Math.sin(t), c = Math.cos(t)
         glass.push(box(0.75, 1.7, 0.2, 0, 0, 0).rotateY(t).translate(x + 2.7 * s, 45.9, z + 2.7 * c)) // arcade openings, recessed in the faces
-        if (k % 2) continue
+        if (k % 2 || LITE) continue // phones: no lucarnes
         const lx = x + 2.15 * s, lz = z + 2.15 * c // lucarnes on four faces of the spire
         slate.push(box(0.9, 1.4, 0.9, 0, 0, 0).rotateY(t).translate(lx, 49.3, lz), new THREE.ConeGeometry(0.72, 1.3, 4).rotateY(t + Math.PI / 4).translate(lx, 50.65, lz))
         glass.push(box(0.5, 0.9, 0.2, 0, 0, 0).rotateY(t).translate(x + 2.62 * s, 49.2, z + 2.62 * c))

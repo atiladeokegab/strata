@@ -35,9 +35,9 @@ export function Landmarks() {
               <button type="button" onClick={(e) => { e.stopPropagation(); select(p.id) }}
                 style={{
                   all: 'unset', cursor: 'pointer', whiteSpace: 'nowrap', font: '500 12px/1.2 Inter, system-ui, sans-serif',
-                  padding: '4px 9px', borderRadius: 999, color: on ? '#1a1408' : '#fff',
-                  background: on ? 'rgba(255,210,122,0.95)' : 'rgba(18,22,28,0.62)', backdropFilter: 'blur(6px)',
-                  border: '1px solid rgba(255,255,255,0.35)', boxShadow: '0 2px 10px rgba(0,0,0,0.25)',
+                  padding: '4px 10px', borderRadius: 999, color: on ? '#fff' : '#0d0d0d',
+                  background: on ? '#0d0d0d' : 'rgba(255,255,255,0.78)', backdropFilter: 'blur(20px) saturate(180%)', WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+                  border: `1px solid ${on ? '#0d0d0d' : 'rgba(0,0,0,0.08)'}`, boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.08)',
                 }}
                 aria-label={`${p.name}: show its history`}>
                 {p.name}

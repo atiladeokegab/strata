@@ -248,8 +248,8 @@ export function Panel() {
         <StoryCard />
         <Inspector />
         <Archive />
-        <Docent />
       </div>
+      <Docent />
     </aside>
   )
 }

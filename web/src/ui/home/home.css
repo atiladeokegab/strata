@@ -4,12 +4,12 @@
 .home-stage { position: absolute; inset: 0; }
 .home-stage canvas { display: block; }
 .home-copy, .home-next { position: relative; z-index: 1; }
-.home-copy { grid-column: 1; align-self: center; max-width: 28rem; }
+.home-copy { grid-column: 1; align-self: center; width: 100%; max-width: 30rem; }
 .home-eyebrow, .home-next-label { margin: 0 0 var(--s3); font: 500 11px/1.2 var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .home-title { margin: 0; font-weight: 400; }
 .home-word { display: block; font: 600 clamp(48px, 6vw, 72px)/1 var(--sans); letter-spacing: -.035em; }
 .home-sub { display: block; margin-top: var(--s4); font: 400 var(--t3)/1.55 var(--sans); color: var(--muted); max-width: 26rem; }
-.home-actions { margin-top: var(--s5); display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; }
+.home-actions { margin-top: var(--s5); display: flex; flex-wrap: nowrap; gap: var(--s2); align-items: center; }
 .home-story, .home-enter { display: inline-flex; align-items: center; gap: var(--s2); height: 44px; padding: 0 var(--s5); border-radius: var(--pill);
   font: 500 var(--t2)/1 var(--sans); transition: background .15s, border-color .15s; }
 .home-story { border: 0; background: var(--ink); color: var(--on-ink); }
@@ -30,4 +30,6 @@
   .home-copy { grid-row: 1; align-self: start; }
   .home-next { grid-row: 3; }
   .home-next ul { grid-template-columns: 1fr; }
+  .home-actions { flex-wrap: wrap; }
+  .home-next-label { display: inline-block; padding: var(--s1) var(--s3); border-radius: var(--pill); background: var(--surface); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); }
 }

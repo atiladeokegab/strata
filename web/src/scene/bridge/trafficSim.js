@@ -162,3 +162,8 @@ export function stepTraffic(t, dt, closed, hurry = 1) {
 // Vehicles and pedestrians on a bascule leaf or past the stop line and committed to one.
 export const onLeaves = (t) =>
   t.lanes.reduce((n, L) => n + L.list.filter((v) => v.u > STOP_U && v.u - TYPES[v.type].len < BASCULE_U).length, 0)
+
+// Walk mode: a vehicle whose body comes within CAM_CLEAR m (ground plan) of the camera is hidden,
+// so the walker's eye never ends up inside a bus. cam is {x, z} in the bridge frame, or null.
+export const CAM_CLEAR = 4
+export const nearCam = (cam, x, z, halfLen = 0) => !!cam && Math.max(0, Math.hypot(x - cam.x, z - cam.z) - halfLen) < CAM_CLEAR

@@ -9,6 +9,7 @@ import { beam, box, merge, M } from './geom.js'
 import { walkwayTruss, walkwayInfill, walkwayJunctions } from './walkway.js'
 import { LITE } from '../look/tier.js'
 import { abutmentTower, abutmentArch } from './abutment.js'
+import { useHomeDisc } from './homeDisc.js'
 
 export const L = {
   hw: -9, // Thames high water below the roadway
@@ -405,6 +406,7 @@ const slope = (w, h, x, yTop0, z0, z1, drop) => {
 
 // ramp 0..1: the ramp embankment and parapets rise out of the street; road: road surface laid
 export function Abutment({ side = 'north', ramp = 1, road = true }) {
+  const disc = useHomeDisc() // Home plinth: the ramp would hang off its edge, so the bridge ends at the abutment
   const g = useMemo(() => {
     const z = L.spanEnd - 5, drop = STREET_DROP[side]
     const z0 = z - 5, z1 = z0 - RAMP
@@ -414,17 +416,17 @@ export function Abutment({ side = 'north', ramp = 1, road = true }) {
       // 6 m towers at x=±13 (outer faces at |x| 16); the south's local -x is world east, where the accumulator tower stands
       abutmentTower(sx, z, t, L, { blind: side === 'south' && sx < 0 })
       // ramp parapets: stone walls down to below the street, 1.1 m above the road
-      bank.push(slope(0.6, 1.1 + 14, sx * (ROAD_HALF + 0.3), 1.1, z0, z1, drop))
+      if (!disc) bank.push(slope(0.6, 1.1 + 14, sx * (ROAD_HALF + 0.3), 1.1, z0, z1, drop))
     }
     abutmentArch(z, t)
     road.push(box(2 * ROAD_HALF, 1, 10, 0, -0.5, z)) // under the arch
     stone.push(box(2 * ROAD_HALF + 2, -1 - L.hw, 10, 0, (L.hw - 1) / 2, z)) // solid fill under it
-    road.push(slope(2 * ROAD_HALF, 1, 0, 0, z0, z1, drop))
-    bank.push(slope(2 * ROAD_HALF, 13, 0, -1, z0, z1, drop)) // embankment fill under the ramp
+    if (!disc) road.push(slope(2 * ROAD_HALF, 1, 0, 0, z0, z1, drop))
+    if (!disc) bank.push(slope(2 * ROAD_HALF, 13, 0, -1, z0, z1, drop)) // embankment fill under the ramp
     // openings read as dark iron: one call. LITE: granite trim into the stone, no gilt finials
     const trim = LITE ? { stone: merge([...stone, ...t.granite]) } : { stone: merge(stone), granite: merge(t.granite), gold: merge(t.gold) }
-    return { ...trim, slate: merge(slate), road: merge(road), iron: merge([...t.iron, ...t.windows, ...t.doors]), bank: merge(bank) }
-  }, [side])
+    return { ...trim, slate: merge(slate), road: merge(road), iron: merge([...t.iron, ...t.windows, ...t.doors]), bank: bank.length ? merge(bank) : null }
+  }, [side, disc])
   const foot = -STREET_DROP[side] // street level: the bank shows above it in step with the works
   return (
     <>
@@ -434,9 +436,11 @@ export function Abutment({ side = 'north', ramp = 1, road = true }) {
       {g.gold && <mesh geometry={g.gold} material={M.gold} />}
       <mesh geometry={g.iron} material={M.iron} castShadow />
       {/* the bank grows up out of the street as the ramp works go on */}
-      <group position-y={foot} scale-y={Math.max(ramp, 0.001)}>
-        <mesh geometry={g.bank} material={M.stone} position-y={-foot} castShadow receiveShadow />
-      </group>
+      {g.bank && (
+        <group position-y={foot} scale-y={Math.max(ramp, 0.001)}>
+          <mesh geometry={g.bank} material={M.stone} position-y={-foot} castShadow receiveShadow />
+        </group>
+      )}
       {road && <mesh geometry={g.road} material={M.road} receiveShadow />}
     </>
   )

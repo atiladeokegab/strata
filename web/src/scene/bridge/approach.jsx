@@ -7,6 +7,7 @@ import { box } from './geom.js'
 import { L, STREET_DROP, RAMP } from './structures.jsx'
 import { Meshes, kit, footways, lamp, lanternFor } from './details.jsx'
 import { KERB_X, KERB_W, FOOTWAY_H } from './roadway.js'
+import { useHomeDisc } from './homeDisc.js'
 
 const RAMP_PARAPET = 9 // inner face of the ramp's stone parapet (structures.jsx ROAD_HALF)
 const WALL_TOP = 1.1 // parapet top above the ramp road
@@ -22,15 +23,17 @@ const onRamp = (w, h, x, z0, z1, drop, y0 = 0) => {
 }
 
 export function RampDetails({ side = 'north', era }) {
+  const disc = useHomeDisc() // Home plinth: no ramp (structures.jsx Abutment), so only the footways under the arch
   return (
     <Meshes
-      deps={[side, era?.blackout, era?.gasLamps]}
+      deps={[side, era?.blackout, era?.gasLamps, disc]}
       materials={lanternFor(era)}
       build={() => {
         const o = kit(), drop = STREET_DROP[side]
         const z0 = L.spanEnd - 10, z1 = z0 - RAMP, w = RAMP_PARAPET - KERB_X - KERB_W
         const roadY = (z) => (-drop * (z0 - z)) / RAMP
         footways(o, z0, L.spanEnd, era) // through the gap between the abutment towers
+        if (disc) return o
         for (const sx of [-1, 1]) {
           const kx = sx * (KERB_X + KERB_W / 2)
           o.granite.push(onRamp(KERB_W, FOOTWAY_H, kx, z0, z1, drop))

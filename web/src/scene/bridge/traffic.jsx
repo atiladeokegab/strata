@@ -10,7 +10,7 @@ import * as THREE from 'three'
 import { useStore } from '../../store.js'
 import { Part } from './Part.jsx'
 import { box, merge, M } from './geom.js'
-import { createTraffic, stepTraffic, onLeaves, roadY, streetProfile, eraOf, hasTram, tramZ, END_U, RAMP_FOOT, TYPES, GATE_U, POST_X, POST_Z, POST_W } from './trafficSim.js'
+import { createTraffic, stepTraffic, onLeaves, roadY, streetProfile, eraOf, hasTram, tramZ, nearCam, END_U, RAMP_FOOT, TYPES, GATE_U, POST_X, POST_Z, POST_W } from './trafficSim.js'
 import { LITE } from '../look/tier.js'
 import { STREET_DROP } from './structures.jsx'
 import { FOOTWAY_H } from './roadway.js'
@@ -148,9 +148,13 @@ export function Traffic({ rt, year, sim, maxAngle }) {
   }, [t])
 
   const disc = useHomeDisc()
-  useFrame((_, dt) => {
+  const camL = useMemo(() => new THREE.Vector3(), [])
+  useFrame(({ camera }, dt) => {
     const g = gate.current
     const store = useStore.getState()
+    // walk mode: the camera in the bridge frame the instances are placed in, to clear vehicles around it
+    const host = Object.values(meshes.current).find(Boolean)?.parent
+    const cam = store.view === 'walk' && host ? host.worldToLocal(camera.getWorldPosition(camL)) : null
     const io = { dt, onLeaves: onLeaves(t), angle: sim.angle, maxAngle, locked: sim.locked, shipX: shipState.x, shipSailing: shipState.sailing }
     const lever = stepLift(lift, io)
     if (lever !== null && lever !== store.bascule) store.setBascule(lever)
@@ -165,7 +169,7 @@ export function Traffic({ rt, year, sim, maxAngle }) {
         const m = meshes.current[v.type]
         if (!m || n[v.type] >= CAP[v.type] || (LITE && PEOPLE.has(v.type) && v.id % 5 > 1)) continue
         const z = L.dir * (v.u - TYPES[v.type].len / 2)
-        if (offDisc(disc, L.x, z, TYPES[v.type].len / 2)) continue
+        if (offDisc(disc, L.x, z, TYPES[v.type].len / 2) || nearCam(cam, L.x, z, TYPES[v.type].len / 2)) continue
         const y = roadY(z, STREET_DROP, sp)
         // pitch with the road: nose down (+x in the body frame) when it falls ahead
         o.position.set(L.x, y + (PEOPLE.has(v.type) && Math.abs(z) <= RAMP_FOOT ? FOOTWAY_H : 0), z)
@@ -175,7 +179,7 @@ export function Traffic({ rt, year, sim, maxAngle }) {
       }
     })
     const zt = t.tram && tramZ(t.tram.time) + TYPES.tram.len / 2 // tram centre, on the crown of the south street
-    if (zt && zt - TYPES.tram.len / 2 < END_U && meshes.current.tram && !offDisc(disc, 0, zt, TYPES.tram.len / 2)) {
+    if (zt && zt - TYPES.tram.len / 2 < END_U && meshes.current.tram && !offDisc(disc, 0, zt, TYPES.tram.len / 2) && !nearCam(cam, 0, zt, TYPES.tram.len / 2)) {
       const sp = street.current?.[0], y = roadY(zt, STREET_DROP, sp)
       o.position.set(0, y, zt)
       o.rotation.set(Math.atan(y - roadY(zt - 1, STREET_DROP, sp)), Math.PI, 0, 'YXZ') // faces north, like a dir -1 lane

@@ -16,7 +16,7 @@ import { createShip, stepShip, WAIT_X, HOLD_X, CRUISE } from './shipSim.js'
 import { leverAfter, leverForKey, leverLabel, KEY_STEP } from './drive.js'
 import { vesselForYear, needsLift, leafInput, CLEARANCE } from './vessels.js'
 import { createRiver, stepRiver, gap, CRAFT, CLEAR } from './riverSim.js'
-import { createTraffic, stepTraffic, onLeaves, roadY, streetProfile, RAMP_FOOT, TYPES, STOP_U, BASCULE_U, START_U, END_U, ABUT_Z, RAMP_LEN, POST_X, POST_Z, POST_W, GATE_U, tramZ, TRAM_STOP, TRAM_OUT, TRAM_CYCLE } from './trafficSim.js'
+import { createTraffic, stepTraffic, onLeaves, roadY, streetProfile, RAMP_FOOT, TYPES, STOP_U, BASCULE_U, START_U, END_U, ABUT_Z, RAMP_LEN, POST_X, POST_Z, POST_W, GATE_U, tramZ, TRAM_STOP, TRAM_OUT, TRAM_CYCLE, nearCam, CAM_CLEAR } from './trafficSim.js'
 import { createLift, liftForShip, stepLift, liftSpeed, setLiftTimeScale, applyShipWarp, gatesClosed, heldLever, PASSED_X, FILM_SCALE } from './liftSequence.js'
 
 const MAX = (86 * Math.PI) / 180
@@ -108,6 +108,15 @@ assert.equal(resolveYears([{ year: 1900, title: 'river foundations begin', sourc
   assert.ok(home > 0 && home === ours, `homeDisc.js HOME_DISC_R ${ours} != Home.jsx PLINTH_R ${home}`)
   assert.ok(END_U + 20 > home, 'street runs past the disc, so the clip is needed')
   console.log(`home disc ok (r ${home} m, street to ${END_U} m)`)
+}
+// Walk mode clears vehicles around the camera (next17: the eye ended up inside two buses at the south end).
+{
+  const bus = TYPES.bus.len / 2, cam = { x: -3.5, z: 160 }
+  assert.ok(nearCam(cam, -3.5, 160 + bus + CAM_CLEAR - 0.5, bus), 'a bus whose tail is 3.5 m from the eye is hidden')
+  assert.ok(nearCam(cam, -3.5, 160, bus), 'the eye inside a bus hides it')
+  assert.ok(!nearCam(cam, -3.5, 160 + bus + CAM_CLEAR + 0.5, bus), 'a bus 4.5 m off stays')
+  assert.ok(!nearCam(null, -3.5, 160, bus), 'outside walk mode nothing is hidden')
+  console.log(`walk clearance ok (${CAM_CLEAR} m)`)
 }
 const tb = JSON.parse(readFileSync(new URL('../../../../data/places/tower-bridge.json', import.meta.url)))
 const real = resolveYears(tb.events)
@@ -479,7 +488,7 @@ console.log('geom materials untextured, all kinded ok')
   const STUB = {
     react: `const H={useMemo:(f)=>f(),useRef:(v=null)=>({current:v}),useState:(v)=>[typeof v==='function'?v():v,()=>{}],useEffect(){},useLayoutEffect(){},useDebugValue(){},useCallback:(f)=>f,useSyncExternalStore:(s,get)=>get(),useContext:()=>({}),createContext:()=>({}),memo:(c)=>c,use:()=>({}),Suspense:()=>null};export const {useMemo,useRef,useState,useEffect,useLayoutEffect,useDebugValue,useCallback,useSyncExternalStore,useContext,createContext,memo,use,Suspense}=H;export default H`,
     'react/jsx-runtime': `export const Fragment=Symbol('F'),jsx=(type,props)=>({type,props}),jsxs=jsx`,
-    '@react-three/fiber': `export const useFrame=()=>{},useThree=(sel=(s)=>s)=>sel({gl:{},camera:{},size:{width:1,height:1},scene:{}})`,
+    '@react-three/fiber': `export const useFrame=()=>{},useThree=(sel=(s)=>s)=>sel({gl:globalThis.__gl??{},camera:{},size:{width:1,height:1},scene:{}})`,
     '@react-three/drei': `export const Html=()=>null,Text=()=>null`,
     textures: `export const pbr=()=>({})`,
     tier: `export let LITE=false;export const setLite=(v)=>(LITE=v)`, // ?lite=1, switchable per render
@@ -586,6 +595,30 @@ console.log('geom materials untextured, all kinded ok')
         }
   }
   console.log('road corridor ok (clear at 0.5/1.7/3 m, road underfoot every 2 m, 1886-2026)')
+
+  // Home plinth (ui/home/Home.jsx): with the canvas in .home-stage, no structure reaches past HOME_DISC_R
+  // (1 m grace for the abutment towers' outer stone, which stands on the plinth's rim).
+  {
+    const { HOME_DISC_R } = await import('./homeDisc.js')
+    globalThis.__gl = { domElement: { closest: (sel) => sel === '.home-stage' } }
+    useStore.getState().setYear(2026)
+    const root = new T.Group(), v = new T.Vector3()
+    build({ type: TowerBridge, props: {} }, root)
+    root.updateMatrixWorld(true)
+    let far = 0, who = ''
+    root.traverse((o) => {
+      if (!o.isMesh) return
+      const p = o.geometry.attributes.position
+      for (let i = 0; i < p.count; i++) {
+        v.fromBufferAttribute(p, i).applyMatrix4(o.matrixWorld)
+        const r = Math.hypot(v.x, v.z)
+        if (r > far) (far = r), (who = o.userData.from)
+      }
+    })
+    delete globalThis.__gl
+    assert.ok(far <= HOME_DISC_R + 1, `home disc: ${who} reaches ${far.toFixed(1)} m, past the ${HOME_DISC_R} m plinth`)
+    console.log(`home disc structure ok (furthest ${far.toFixed(1)} m, ${who}, plinth ${HOME_DISC_R} m)`)
+  }
 
   // Render budget, 2026 (the busiest year): draw calls and triangles per part id, ship and traffic
   // included. Lines and instanced meshes are one call each; instanced triangles count every instance.

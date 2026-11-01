@@ -27,6 +27,7 @@ import { OpeningDay } from './opening.jsx'
 import { TopView } from './topview.jsx'
 import { liftSpeed, heldLever } from './liftSequence.js'
 import { LiftControls } from './liftControls.jsx'
+import { useHomeDisc } from './homeDisc.js'
 import { LITE } from '../look/tier.js'
 
 // The live sim state, for any panel that wants to show pressure or stored volume. Read-only.
@@ -157,6 +158,7 @@ export function TowerBridge(props) {
   const exploded = useStore((s) => s.exploded)
   const select = useStore((s) => s.select)
   const gl = useThree((s) => s.gl)
+  const disc = useHomeDisc()
   const years = useMemo(() => resolveYears(place?.events), [place])
   const st = stageForYear(year, years.stages)
   const era = eraFor(year, years.eras)
@@ -234,7 +236,8 @@ export function TowerBridge(props) {
             {era.olympics && side === 'east' && <H.OlympicRings x={side === 'east' ? S.L.walkX : -S.L.walkX} />}
           </Part>
         ))}
-      {shown('engine', st.stage) && <EngineRoom rt={rt} steam={era.steam} third={era.thirdEngine} museum={era.engineMuseum} explode={[14, 6, 20]} />}
+      {/* off the Home plinth's edge (176 m out): skipped there */}
+      {shown('engine', st.stage) && !disc && <EngineRoom rt={rt} steam={era.steam} third={era.thirdEngine} museum={era.engineMuseum} explode={[14, 6, 20]} />}
       <TopView st={st} year={year} maxAngle={maxAngle} sim={bridgeHydraulics} />
       {/* traffic rides no part, so it would float over the exploded decks; hide it but keep its sim */}
       {st.stage >= 5 && (

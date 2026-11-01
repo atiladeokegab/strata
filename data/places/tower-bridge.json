@@ -752,6 +752,116 @@
         null
       ],
       "located": "inferred: map position converted from WGS84 to OSGB36"
+    },
+    {
+      "id": "traffic",
+      "name": "Period road traffic",
+      "group": "traffic",
+      "dims": {},
+      "summary": "Horse-drawn carts and cabs represent the bridge’s early road traffic. The precise vehicles and their movements are illustrative reconstructions.",
+      "sources": [
+        "tb-timeline",
+        "strata-traffic"
+      ]
+    },
+    {
+      "id": "ship",
+      "name": "River vessel",
+      "group": "river",
+      "dims": {},
+      "summary": "The vessel type changes with the selected era. The sailing barque, tug, coaster and passenger catamaran are representative models rather than verified named ships in a historical image.",
+      "sources": [
+        "strata-vessels",
+        "tb-why-open"
+      ]
+    },
+    {
+      "id": "stairs-north",
+      "name": "North tower stairs",
+      "group": "access",
+      "dims": {},
+      "summary": "Stairs provided pedestrian access from the roadway to the high-level walkways.",
+      "sources": [
+        "tb-inside",
+        "tb-history"
+      ]
+    },
+    {
+      "id": "lift-north",
+      "name": "North tower lift",
+      "group": "access",
+      "dims": {},
+      "summary": "Hydraulic lifts formed part of the original tower machinery for access between road level and the high-level crossing.",
+      "sources": [
+        "tb-history",
+        "tb-engine"
+      ]
+    },
+    {
+      "id": "works-north",
+      "name": "North pier construction works",
+      "group": "construction",
+      "dims": {},
+      "summary": "Temporary staging, caisson works and lifting equipment illustrate the construction of the river piers and bridge structure. The exact rendered arrangement is reconstructed.",
+      "sources": [
+        "tb-history",
+        "strata-construction"
+      ]
+    },
+    {
+      "id": "barrier-north",
+      "name": "North road traffic barrier",
+      "group": "safety",
+      "dims": {},
+      "summary": "The road barrier illustrates keeping traffic off the bascules during a bridge lift. The boom design and its animation are reconstructed rather than an attested original dimension.",
+      "sources": [
+        "tb-lifts",
+        "strata-traffic"
+      ]
+    },
+    {
+      "id": "stairs-south",
+      "name": "South tower stairs",
+      "group": "access",
+      "dims": {},
+      "summary": "Stairs provided pedestrian access from the roadway to the high-level walkways.",
+      "sources": [
+        "tb-inside",
+        "tb-history"
+      ]
+    },
+    {
+      "id": "lift-south",
+      "name": "South tower lift",
+      "group": "access",
+      "dims": {},
+      "summary": "Hydraulic lifts formed part of the original tower machinery for access between road level and the high-level crossing.",
+      "sources": [
+        "tb-history",
+        "tb-engine"
+      ]
+    },
+    {
+      "id": "works-south",
+      "name": "South pier construction works",
+      "group": "construction",
+      "dims": {},
+      "summary": "Temporary staging, caisson works and lifting equipment illustrate the construction of the river piers and bridge structure. The exact rendered arrangement is reconstructed.",
+      "sources": [
+        "tb-history",
+        "strata-construction"
+      ]
+    },
+    {
+      "id": "barrier-south",
+      "name": "South road traffic barrier",
+      "group": "safety",
+      "dims": {},
+      "summary": "The road barrier illustrates keeping traffic off the bascules during a bridge lift. The boom design and its animation are reconstructed rather than an attested original dimension.",
+      "sources": [
+        "tb-lifts",
+        "strata-traffic"
+      ]
     }
   ],
   "events": [
@@ -1037,6 +1147,61 @@
       "title": "Wikipedia: HMS Belfast",
       "url": "https://en.wikipedia.org/wiki/HMS_Belfast",
       "kind": "encyclopedia"
+    },
+    {
+      "id": "tb-animals",
+      "title": "Animals of Tower Bridge",
+      "url": "https://www.towerbridge.org.uk/stories/animals-of-tower-bridge",
+      "kind": "primary institutional"
+    },
+    {
+      "id": "tb-why-open",
+      "title": "Why does Tower Bridge open?",
+      "url": "https://www.towerbridge.org.uk/stories/why-does-tower-bridge-open",
+      "kind": "primary institutional"
+    },
+    {
+      "id": "tb-vessels",
+      "title": "10 interesting vessels to sail through Tower Bridge",
+      "url": "https://www.towerbridge.org.uk/stories/10-interesting-vessels",
+      "kind": "primary institutional"
+    },
+    {
+      "id": "lpa-tug-naja",
+      "title": "Tower Bridge tug Naja, London Picture Archive",
+      "url": "https://www.londonpicturearchive.org.uk/view-item?i=32651",
+      "kind": "primary archive photograph record"
+    },
+    {
+      "id": "thames-clippers-history",
+      "title": "A Journey Through History: Celebrating 24 Years of Thames Clippers",
+      "url": "https://www.thamesclippers.com/blog/celebrating-24-years-of-thames-clippers",
+      "kind": "primary operator history"
+    },
+    {
+      "id": "tb-lifts",
+      "title": "Request a Bridge Lift",
+      "url": "https://www.towerbridge.org.uk/bridge-lifts/request-a-bridge-lift",
+      "kind": "primary institutional",
+      "locator": "Bridge lift procedures: road traffic halts for a lift."
+    },
+    {
+      "id": "strata-vessels",
+      "title": "Strata era-vessel reconstruction",
+      "url": "https://github.com/atiladeokegab/strata/blob/7cbd1fc34317551b96b28b47e4a30633856cec34/web/src/scene/bridge/vessels.js",
+      "kind": "primary project scene definition"
+    },
+    {
+      "id": "strata-traffic",
+      "title": "Strata road-traffic reconstruction",
+      "url": "https://github.com/atiladeokegab/strata/blob/7d454ff795cf8414b2215e7f8ab20e08189714d8/web/src/scene/bridge/traffic.jsx",
+      "kind": "primary project scene definition"
+    },
+    {
+      "id": "strata-construction",
+      "title": "Strata construction-stage reconstruction",
+      "url": "https://github.com/atiladeokegab/strata/blob/7d454ff795cf8414b2215e7f8ab20e08189714d8/web/src/scene/bridge/construction.jsx",
+      "kind": "primary project scene definition"
     }
   ],
   "people": [
@@ -1256,6 +1421,256 @@
       "status": "text-attested",
       "qualifier": "more than",
       "locator": "Official top facts, ‘It took immense skill to build.’"
+    },
+    {
+      "id": "horse-drawn-traffic",
+      "title": "Horses and period road traffic",
+      "text": "When Tower Bridge opened in 1894, an estimated 8,000 horse-drawn vehicles crossed it each day.",
+      "source": "tb-timeline",
+      "sources": [
+        "tb-timeline"
+      ],
+      "status": "text-attested",
+      "locator": "Timeline, 29 July 1894: estimated daily road and pedestrian traffic."
+    },
+    {
+      "id": "bridge-horses",
+      "title": "Why Tower Bridge had horses",
+      "text": "Horses were part of Tower Bridge's own operation when it opened: horses stabled beneath the southern approach could help carts struggling up the bridge incline. The site also records a blacksmith caring for horses and repairing bridge equipment.",
+      "source": "tb-animals",
+      "sources": [
+        "tb-animals"
+      ],
+      "status": "text-attested",
+      "locator": "“Horsing around” section."
+    },
+    {
+      "id": "opening-day-vessel",
+      "title": "The first ship through Tower Bridge",
+      "text": "The first vessel through Tower Bridge at its opening was the Harbour Master’s cutter Daisy.",
+      "source": "tb-timeline",
+      "sources": [
+        "tb-timeline"
+      ],
+      "status": "text-attested",
+      "locator": "Timeline, “A Royal opening.”"
+    },
+    {
+      "id": "barque-model",
+      "title": "The sailing barque in the river scene",
+      "text": "The early river scene uses a generic three-masted sailing barque to evoke the cargo ships that needed access to the Pool of London. It is an illustrative reconstruction, not a specific documented vessel or passage.",
+      "source": "tb-why-open",
+      "sources": [
+        "tb-why-open"
+      ],
+      "status": "inferred",
+      "method": "The scene's ship mesh is a representative barque; the cited history supports sailing cargo ships in the period but does not identify this model."
+    },
+    {
+      "id": "later-river-vessels",
+      "title": "Tug, coaster and Clipper models in later views",
+      "text": "Later river views use representative tug-and-lighter, motor-coaster and Clipper-style models. These show changing kinds of river traffic; they are not claims that a particular named vessel passed Tower Bridge in the displayed year.",
+      "source": "tb-vessels",
+      "sources": [
+        "tb-vessels",
+        "lpa-tug-naja",
+        "thames-clippers-history"
+      ],
+      "status": "inferred",
+      "method": "The displayed classes follow the scene's era model; archival records document Tower Bridge tug Naja, and the Clipper operator documents its passenger-catamaran service. The individual rendered models are illustrative."
+    },
+    {
+      "id": "visible-bascules",
+      "title": "How do the bascules open?",
+      "text": "In 1894, steam engines pumped water into accumulators, which stored pressure until a lift was needed. Releasing that pressurised water drove hydraulic engines and gears that raised the bascules. Today electric pumps drive an oil-hydraulic system.",
+      "source": "tb-work",
+      "sources": [
+        "tb-work",
+        "tb-history"
+      ],
+      "status": "text-attested"
+    },
+    {
+      "id": "visible-horses",
+      "title": "Why are there horses on the bridge?",
+      "text": "The horse-drawn carts and cabs represent the bridge's early road traffic. When Tower Bridge opened in 1894, horse-drawn vehicles crossed it every day alongside pedestrians.",
+      "source": "tb-timeline",
+      "sources": [
+        "tb-timeline"
+      ],
+      "status": "text-attested"
+    },
+    {
+      "id": "visible-build-time",
+      "title": "Construction cranes and temporary working platforms",
+      "text": "During construction, temporary platforms and pile staging gave workers access to the river piers. Cranes lifted excavated material for removal by barges and helped place bridge components. The exact layout of the rendered equipment is illustrative.",
+      "source": "tb-history",
+      "sources": [
+        "tb-history",
+        "tb-engine"
+      ],
+      "status": "text-attested",
+      "locator": "Official timeline; Tuit's contemporary account of foundations and construction."
+    },
+    {
+      "id": "visible-engine-house",
+      "title": "What powered it in 1894?",
+      "text": "The engine house held the steam-powered pumps that supplied the bridge's original hydraulic machinery. The pumps pressurised water; accumulators stored it so the bridge could draw power when a bascule lift was required.",
+      "source": "tb-history",
+      "sources": [
+        "tb-history",
+        "tb-work"
+      ],
+      "status": "text-attested",
+      "locator": "Tuit, printed pp. 99–101, “The Hydraulic Machinery.”"
+    },
+    {
+      "id": "visible-stairs-lifts",
+      "title": "What were the stairs and lifts for?",
+      "text": "The stairs and hydraulic lifts carried people between the road level and the high-level walkways. The walkways gave pedestrians a way across the river while the bascules were raised for ships.",
+      "source": "tb-history",
+      "sources": [
+        "tb-history",
+        "tb-inside"
+      ],
+      "status": "text-attested"
+    },
+    {
+      "id": "visible-traffic-gates",
+      "title": "Why do the traffic gates close?",
+      "text": "The gates stop road users entering the bascules when a bridge lift is under way. The road must be clear before the leaves rise for a vessel, and traffic waits until the bridge is ready to use again.",
+      "source": "tb-lifts",
+      "sources": [
+        "tb-lifts",
+        "tb-work"
+      ],
+      "status": "text-attested"
+    },
+    {
+      "id": "visible-river-ships",
+      "title": "Why does the bridge lift for ships?",
+      "text": "Tower Bridge was designed to carry road traffic across the Thames while allowing river vessels to pass through the central opening. At the 1894 opening ceremony, the first vessel through was the Harbour Master's cutter Daisy.",
+      "source": "tb-timeline",
+      "sources": [
+        "tb-timeline",
+        "tb-history"
+      ],
+      "status": "text-attested"
+    },
+    {
+      "id": "visible-hydraulic-mains",
+      "title": "Why do pipes cross the high-level walkway?",
+      "text": "In the original water-hydraulic system, pressure pipes carried water from the pumping plant on the south side, up the south tower, across the high-level crossing and down to machinery at the north pier. Return pipes brought water back to the pumps, completing the circuit.",
+      "source": "tb-engine",
+      "sources": [
+        "tb-engine",
+        "tb-history",
+        "tb-work"
+      ],
+      "status": "text-attested",
+      "locator": "Barry's 1894 lecture and Tuit's 1894 account of the hydraulic machinery."
+    },
+    {
+      "id": "construction-temporary-staging",
+      "title": "Temporary staging across the river works",
+      "text": "The timber platform and jetty represent temporary pile staging used to reach and build the river piers. John Wolfe Barry describes pilework in the river supporting temporary bridges between shore and pier; Parliament required a navigable channel to remain open during construction. The scene's exact footprint and placement are illustrative, not a surveyed reconstruction.",
+      "source": "tb-engine",
+      "sources": [
+        "tb-engine"
+      ],
+      "status": "inferred",
+      "method": "The primary account confirms pile staging and temporary bridges; the scene geometry and precise arrangement are reconstructed."
+    },
+    {
+      "id": "construction-caissons-and-cofferdam",
+      "title": "Iron caissons inside temporary river works",
+      "text": "The scene's timber ring is a simplified visual cue for temporary foundation works, not the actual material of the pier caissons. Barry describes wrought-iron caissons sunk into the riverbed; their upper temporary sections excluded water while the pier masonry was built, and could later be removed. The rendered cofferdam shape should not be read as a measured historical plan.",
+      "source": "tb-engine",
+      "sources": [
+        "tb-engine",
+        "tb-history"
+      ],
+      "status": "inferred",
+      "method": "The source documents iron caissons and temporary water-excluding sections; the scene simplifies these distinct works into one timber-colored enclosure."
+    },
+    {
+      "id": "construction-pile-driver",
+      "title": "Pile-driving rig",
+      "text": "Piles supported the temporary staging around the piers. This steam-powered leader and drop-hammer assembly illustrates how pile-driving work could be carried out; the 1894 descriptions confirm pilework but do not identify this exact rig or its position at Tower Bridge.",
+      "source": "tb-engine",
+      "sources": [
+        "tb-engine"
+      ],
+      "status": "inferred",
+      "method": "The account documents piles and pile staging, not the rendered machine's configuration; its form and location are an explanatory reconstruction."
+    },
+    {
+      "id": "construction-cranes-and-barges",
+      "title": "Cranes, barges and river deliveries",
+      "text": "Barry records cranes lifting excavated material from the caissons for removal by barge. He also describes cranes moving along temporary timber bridges to place chain sections on trestles. The scene's moored lighters represent riverborne work and supply; their count, dimensions and exact mooring positions are illustrative.",
+      "source": "tb-engine",
+      "sources": [
+        "tb-engine",
+        "tb-photo-1891"
+      ],
+      "status": "inferred",
+      "method": "Cranes, barges and temporary bridges are documented; the specific vessels and their placement in the 3D scene are not individually identified by the sources."
+    },
+    {
+      "id": "construction-derrick",
+      "title": "Illustrative derrick on the rising frame",
+      "text": "This timber derrick shows a possible lifting arrangement as the tower frame rises. Barry's account documents cranes on temporary stages and the sequence of erecting steelwork, but does not confirm a derrick of this design or its placement on top of a tower. Treat this mesh as a visual explanation of lifting work, not a documented Tower Bridge machine.",
+      "source": "tb-engine",
+      "sources": [
+        "tb-engine",
+        "tb-photo-1891"
+      ],
+      "status": "inferred",
+      "method": "The frame's growth is documented in the account and archive photograph; this derrick's form and location are an artist's reconstruction."
+    },
+    {
+      "id": "construction-scaffolds-and-trestles",
+      "title": "Scaffolds and trestles for the high-level chains",
+      "text": "Barry describes scaffolds and trestles resting on the temporary bridge to erect the suspension chains. He also says the high-level walkways were assembled outward from the tower tops without scaffolding below them. The wraparound scaffold shown on the tower is therefore an illustrative access structure, not a claim that this exact scaffold was documented there.",
+      "source": "tb-engine",
+      "sources": [
+        "tb-engine",
+        "tb-photo-1891"
+      ],
+      "status": "inferred",
+      "method": "The source documents chain scaffolds and trestles, while the scene's tower-wrapping scaffold is inferred and should not be mistaken for evidence of its exact historical form."
+    },
+    {
+      "id": "road-gates-and-bridge-lifts",
+      "title": "Road traffic stops before a bridge lift",
+      "text": "Before a lift, road traffic had to stop and the bridge had to clear. Barry describes interlocked controls in cabins on the piers, compared with a railway signal box. The scene's swinging boom barriers and their automatic red/green behavior make that safety sequence visible; the sources cited here do not establish this exact barrier design as the 1894 installation.",
+      "source": "tb-engine",
+      "sources": [
+        "tb-engine",
+        "tb-timeline"
+      ],
+      "status": "inferred",
+      "method": "Stopping and clearing road traffic and interlocked controls are documented; the rendered boom barriers and their modern-looking lamps are explanatory scene elements."
+    },
+    {
+      "id": "river-signals-for-vessels",
+      "title": "Signals tell vessels whether the bridge is open",
+      "text": "In his 1894 description, Barry specifies semaphore signals by day and signal lamps at night to show river vessels whether the bridge was open or shut. He describes green lamps for an open bridge and red lamps for a closed one, interlocked with the machinery so an incorrect indication could not be shown. This is the documented river-traffic signal system, separate from the scene's road barriers.",
+      "source": "tb-engine",
+      "sources": [
+        "tb-engine"
+      ],
+      "status": "text-attested"
+    },
+    {
+      "id": "visible-era-ships",
+      "title": "Which ship is visible in each era?",
+      "text": "The river scene changes from a sailing barque to a steam tug with a lighter, then a motor coaster and a Clipper-style passenger catamaran. These are representative reconstructions rather than verified named ships in a historical photograph. Their rendered sizes and passage timings are inferred.",
+      "source": "strata-vessels",
+      "sources": [
+        "strata-vessels"
+      ],
+      "status": "text-attested"
     }
   ]
 }

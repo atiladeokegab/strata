@@ -5,6 +5,7 @@ import { useTour, startTour, stopTour } from '../tour/tour.js'
 const Voice = lazy(() => import('./Voice'))
 import { StoryCard } from './TimelineMarks'
 import { readDocentStream } from '../lib/docentStream'
+import docentQuestions from './docentQuestions.json'
 import Archive from './Archive'
 
 const STATUS = { 'text-attested': 'Text-attested', measured: 'Measured', inferred: 'Inferred' }
@@ -173,12 +174,13 @@ function Docent() {
   const [talk, setTalk] = useState(false)
   const end = useRef(null)
   useEffect(() => { if (log.length) end.current?.scrollIntoView({ block: 'nearest' }) }, [log, busy]) // not on mount: the place card stays in view
-  const ask = async (e) => {
+  const ask = async (e, suggestion) => {
     e.preventDefault()
-    const question = q.trim()
+    const question = (suggestion ?? q).trim()
     if (!question || busy || !place) return
     setLog((l) => [...l, { who: 'you', text: question }, { who: 'docent', text: '', live: true }])
-    setQ(''); setBusy(true)
+    if (suggestion === undefined) setQ('')
+    setBusy(true)
     try {
       const r = await fetch('/api/ask', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
         body: JSON.stringify({ place: place.id, ...(selected ? { part: selected } : {}), question }) })
@@ -194,6 +196,10 @@ function Docent() {
   return (
     <section className="docent">
       <p className="eyebrow">Ask the docent</p>
+      <div className="sources" role="group" aria-label="Suggested questions">
+        {docentQuestions.map((question) => <button key={question} type="button" className="chip source"
+          disabled={busy || !place} onClick={(e) => ask(e, question)}>{question}</button>)}
+      </div>
       <div className="log">
         {log.length === 0 && <p className="hint">It answers from the sources and says so when it cannot cite one.</p>}
         {log.map((m, i) => (

@@ -10,6 +10,7 @@ import { LITE } from '../look/tier.js'
 import { leafKit } from './basculeDetail.jsx'
 import { walkwayKnees, walkwayLamps } from './walkway.js'
 import { POST_X, POST_Z } from './trafficSim.js'
+import { sandbagWalls } from './sandbags.js'
 
 // Renders { materialKey: [geometries] } as one merged mesh per material.
 // materials: optional {key: material} overriding M for some keys (e.g. lantern glass by era)
@@ -137,7 +138,7 @@ const LANTERN = {
 // Blackout white paint: brighter than lit white (colour > 1) and untextured (no kind), so the bands still read at
 // 640x360. Not emissive: Part owns emissive for the selection glow.
 const BAND = new THREE.MeshStandardMaterial({ color: new THREE.Color(1.6, 1.6, 1.6), roughness: 1, metalness: 0 })
-export const lanternFor = (era) => ({ lantern: era?.blackout ? LANTERN.blackout : era?.gasLamps ? LANTERN.gas : LANTERN.electric, ...(era?.blackout && { white: BAND }) })
+export const lanternFor = (era) => ({ lantern: era?.blackout ? LANTERN.blackout : era?.gasLamps ? LANTERN.gas : LANTERN.electric, ...(era?.blackout && { white: BAND, sand: SAND }) })
 
 export function lamp(out, x, y, z, era) {
   // blackout: base painted white, then three 0.6 m white bands up the column, wide enough to read from afar
@@ -193,8 +194,8 @@ export const join = (...ks) => ks.reduce((o, k) => (Object.entries(k).forEach(([
 export const kit = () => ({ iron: [], glass: [], gold: [], white: [], stone: [], granite: [], steel: [], lantern: [], sand: [] })
 
 // Wartime sandbags (inferred: general ARP practice, no Tower Bridge photo of them yet). One merged
-// mesh per tower Part, so 1939-44 costs two draw calls; skipped on the lite tier.
-const SAND = new THREE.MeshStandardMaterial({ color: '#9b8b67', roughness: 0.95 })
+// mesh per tower Part, so 1939-44 costs two draw calls on both tiers; LITE has only the pier walls (sandbags.js).
+const SAND = new THREE.MeshStandardMaterial({ color: '#cdbd92', roughness: 0.95 }) // pale enough to read against the granite from the river
 function sandbags(out, x, z, w, d, courses) {
   const along = w >= d, len = along ? w : d, n = Math.max(1, Math.round(len / 0.6))
   for (let c = 0; c < courses; c++) {
@@ -240,6 +241,7 @@ export function deckMarkingsKit(era) {
   const o = kit()
   if (!era?.woodBlocks) dashes(o, L.pierZ - 9.5, L.pierZ + 9.5)
   footways(o, L.pierZ - L.towerHalfZ, L.pierZ + L.towerHalfZ, era)
+  if (era?.blackout) sandbagWalls(o, L)
   if (era?.blackout && !LITE) {
     for (const sx of [-1, 1]) sandbags(o, sx * 8.65, L.pierZ - L.towerHalfZ + 0.7, 0.9, 1.2, 5) // against the tower's shore-side jambs
     sandbags(o, POST_X - 0.15, POST_Z, 0.9, 1.0, 3) // round the foot of the gate post

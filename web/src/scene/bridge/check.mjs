@@ -889,3 +889,25 @@ console.log('geom materials untextured, all kinded ok')
   assert.ok(ARCH.spring >= ROAD_CLEAR.belowY && ARCH.half >= ROAD_CLEAR.halfX, 'the arch springs above the road clearance')
   console.log('abutment checks ok (arch springs at 6 m over |x| < 10)')
 }
+
+// 1939-45 sandbag walls: on the pier ledge in front of the tower's corner turrets (x 15.4), inside the
+// pier (|x| < 21, |z - pierZ| < 15), standing 2 m; LITE draws one slab per course.
+{
+  const { sandbagWalls } = await import('./sandbags.js')
+  const src = readFileSync(new URL('structures.jsx', import.meta.url), 'utf8')
+  const L = { pierTop: Number(src.match(/pierTop: (-?[\d.]+)/)[1]), pierZ: Number(src.match(/pierZ: (-?[\d.]+)/)[1]) }
+  for (const lite of [false, true]) {
+    const o = { sand: [] }
+    sandbagWalls(o, L, lite)
+    if (lite) assert.equal(o.sand.length, 16, 'lite sandbag walls are one slab per course')
+    const b = new THREE.Box3()
+    o.sand.forEach((g) => (g.computeBoundingBox(), b.union(g.boundingBox)))
+    assert.ok(Math.abs(b.min.y - L.pierTop) < 0.01 && b.max.y >= L.pierTop + 1.9, `sandbags stand 2 m on the pier top (${b.min.y.toFixed(2)}..${b.max.y.toFixed(2)})`)
+    for (const g of o.sand) {
+      const x = Math.abs(g.boundingBox.min.x + g.boundingBox.max.x) / 2, half = (g.boundingBox.max.x - g.boundingBox.min.x) / 2
+      assert.ok(x - half > 15.4 && x + half < 21, `sandbags clear of the turrets and on the pier (x ${(x - half).toFixed(2)}..${(x + half).toFixed(2)})`)
+    }
+    assert.ok(b.min.z > L.pierZ - 15 && b.max.z < L.pierZ + 15, 'sandbags within the pier length')
+  }
+  console.log('sandbag wall checks ok')
+}

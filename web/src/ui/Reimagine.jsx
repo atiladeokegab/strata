@@ -47,12 +47,9 @@ export default function Reimagine() {
     const view = nearView()
     const hit = view && m.items.find((it) => it.view === view && Math.abs(it.year - year) <= 2)
     if (hit) { setState(cachedState(m, hit)); setSplit(50); return }
-    try {
-      const { image, aspect } = capture()
-      run(image, year, aspect, view)
-    } catch (e) {
-      setState({ before: null, year, status: 'error', error: e.message })
-    }
+    capture()
+      .then(({ image, aspect }) => run(image, year, aspect, view))
+      .catch((e) => setState({ before: null, year, status: 'error', error: e.message }))
   }
 
   useEffect(() => {

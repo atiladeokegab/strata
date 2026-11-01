@@ -16,11 +16,13 @@ YEARS = [(1894, "1894"), (1944, "1944"), (2026, "Today")]
 caps = {}
 with sync_playwright() as p:
     b = p.chromium.launch(executable_path="/usr/bin/google-chrome", args=["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"])
-    pg = b.new_page(viewport={"width": 1600, "height": 900})
+    pg = b.new_page(viewport={"width": 1280, "height": 720})
+    pg.set_default_timeout(900000)  # software WebGL on a busy box can take minutes a frame burst
     pg.route("**/api/**", lambda r: r.fulfill(response=r.fetch(url=r.request.url.replace(APP, API), timeout=120000)))
     pg.goto(APP + "/")
-    pg.wait_for_function("window.strataReimagine && document.querySelector('canvas')", timeout=60000)
-    pg.wait_for_timeout(8000)
+    pg.click(".home-enter", timeout=900000)  # past the museum landing, without starting the tour
+    pg.wait_for_function("window.strataReimagine && document.querySelector('canvas')", timeout=900000)
+    pg.wait_for_timeout(15000)  # terrain and textures
     for y, _ in YEARS:
         pg.evaluate(f"window.strataReimagine.setYear({y})")
         for v in VIEWS:
@@ -29,6 +31,7 @@ with sync_playwright() as p:
             assert pg.evaluate("window.strataReimagine.nearView()") == v, v
             c = pg.evaluate("window.strataReimagine.capture()")
             caps[(v, y)] = c
+            print("captured", v, y, flush=True)
             open(f"{OUT}/{v}-{y}-3d.jpg", "wb").write(base64.b64decode(c["image"].split(",", 1)[1]))
     b.close()
 

@@ -1,5 +1,5 @@
 // Fixed camera views with pre-generated photographs (web/public/reimagine). Same frame as the tour: x east, y up, z south.
-import { _roots } from '@react-three/fiber'
+import { _roots, addAfterEffect } from '@react-three/fiber'
 import { useStore } from '../../store'
 
 const rad = Math.PI / 180
@@ -19,13 +19,18 @@ export function three() {
   return canvas && _roots.get(canvas)?.store.getState()
 }
 
-// Render a fresh frame and read it straight back, so the canvas needs no preserveDrawingBuffer.
+// Read the canvas straight after R3F's next frame (post-processing included), so it needs no preserveDrawingBuffer.
 export function capture() {
   const s = three()
-  if (!s) throw new Error('There is no 3D view to capture yet.')
-  s.gl.render(s.scene, s.camera)
-  const c = s.gl.domElement
-  return { image: c.toDataURL('image/jpeg', 0.92), aspect: c.width / c.height }
+  if (!s) return Promise.reject(new Error('There is no 3D view to capture yet.'))
+  return new Promise((resolve) => {
+    const off = addAfterEffect(() => {
+      off()
+      const c = s.gl.domElement
+      resolve({ image: c.toDataURL('image/jpeg', 0.92), aspect: c.width / c.height })
+    })
+    s.invalidate()
+  })
 }
 
 // The cached view the camera is standing at, if any.

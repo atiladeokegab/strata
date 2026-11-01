@@ -1,6 +1,11 @@
 comma := ,
+.PHONY: smoke check-web web dev deploy
 smoke:
 	uv run pytest -q
+	$(MAKE) check-web
+# The web self-checks: docent stream parsing, bare-earth ground, and the bridge logic incl. the road-corridor guard (~40 s).
+check-web:
+	cd web && node --test src/lib/docentStream.test.js && node src/scene/bareEarth.check.mjs && node src/scene/bridge/check.mjs
 web:
 	cd web && npm run build
 dev:

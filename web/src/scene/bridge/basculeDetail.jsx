@@ -3,7 +3,8 @@
 // tail locks and buffers. LEAF-LOCAL frame (mount inside <S.PivotFrame>): origin on the pivot
 // axis, leaf runs +z to the tip at z=LEN, deck top at y=1.5. One merged mesh per material.
 // status: inferred layout; spacing follows the main girders in structures.jsx, not drawings.
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
+import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { beam, box, merge } from './geom.js'
 import { pbr } from '../look/textures.js'
@@ -29,7 +30,7 @@ const mats = () =>
   })
 
 function build() {
-  const soffit = [], fascia = [], iron = []
+  const soffit = [], fascia = [], iron = [], bolts = [], tailBars = []
 
   // ribbed soffit: thin plate under the road with longitudinal stringers between the girders
   soffit.push(box(17.6, 0.04, LEN, 0, PLATE, LEN / 2))
@@ -79,7 +80,7 @@ function build() {
   // Teeth at -8.5 + 2k: the opposite leaf (turned 180 deg) puts its own in the gaps.
   for (const x of [-5.25, 0, 5.25]) {
     iron.push(box(1.6, 0.7, 1.6, x, PLATE - 0.35, LEN - 0.9))
-    iron.push(beam([x, PLATE - 0.35, LEN - 0.1], [x, PLATE - 0.35, LEN + 0.35], 0.16, 8))
+    bolts.push(beam([x, PLATE - 0.35, LEN - 1.4], [x, PLATE - 0.35, LEN + 0.35], 0.16, 8)) // shot home: 0.35 m into the other leaf
     iron.push(box(1.8, 0.12, 1.8, x, PLATE - 0.75, LEN - 0.9))
   }
   for (let x = -8.5; x <= 8.5; x += 2) iron.push(box(0.9, 0.35, 0.3, x, PLATE - 0.2, LEN + 0.1))
@@ -88,7 +89,7 @@ function build() {
   // tail: lock bars and buffers at the end of the tail, under the counterweight arm
   const tz = -14
   for (const x of GIRDERS) {
-    iron.push(box(0.5, 0.5, 1.6, x, bottom(0) + 0.6, tz - 0.4))
+    tailBars.push(box(0.5, 0.5, 1.6, 0, 0, -0.8).translate(x, 0, 0)) // hinged at the tail end (group origin)
     iron.push(box(1.2, 1.2, 0.3, x, bottom(0) + 0.6, tz - 1.2))
   }
   for (const x of [-5.25, 0, 5.25]) {
@@ -97,11 +98,26 @@ function build() {
   }
   iron.push(box(17, 0.3, 0.3, 0, bottom(0) + 0.6, tz - 0.15))
 
-  return { soffit: merge(soffit), fascia: merge(fascia), iron: merge(iron) }
+  return { soffit: merge(soffit), fascia: merge(fascia), iron: merge(iron), bolts: merge(bolts), tailBars: merge(tailBars) }
 }
 
-export function BasculeLeafDetail() {
-  const g = useMemo(build, [])
+const BOLT_DRAW = 0.6 // m the nose bolts withdraw
+const TAIL_HINGE = [0, bottom(0) + 0.6, -14 + 0.4]
+
+// sim.bolts (hydraulics.js stepBolts): 1 = nose bolts shot and tail bars engaged, 0 = clear.
+export function BasculeLeafDetail({ sim }) {
+  const { bolts, tailBars, ...fixed } = useMemo(build, [])
   const m = mats()
-  return Object.entries(g).map(([k, geo]) => <mesh key={k} geometry={geo} material={m[k]} castShadow receiveShadow />)
+  const boltRef = useRef(), tailRef = useRef()
+  useFrame(() => {
+    boltRef.current.position.z = (sim.bolts - 1) * BOLT_DRAW
+    tailRef.current.rotation.x = (sim.bolts - 1) * (Math.PI / 2) // swing down and clear
+  })
+  return (
+    <>
+      {Object.entries(fixed).map(([k, geo]) => <mesh key={k} geometry={geo} material={m[k]} castShadow receiveShadow />)}
+      <mesh ref={boltRef} geometry={bolts} material={m.iron} castShadow />
+      <mesh ref={tailRef} geometry={tailBars} material={m.iron} position={TAIL_HINGE} castShadow />
+    </>
+  )
 }

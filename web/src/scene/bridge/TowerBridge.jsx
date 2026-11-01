@@ -87,7 +87,7 @@ function Half({ side, rt, st, towerTop, era }) {
               <S.PivotFrame sim={sim}>
                 <S.BasculeLeaf />
                 <D.BasculeDetails />
-                <BasculeLeafDetail />
+                <BasculeLeafDetail sim={sim} />
               </S.PivotFrame>
             </BasculeDrive>
           </Part>

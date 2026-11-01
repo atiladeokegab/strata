@@ -1,6 +1,6 @@
 // Self-check for the pure bridge logic: `node web/src/scene/bridge/check.mjs`
 import assert from 'node:assert/strict'
-import { createHydraulics, stepHydraulics, OPEN_TIME_S, SIM_SPEED } from './hydraulics.js'
+import { createHydraulics, stepHydraulics, OPEN_TIME_S, SIM_SPEED, BOLT_SETTLE_S, BOLT_TRAVEL_S } from './hydraulics.js'
 import { stageForYear, shown, ERAS, eraFor } from './stages.js'
 import { containersOf } from './xray.js'
 import { createShip, stepShip, WAIT_X, HOLD_X } from './shipSim.js'
@@ -29,6 +29,22 @@ assert.ok(s.angle < 0.01, 'closes again')
 const dry = run(Object.assign(createHydraulics(), { stored: 0 }), 1, 10)
 const full = run(createHydraulics(), 1, 10)
 assert.ok(dry.angle < full.angle, 'an empty accumulator slows the lift')
+
+// bolts: drawn before the leaf moves, home only after it has sat closed for BOLT_SETTLE_S
+const b = createHydraulics()
+assert.ok(b.locked && b.bolts === 1, 'starts bolted')
+stepHydraulics(b, 1, 0.05, MAX)
+assert.ok(!b.locked, 'lever up unlocks at once')
+run(b, 1, BOLT_TRAVEL_S + 0.1)
+assert.ok(b.bolts === 0, 'bolts fully drawn')
+run(b, 0, OPEN_TIME_S * 2)
+assert.ok(b.angle < 0.001 && b.locked, 'closed leaf re-bolts')
+const c = run(createHydraulics(), 1, OPEN_TIME_S * 2)
+for (let t = 0; c.angle > 0.001; t += 0.05) stepHydraulics(c, 0, 0.05, MAX)
+run(c, 0, BOLT_SETTLE_S - 0.1)
+assert.ok(c.bolts === 0 && !c.locked, 'bolts wait while the leaf settles')
+run(c, 0, 0.1 + BOLT_TRAVEL_S + 0.05)
+assert.ok(c.bolts === 1 && c.locked, 'then drive home')
 
 assert.equal(stageForYear(1885).stage, -1)
 assert.equal(stageForYear(1886).stage, 0)

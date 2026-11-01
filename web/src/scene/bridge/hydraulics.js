@@ -18,7 +18,20 @@ const DRAW_DOWN = 0.003 // lowering is mostly braked against the counterweight b
 const PUMP = 0.004 // stored fraction per s the steam pumps restore
 
 export function createHydraulics() {
-  return { angle: 0, omega: 0, stored: 1, pumping: false, valve: 0 }
+  return { angle: 0, omega: 0, stored: 1, pumping: false, valve: 0, bolts: 1, seated: BOLT_SETTLE_S, locked: true }
+}
+
+// Nose bolts and tail locks: drawn (bolts -> 0) as soon as the lever is up or the leaf is off its
+// seat; driven home (-> 1) only after the leaf has sat closed for BOLT_SETTLE_S. `locked` is the
+// interlock the traffic gates read. Times are sim seconds (scaled by SIM_SPEED like the lift).
+export const BOLT_SETTLE_S = 1
+export const BOLT_TRAVEL_S = 0.6
+export function stepBolts(s, target, dt) {
+  s.seated = s.angle > 0.001 || target > 0 ? 0 : s.seated + dt
+  const goal = s.seated >= BOLT_SETTLE_S ? 1 : 0
+  s.bolts += Math.sign(goal - s.bolts) * Math.min(Math.abs(goal - s.bolts), dt / BOLT_TRAVEL_S)
+  s.locked = s.bolts === 1
+  return s
 }
 
 // Advance state `s` by dt seconds towards `target` (0..1 of maxAngleRad). Mutates and returns s.
@@ -37,5 +50,5 @@ export function stepHydraulics(s, target, dt, maxAngleRad) {
   s.pumping = s.stored < 1
   const used = (Math.abs(s.omega) / OMEGA_MAX) * draw * dt
   s.stored = Math.min(1, Math.max(0, s.stored - used + (s.pumping ? PUMP * dt : 0)))
-  return s
+  return stepBolts(s, target, dt)
 }

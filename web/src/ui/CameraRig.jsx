@@ -23,6 +23,7 @@ export function CameraRig() {
   const fly = useRef(null)
 
   useEffect(() => {
+    if (isTourPlaying()) return // the tour owns the camera; its view changes are not camera moves
     const p = PRESETS[view]
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
     const fromTarget = controls.current?.target.clone() ?? camera.getWorldDirection(new Vector3()).multiplyScalar(50).add(camera.position)

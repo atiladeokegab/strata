@@ -168,7 +168,7 @@ export function TowerBridge(props) {
     <group ref={root} name="tower-bridge" {...props}>
       <Half side="north" rt={rt} st={st} towerTop={towerTop} />
       <Half side="south" rt={rt} st={st} towerTop={towerTop} />
-      {year >= 1894 && <Ship rt={rt} maxAngle={maxAngle} />}
+      {year >= 1894 && <Ship rt={rt} year={year} maxAngle={maxAngle} />}
       {shown('walkway', st.stage) &&
         ['east', 'west'].map((side) => (
           <Part

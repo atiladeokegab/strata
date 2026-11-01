@@ -1,6 +1,5 @@
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
-import { pbr } from '../look/textures.js'
 
 const UP = new THREE.Vector3(0, 1, 0)
 
@@ -54,24 +53,21 @@ export function boxProjectUvs(source) {
 // Merged geometry gets world-scale (metre) box-projected UVs so the textures keep one scale.
 export const merge = (gs) => mergeGeometries(gs.map(boxProjectUvs))
 
-// Each material carries its kind so Part can recolour steel by year. Textures are the shared
-// look/textures.js sets; `repeat` is tiles per metre, since merge gives metre UVs.
-const mat = (kind, props, variant, metresPerTile) =>
-  Object.assign(new THREE.MeshStandardMaterial({ ...(variant ? pbr(variant, 1 / metresPerTile) : {}), ...props }), {
-    userData: { kind },
-  })
+// Each material carries its kind: Part recolours steel by year, and Look.jsx textures by kind (world-scale
+// grey detail, normal and roughness maps), so these carry only colour, roughness and metalness. Colours and
+// roughness are the midpoints of the look/textures.js palettes the maps used to carry.
+const mat = (kind, props) => Object.assign(new THREE.MeshStandardMaterial(props), { userData: { kind } })
 export const MATERIALS = {
-  stone: () => mat('stone', {}, 'stone:portland', 6),
-  granite: () => mat('stone', {}, 'granite:cornish', 6),
-  slate: () => mat('slate', {}, 'slate:roof', 4),
-  // steel:white so Part's per-year steel colour tints it
-  steel: () => mat('steel', { color: '#5b8fd0' }, 'steel:white', 6),
+  stone: () => mat('stone', { color: '#c7beab', roughness: 0.77 }), // portland; Look reads light stone as portland
+  granite: () => mat('stone', { color: '#93908b', roughness: 0.68 }), // Look reads stone darker than l 0.7 as granite
+  slate: () => mat('slate', { color: '#454c53', roughness: 0.6, metalness: 0.05 }),
+  steel: () => mat('steel', { color: '#5b8fd0', roughness: 0.45, metalness: 0.02 }), // Part tints it by year
   white: () => mat('trim', { color: '#e9ecef', roughness: 0.5, metalness: 0.3 }),
-  iron: () => mat('iron', {}, 'iron:cast', 3),
+  iron: () => mat('iron', { color: '#3c4145', roughness: 0.58, metalness: 0.8 }),
   brass: () => mat('iron', { color: '#b08d4a', roughness: 0.35, metalness: 0.9 }),
-  road: () => mat('road', {}, 'asphalt', 4),
+  road: () => mat('road', { color: '#3f3f3f', roughness: 0.87 }),
   glass: () => mat('glass', { color: '#18202b', roughness: 0.15, metalness: 0.6 }),
-  timber: () => mat('timber', {}, 'wood:dark', 2),
+  timber: () => mat('timber', { color: '#42291b', roughness: 0.72, metalness: 0.08 }),
   gold: () => mat('trim', { color: '#c9a646', roughness: 0.3, metalness: 1 }),
 }
 const cache = {}

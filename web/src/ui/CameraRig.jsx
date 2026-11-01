@@ -1,14 +1,15 @@
 // Orbit, top-down and walk. Switching flies the camera to the view's start in under a second.
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import { Box3, Raycaster, Vector3, MathUtils } from 'three'
-import { useStore } from '../store'
+import { useStore, EMBED } from '../store'
+import { VIEWS } from './reimagine/views'
 import { isTourPlaying } from '../tour/tour.js'
 
 export const EYE = 1.7 // walk height above the road deck, metres
 const PRESETS = {
-  orbit: { pos: [170, 75, 190], target: [0, 18, 0] },
+  orbit: EMBED ? VIEWS.hero : { pos: [170, 75, 190], target: [0, 18, 0] }, // embeds open on the tour's hero shot
   top: { pos: [0, 700, 0.01], target: [0, 0, 0] },
   walk: { pos: [0, EYE, 105], target: [0, EYE, 0] }, // south approach, clear of the towers even when exploded, looking north along the deck
 }
@@ -21,6 +22,10 @@ export function CameraRig() {
   const scene = useThree((s) => s.scene)
   const controls = useRef()
   const fly = useRef(null)
+  // embed: slow auto-orbit, paused while dragging and for 5 s after; none for reduced motion
+  const [spin, setSpin] = useState(() => EMBED && !matchMedia('(prefers-reduced-motion: reduce)').matches)
+  const idle = useRef(0)
+  useEffect(() => () => clearTimeout(idle.current), [])
 
   useEffect(() => {
     if (isTourPlaying()) return // the tour owns the camera; its view changes are not camera moves
@@ -43,7 +48,7 @@ export function CameraRig() {
 
   // fly to a part when it is selected: keep the current viewing angle, frame its bounds
   useEffect(() => {
-    if (!selected || view === 'walk' || !controls.current || isTourPlaying()) return // the tour frames its own close-ups
+    if (EMBED || !selected || view === 'walk' || !controls.current || isTourPlaying()) return // the tour frames its own close-ups
     const box = new Box3()
     scene.traverse((o) => { if (o.name === selected && o.isMesh) box.expandByObject(o) })
     if (box.isEmpty()) return
@@ -75,6 +80,10 @@ export function CameraRig() {
       ref={controls}
       makeDefault
       enableDamping
+      autoRotate={spin}
+      autoRotateSpeed={0.5}
+      onStart={EMBED ? () => { clearTimeout(idle.current); setSpin(false) } : undefined}
+      onEnd={EMBED ? () => { clearTimeout(idle.current); idle.current = setTimeout(() => setSpin(!matchMedia('(prefers-reduced-motion: reduce)').matches), 5000) } : undefined}
       minDistance={15}
       maxDistance={1600}
       minPolarAngle={0}

@@ -25,7 +25,7 @@ function partOf(object, ids) {
 
 // Scene labels (drei <Html> buttons in .stage) hide while they overlap the on-screen controls,
 // so they never crowd or sit under the buttons.
-const CLEAR_OF = '.controls, .credit, .dock'
+const CLEAR_OF = '.controls, .credit, .dock, .embed-open'
 const overlaps = (a, b, m = 6) => a.left < b.right + m && a.right > b.left - m && a.top < b.bottom + m && a.bottom > b.top - m
 function useLabelsClear() {
   useEffect(() => {

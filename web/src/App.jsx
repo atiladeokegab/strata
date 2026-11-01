@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
-import { useStore } from './store'
+import { useStore, EMBED } from './store'
 import { Stage } from './ui/Stage'
 import { Panel } from './ui/Panel'
 import { Controls, Dock } from './ui/Dock'
@@ -72,7 +72,7 @@ function useNoWebGL() {
 function NoWebGL() {
   return (
     <div className="no-webgl glass" role="alert">
-      <p>Your browser couldn't start 3D. Try Chrome, or watch the film:</p>
+      <p>{"Your browser couldn't start 3D. Try Chrome, or watch the film:"}</p>
       <a className="primary" href={FILM} target="_blank" rel="noreferrer">Watch the film</a>
     </div>
   )
@@ -108,6 +108,18 @@ export default function App() {
     setEntered(true)
     const film = /[?&](tour|capture)=1/.test(location.search)
     if (!film && !helpSeen()) useStore.getState().setHelp(true)
+  }
+  if (EMBED) {
+    const full = new URL(location.href)
+    full.searchParams.delete('embed')
+    return (
+      <div className="app embed">
+        {noGL ? <NoWebGL /> : <Guard name="Stage" fallback={<NoWebGL />}><Stage /></Guard>}
+        <a className="embed-open glass" href={full.toString()} target="_blank" rel="noreferrer">Open the full app <span aria-hidden="true">↗</span></a>
+        <Credit />
+        {(!place || error) && <Loading error={error} retry={load} />}
+      </div>
+    )
   }
   // no WebGL (old phone, locked-down browser): skip the 3D landing; the panel, timeline and docent still work
   if (!entered && !noGL) return <Guard name="Home" fallback={<AutoEnter go={enter} />}><Home onEnter={enter} /></Guard>

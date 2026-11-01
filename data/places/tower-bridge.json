@@ -247,8 +247,10 @@
       "dims": {},
       "summary": "Stores pressurised water so the bridge leaves can be raised on demand.",
       "sources": [
-        "tb-engine"
-      ]
+        "tb-engine",
+        "he-accumulator"
+      ],
+      "located": "inferred: the scene draws a free-standing engine house beside the south approach. The Historic England listing puts the engines under the south approach, with the chimney attached to the north side of the accumulator tower (brown stock brick, three tall storeys above the approach)."
     },
     {
       "id": "engine-room",
@@ -265,8 +267,10 @@
       },
       "summary": "Victorian steam plant supplied hydraulic power for bridge lifts before electrification.",
       "sources": [
-        "tb-inside"
-      ]
+        "tb-inside",
+        "he-accumulator"
+      ],
+      "located": "inferred: the scene draws a free-standing engine house beside the south approach. The Historic England listing puts the engines under the south approach, with the chimney attached to the north side of the accumulator tower (brown stock brick, three tall storeys above the approach)."
     },
     {
       "id": "approach-north",
@@ -836,6 +840,12 @@
       "url": "https://www.edfenergy.com/media-centre/news-releases/landmark-dazzles-diamond-white-queens-jubilee-weekend",
       "kind": "project partner press release",
       "locator": "30 May 2012: new LED lighting system's first official switch-on; notes it replaced the previous system."
+    },
+    {
+      "id": "he-accumulator",
+      "title": "Historic England listing: Accumulator tower and chimney stack to east side of Tower Bridge Approach",
+      "url": "https://britishlistedbuildings.co.uk/101385982-accumulator-tower-and-chimney-stack-to-east-side-of-tower-bridge-approach-riverside-ward",
+      "kind": "primary institutional"
     }
   ],
   "people": [

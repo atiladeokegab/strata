@@ -33,16 +33,21 @@ async function decodeHeights(url, meta) {
 // 1. lo/: the whole 1.5 km at 4 m with small drapes, ~0.4 MB, every device;
 // 2. the full 1 m tile and its 4096 px drapes, fetched only after lo/ is in;
 // 3. desktop only: the 600 m near field at 0.5 m. Each stage resolves with its drapes in, so it never shows grey.
+// Each stage's mesh is built off the main thread (rtin below) and capped at BUDGET triangles: the lead's cap is
+// ~500k on desktop (250k outer + 250k near) and ~150k on phones and for the first-load tile.
 // Before 1950 the ground is bare earth (see bareEarth.js), opened with a 30 m window at any pixel size.
 const withOld = (meta, { heights, w, h }) =>
   ({ meta, heights, w, h, old: keepApproaches(bareEarth(heights, w, h, Math.round((30 * w) / (meta.bbox_osgb[2] - meta.bbox_osgb[0]))), heights, w, meta) })
+
+const BUDGET = { low: 150_000, full: LITE ? 150_000 : 250_000, near: 250_000 }
 
 export function loadLow() {
   lowCache ??= (async () => {
     const meta = await loadMeta()
     const base = meta.lite ? BASE + 'lo/' : BASE
     const [px, ...maps] = await Promise.all([decodeHeights(base + 'height.png', meta), ...MAPS.map((f) => texture(base + f))])
-    return { ...withOld(meta, px), maps }
+    const t = withOld(meta, px)
+    return { ...t, maps, mesh: await meshOf(t, BUDGET.low) }
   })()
   return lowCache
 }
@@ -54,7 +59,8 @@ export function loadTerrain() {
 }
 
 function loadFull() {
-  fullCache ??= loadLow().then(() => Promise.all([loadTerrain(), ...MAPS.map((f) => texture(BASE + f))]))
+  const mesh = async (t) => ({ ...t, mesh: await meshOf(t, BUDGET.full, LITE ? undefined : t.meta.near?.bbox_osgb) })
+  fullCache ??= loadLow().then(() => Promise.all([loadTerrain().then(mesh), ...MAPS.map((f) => texture(BASE + f))]))
     .then(([t, ...maps]) => ({ ...t, maps }))
   return fullCache
 }
@@ -73,7 +79,7 @@ function loadNear() {
     for (let i = 0; i < h; i++) for (let j = 0; j < w; j++) {
       old[i * w + j] = Math.min(heights[i * w + j], heightAt(outerOld, minE + (j + 0.5) * res - oE, oN - (maxN - (i + 0.5) * res)) + meta.origin_h)
     }
-    return { meta, heights, old, w, h, maps }
+    return { meta, heights, old, w, h, maps, mesh: await meshOf({ meta, heights, old, w, h }, BUDGET.near) }
   })()
   return nearCache
 }
@@ -162,8 +168,8 @@ function heightfieldRaycast(t) {
 // Invisible stand-in that answers raycasts for both looks (a Points cloud is not a mesh to walk on).
 function Ground() {
   const t = useLoaded(loadTerrain) ?? use(loadLow())
-  const old = useStore((s) => s.year < 1950)
-  const raycast = useMemo(() => heightfieldRaycast(old ? { ...t, heights: t.old } : t), [t, old])
+  const bare = useStore((s) => s.year < 1950 || !s.lidar) // stand on the ground the mesh shows, not on tree crowns
+  const raycast = useMemo(() => heightfieldRaycast(bare ? { ...t, heights: t.old } : t), [t, bare])
   return <mesh name="terrain-ground" raycast={raycast} frustumCulled={false}><bufferGeometry /></mesh>
 }
 
@@ -211,39 +217,133 @@ function rect(meta, [minE, minN, maxE, maxN]) {
 }
 const inside = (p, k, r) => r && p[k * 3] >= r[0] && p[k * 3] <= r[2] && p[k * 3 + 2] >= r[1] && p[k * 3 + 2] <= r[3]
 
-function TerrainMesh({ t, step, hole, name = 'terrain' }) {
-  const gl = useThree((s) => s.gl)
-  const geometry = useMemo(() => {
-    const { pos, uv, low, cols, rows } = grid(t, step)
-    const idx = new Uint32Array((cols - 1) * (rows - 1) * 6)
-    let n = 0
-    for (let r = 0; r < rows - 1; r++) {
-      for (let c = 0; c < cols - 1; c++) {
-        const a = r * cols + c, b = a + 1, d = a + cols, e = d + 1
-        idx.set([a, d, b, b, d, e], n)
-        n += 6
+// Error-driven mesh (RTIN), adapted from @mapbox/martini (ISC): the tile is resampled onto a (2^k+1)² grid of
+// right triangles, and a triangle splits only where its height error is over maxError. Errors propagate to
+// parents, so neighbours always agree on shared edges: no cracks. maxError is searched to fit `budget` triangles.
+// The mesh is the bare earth (bareEarth.js) in every year: it only shows when OSM buildings (Buildings.jsx) stand
+// on it, and the DSM's own roofs and tree crowns drew as curtains and spikes beside them. The LiDAR look keeps the DSM.
+function rtin({ meta, old, w, h }, budget, seam) {
+  const size = Math.min(1025, 2 ** Math.ceil(Math.log2(Math.max(w, h) - 1)) + 1), max = size - 1
+  const sx = (w - 1) / max, sy = (h - 1) / max // source pixels per grid step
+  const sample = (src) => {
+    const out = new Float32Array(size * size)
+    for (let gy = 0, k = 0; gy < size; gy++) {
+      const i = Math.min(gy * sy, h - 1.0001), i0 = Math.floor(i), fi = i - i0
+      for (let gx = 0; gx < size; gx++, k++) {
+        const j = Math.min(gx * sx, w - 1.0001), j0 = Math.floor(j), fj = j - j0, q = i0 * w + j0
+        out[k] = (src[q] * (1 - fj) + src[q + 1] * fj) * (1 - fi) + (src[q + w] * (1 - fj) + src[q + w + 1] * fj) * fi
       }
     }
+    return out
+  }
+  const O = sample(old)
+  const errors = new Float32Array(size * size)
+  // keep full detail along seams: the tile's own border, and on the outer tile the near tile's border
+  const lock = (x0, y0, x1, y1) => {
+    for (let gy = Math.max(0, Math.floor(y0) - 1); gy <= Math.min(max, Math.ceil(y1) + 1); gy++)
+      for (let gx = Math.max(0, Math.floor(x0) - 1); gx <= Math.min(max, Math.ceil(x1) + 1); gx++)
+        if (Math.abs(gx - x0) <= 1 || Math.abs(gx - x1) <= 1 || Math.abs(gy - y0) <= 1 || Math.abs(gy - y1) <= 1) errors[gy * size + gx] = Infinity
+  }
+  const [minE, , maxE, maxN] = meta.bbox_osgb
+  const res = (maxE - minE) / w
+  lock(0, 0, max, max)
+  if (seam) lock(((seam[0] - minE) / res - 0.5) / sx, ((maxN - seam[3]) / res - 0.5) / sy, ((seam[2] - minE) / res - 0.5) / sx, ((maxN - seam[1]) / res - 0.5) / sy)
+  // every triangle's hypotenuse a-b, finest last (martini's triangle ids)
+  const n = max * max * 2 - 2, parents = n - max * max, coords = new Uint16Array(n * 4)
+  for (let t = 0; t < n; t++) {
+    let id = t + 2, ax = 0, ay = 0, bx = 0, by = 0, cx = 0, cy = 0
+    if (id & 1) bx = by = cx = max; else ax = ay = cy = max
+    while ((id >>= 1) > 1) {
+      const mx = (ax + bx) >> 1, my = (ay + by) >> 1
+      if (id & 1) { bx = ax; by = ay; ax = cx; ay = cy } else { ax = bx; ay = by; bx = cx; by = cy }
+      cx = mx; cy = my
+    }
+    coords[t * 4] = ax; coords[t * 4 + 1] = ay; coords[t * 4 + 2] = bx; coords[t * 4 + 3] = by
+  }
+  for (let t = n - 1; t >= 0; t--) {
+    const k = t * 4, ax = coords[k], ay = coords[k + 1], bx = coords[k + 2], by = coords[k + 3]
+    const mx = (ax + bx) >> 1, my = (ay + by) >> 1, cx = mx + my - ay, cy = my + ax - mx, m = my * size + mx
+    let e = Math.abs((O[ay * size + ax] + O[by * size + bx]) / 2 - O[m])
+    if (t < parents) e = Math.max(e, errors[((ay + cy) >> 1) * size + ((ax + cx) >> 1)], errors[((by + cy) >> 1) * size + ((bx + cx) >> 1)])
+    if (e > errors[m]) errors[m] = e
+  }
+  const walk = (maxError, leaf) => {
+    const go = (ax, ay, bx, by, cx, cy) => {
+      const mx = (ax + bx) >> 1, my = (ay + by) >> 1
+      if (Math.abs(ax - cx) + Math.abs(ay - cy) > 1 && errors[my * size + mx] > maxError) {
+        if (go(cx, cy, ax, ay, mx, my) === false) return false
+        return go(bx, by, cx, cy, mx, my)
+      }
+      return leaf(ax, ay, bx, by, cx, cy)
+    }
+    go(0, 0, max, max, max, 0) !== false && go(max, max, 0, 0, 0, max)
+  }
+  let lo = 0.01, hi = 256 // metres, searched on a log scale; the tile spans 177
+  for (let it = 0; it < 12; it++) {
+    const mid = Math.sqrt(lo * hi)
+    let count = 0
+    walk(mid, () => ++count <= budget)
+    if (count > budget) lo = mid; else hi = mid
+  }
+  const vid = new Int32Array(size * size).fill(-1), tris = []
+  let nv = 0
+  const at = (x, y) => { const g = y * size + x; if (vid[g] < 0) vid[g] = nv++; return vid[g] }
+  walk(hi, (ax, ay, bx, by, cx, cy) => { tris.push(at(ax, ay), at(bx, by), at(cx, cy)) })
+  const [oE, oN] = meta.origin_osgb
+  const pos = new Float32Array(nv * 3), uv = new Float32Array(nv * 2), low = new Float32Array(nv)
+  for (let g = 0; g < vid.length; g++) {
+    const v = vid[g]
+    if (v < 0) continue
+    const j = (g % size) * sx, i = Math.floor(g / size) * sy
+    pos[v * 3] = minE + (j + 0.5) * res - oE
+    pos[v * 3 + 1] = O[g] - meta.origin_h
+    pos[v * 3 + 2] = oN - (maxN - (i + 0.5) * res)
+    uv[v * 2] = (j + 0.5) / w
+    uv[v * 2 + 1] = 1 - (i + 0.5) / h
+    low[v] = O[g] - meta.origin_h
+  }
+  return { pos, uv, low, index: new Uint32Array(tris), maxError: hi }
+}
+
+// Runs rtin in a worker (its source is self-contained), so a 1025² tile never stalls a frame; inline if workers fail.
+function meshOf(t, budget, seam) {
+  const args = [{ meta: t.meta, old: t.old, w: t.w, h: t.h }, budget, seam]
+  return new Promise((resolve, reject) => {
+    const src = `onmessage = (e) => { const r = (${rtin})(...e.data); postMessage(r, [r.pos.buffer, r.uv.buffer, r.low.buffer, r.index.buffer]) }`
+    const url = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }))
+    const worker = new Worker(url)
+    const done = () => { worker.terminate(); URL.revokeObjectURL(url) }
+    worker.onmessage = (e) => { done(); resolve(e.data) }
+    worker.onerror = (e) => { done(); reject(e) }
+    worker.postMessage(args)
+  }).catch(() => rtin(...args))
+}
+
+function TerrainMesh({ t, hole, name = 'terrain' }) {
+  const gl = useThree((s) => s.gl)
+  const geometry = useMemo(() => {
+    const { pos, uv, low, index, maxError } = t.mesh
     const g = new THREE.BufferGeometry()
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3))
     g.setAttribute('uv', new THREE.BufferAttribute(uv, 2))
     g.setAttribute('aOld', new THREE.BufferAttribute(low, 1))
-    g.setIndex(new THREE.BufferAttribute(idx, 1))
+    g.setIndex(new THREE.BufferAttribute(index, 1))
     g.computeVertexNormals()
     g.computeBoundingSphere()
+    g.userData.maxError = maxError
     return g
-  }, [t, step])
-  // once the near tile is up, drop the outer cells it covers (only the index changes, so no rebuild hitch)
+  }, [t])
+  // once the near tile is up, drop the outer triangles it covers (only the index changes, so no rebuild hitch)
   useLayoutEffect(() => {
     const full = geometry.index
     if (!hole) return
     const pos = geometry.attributes.position.array, idx = full.array, r = rect(t.meta, hole)
     const keep = new Uint32Array(idx.length)
     let n = 0
-    for (let q = 0; q < idx.length; q += 6) {
-      if (inside(pos, idx[q], r) && inside(pos, idx[q + 5], r)) continue // a 0.25 m overlap with the near tile, no gap
-      keep.set(idx.subarray(q, q + 6), n)
-      n += 6
+    for (let q = 0; q < idx.length; q += 3) {
+      if (inside(pos, idx[q], r) && inside(pos, idx[q + 1], r) && inside(pos, idx[q + 2], r)) continue // the seam is full detail, so the overlap is one grid step
+      keep.set(idx.subarray(q, q + 3), n)
+      n += 3
     }
     geometry.setIndex(new THREE.BufferAttribute(keep.subarray(0, n), 1))
     return () => geometry.setIndex(full)
@@ -260,7 +360,8 @@ function TerrainMesh({ t, step, hole, name = 'terrain' }) {
   useEffect(() => () => geometry.dispose(), [geometry])
   return (
     <mesh name={name} geometry={geometry} raycast={noRaycast} castShadow={!old} receiveShadow>{/* the shadow pass draws the raw DSM */}
-      <meshStandardMaterial map={map} roughness={0.92} metalness={0} onBeforeCompile={facades} customProgramCacheKey={() => 'terrain-facades'} />
+      {/* where the outer tile overlaps the near one, the near one wins the depth test */}
+      <meshStandardMaterial map={map} roughness={0.92} metalness={0} polygonOffset={!!hole} polygonOffsetFactor={1} polygonOffsetUnits={1} onBeforeCompile={facades} customProgramCacheKey={() => 'terrain-facades'} />
     </mesh>
   )
 }
@@ -300,16 +401,21 @@ function Tiles({ lidar, step }) {
   const low = use(loadLow())
   const full = useLoaded(loadFull)
   const near = useLoaded(loadNear, !LITE && !!full)
-  const Look = lidar ? LidarPoints : TerrainMesh
+  if (lidar) return (
+    <>
+      <LidarPoints t={full ?? low} step={full ? step : 1} hole={near?.meta.bbox_osgb} />
+      {near && <LidarPoints t={near} step={1} name="terrain-lidar-near" />}
+    </>
+  )
   return (
     <>
-      <Look t={full ?? low} step={full ? step : 1} hole={near?.meta.bbox_osgb} />
-      {near && <Look t={near} step={1} name={lidar ? 'terrain-lidar-near' : 'terrain-near'} />}
+      <TerrainMesh t={full ?? low} hole={near?.meta.bbox_osgb} />
+      {near && <TerrainMesh t={near} name="terrain-near" />}
     </>
   )
 }
 
-/** Real EA LiDAR DSM of Tower Bridge with aerial imagery draped. `lidar` swaps to a height-coloured point cloud. */
+/** Bare earth from the EA LiDAR DSM with aerial imagery draped. `lidar` swaps to the DSM as a height-coloured point cloud. */
 export default function Terrain({ lidar = false, step = LITE ? 2 : 1 }) {
   const google = useGoogleShown(lidar)
   return (

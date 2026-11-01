@@ -1,5 +1,5 @@
 {
-  "_why": "Ceilings for the whole bridge; full is checked in 2026, 1894 and 1940 (period eras add meshes), lite in 2026; shared with the terrain and city tiles; check.mjs prints both tables. full (laptops): draw calls bind first in WebGL, ~1,500/frame at 60 fps on an Iris Xe/GTX 1650/M1-class GPU; every shadow caster is drawn twice and the tiles take several hundred, so the bridge gets 300 (~600 with shadows). Triangles: 1 M plus the tiles, doubled by the shadow pass, is ~3-4 M/frame, comfortable on that class. lite (judges' phones, look/tier.js, ?lite=1): a mid phone (Adreno 6xx, A13-A15) holds 60 fps at roughly 300-500 calls and ~1 M triangles per frame all in, so the bridge's fair share is ~150 calls; it already spends 230 because little is gated on LITE yet. The lite cap therefore freezes it near today (240 calls, ~4% over today; 220 k triangles, today + 20%): new geometry-heavy detail must be skipped when LITE is true, and lite should shrink towards 150. baseline: [draw calls, triangles] per part id on main at 2026-11-01, for the deltas in the tables; update it when you land a deliberate spend.",
+  "_why": "Ceilings for the whole bridge; both tiers are checked in 2026, 1894 and 1940 (period eras add meshes); shared with the terrain and city tiles; check.mjs prints both tables. full (laptops): draw calls bind first in WebGL, ~1,500/frame at 60 fps on an Iris Xe/GTX 1650/M1-class GPU; every shadow caster is drawn twice and the tiles take several hundred, so the bridge gets 300 (~600 with shadows). Triangles: 1 M plus the tiles, doubled by the shadow pass, is ~3-4 M/frame, comfortable on that class. lite (judges' phones, look/tier.js, ?lite=1): a mid phone (Adreno 6xx, A13-A15) holds 60 fps at roughly 300-500 calls and ~1 M triangles per frame all in, so the bridge's fair share is ~150 calls; it already spends 230 because little is gated on LITE yet. The lite cap therefore freezes it near today (240 calls, ~4% over today; 260 k triangles, the busiest year (1940, period traffic) + 20%): new geometry-heavy detail must be skipped when LITE is true, and lite should shrink towards 150. baseline: [draw calls, triangles] per part id on main at 2026-11-01, for the deltas in the tables; update it when you land a deliberate spend.",
   "full": {
     "maxDrawCalls": 300,
     "maxTriangles": 1000000,
@@ -44,7 +44,7 @@
   },
   "lite": {
     "maxDrawCalls": 240,
-    "maxTriangles": 220000,
+    "maxTriangles": 260000,
     "baseline": {
       "traffic": [4, 43200],
       "north-tower": [18, 14144],

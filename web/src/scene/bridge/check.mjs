@@ -609,8 +609,8 @@ console.log('geom materials untextured, all kinded ok')
   for (const tier of ['full', 'lite']) {
     const B = BUDGET[tier]
     setLite(tier === 'lite')
-    // 2026 against the baseline; on full also the period years, whose eras swap and add meshes (1940: sandbags, lamps)
-    const years = tier === 'full' ? [2026, 1894, 1940] : [2026]
+    // 2026 against the baseline, then the period years, whose eras swap and add meshes (1940: sandbags, lamps)
+    const years = [2026, 1894, 1940]
     const spent = years.map((y) => {
       useStore.getState().setYear(y)
       const t = {}

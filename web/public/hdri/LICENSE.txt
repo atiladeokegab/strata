@@ -1,2 +1,4 @@
 evening_road_01_puresky by Poly Haven (polyhaven.com/a/evening_road_01_puresky), CC0 1.0.
 The 1k .hdr lights and reflects the scene; the 4k .jpg is Poly Haven's tonemapped JPG, downscaled, shown as the sky.
+evening_road_ground_1k.hdr is that 1k HDR with a warm grey-green ground (river and street bounce) blended in below
+the horizon in place of the mirrored sky; the 2k .jpg is the sky JPG downscaled for the lite tier. Both CC0 like the source.

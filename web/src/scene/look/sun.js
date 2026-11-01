@@ -1,9 +1,12 @@
 // The light: Poly Haven's evening_road_01_puresky (CC0), a clear late afternoon with the sun ~15 degrees up.
 // It is rotated so the sun sits in the south-west over London. Scene frame: x east, y up, z south.
 import * as THREE from 'three'
+import { LITE } from './tier'
 
-export const HDRI = '/hdri/evening_road_01_puresky_1k.hdr'
-export const SKY_JPG = '/hdri/evening_road_01_puresky_4k.jpg'
+// The puresky HDRI with a warm grey-green ground blended in below the horizon (it was mirrored blue sky, so
+// metal facing down or sideways reflected near-black); envLow.js is its 32x16 instant copy.
+export const HDRI = '/hdri/evening_road_ground_1k.hdr'
+export const SKY_JPG = LITE ? '/hdri/evening_road_01_puresky_2k.jpg' : '/hdri/evening_road_01_puresky_4k.jpg'
 
 // Sun direction as found in the HDRI (brightest pixels, three's equirect frame), and the yaw that turns
 // it to azimuth ~238 degrees (south-west).

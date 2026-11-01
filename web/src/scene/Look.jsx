@@ -2,17 +2,39 @@
 // The scene's look: a Poly Haven HDRI sky (CC0) that also lights and reflects the scene, a sun matched to it
 // with camera-fitted soft shadows, haze, world-scale textures on the bridge, and the post stack
 // (N8AO, bloom, ACES, period grade by year, vignette, SMAA). Mount once inside the R3F <Canvas>.
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Environment, PerformanceMonitor, useTexture } from '@react-three/drei'
-import { Bloom, EffectComposer, N8AO, SMAA, ToneMapping } from '@react-three/postprocessing'
-import { BrightnessContrastEffect, HueSaturationEffect, SepiaEffect, ToneMappingMode, VignetteEffect } from 'postprocessing'
 import * as THREE from 'three'
-import { useStore } from '../store'
-import { ENV_ROTATION, HAZE, HDRI, SKY_JPG, SUN_COLOR, SUN_DIR, periodGrade } from './look/sun'
+import { Guard } from '../ui/slots'
+import { makeLowEnv } from './look/envLow'
+import { ENV_ROTATION, HAZE, HDRI, SKY_JPG, SUN_COLOR, SUN_DIR } from './look/sun'
 import { pbr, warmMaterialTextures } from './look/textures'
 import { LITE } from './look/tier'
 import { worldUVs } from './look/uvs'
+
+const Grade = lazy(() => import('./look/Grade.jsx'))
+const ENV_INTENSITY = 0.6
+
+// First frame: a 32x16 copy of the HDRI (inlined, no fetch) lights and fills the sky at once, with the HDRI's
+// energy, so the bridge is never a black silhouette on a blank sky while the HDR, the sky JPG and the post
+// stack load. Each later layer replaces it in place.
+function InstantSky() {
+  const scene = useThree((s) => s.scene)
+  useLayoutEffect(() => {
+    const env = makeLowEnv()
+    const prev = [scene.environment, scene.background, scene.environmentIntensity]
+    scene.environment = scene.background = env
+    scene.environmentIntensity = ENV_INTENSITY
+    scene.environmentRotation.set(0, ENV_ROTATION, 0)
+    scene.backgroundRotation.set(0, ENV_ROTATION, 0)
+    return () => { [scene.environment, scene.background, scene.environmentIntensity] = prev; env.dispose() }
+  }, [scene])
+  return null
+}
+
+// A layer that streams in after the first frame; if it fails, the instant sky stays.
+const Later = ({ name, children }) => <Guard name={name} fallback={null}><Suspense fallback={null}>{children}</Suspense></Guard>
 
 // The sky: Poly Haven's tonemapped 4k JPG (sharp clouds), rotated with the HDRI so the sun lines up.
 function SkyBackground() {
@@ -152,40 +174,6 @@ function SceneUpgrades() {
 // Year drives the grade continuously, damped so scrubbing the timeline eases between periods.
 // The grade effects are plain objects mutated per frame: the r3f wrappers rebuild on every prop change, and
 // under React 19 a ref passed to them lands in their JSON.stringify'd props and throws.
-function Grade({ low }) {
-  const fx = useMemo(() => ({
-    sat: new HueSaturationEffect(),
-    bc: new BrightnessContrastEffect(),
-    sepia: new SepiaEffect({ intensity: 0 }),
-    vig: new VignetteEffect({ offset: 0.3, darkness: 0.38 }),
-  }), [])
-  useEffect(() => () => Object.values(fx).forEach((e) => e.dispose()), [fx])
-  const k = useRef(periodGrade(useStore.getState().year))
-  const ao = useRef()
-  useFrame(({ camera }, dt) => {
-    // AO grounds things up close; from altitude it only greys the dense LiDAR roofscape, so fade it out
-    if (ao.current) ao.current.configuration.intensity = 2.4 * (1 - 0.75 * THREE.MathUtils.smoothstep(camera.position.y, 150, 900))
-    const p = (k.current = THREE.MathUtils.damp(k.current, periodGrade(useStore.getState().year), 4, dt))
-    fx.sat.saturation = 0.04 - 0.4 * p
-    fx.sepia.intensity = 0.42 * p
-    fx.bc.contrast = 0.08 - 0.05 * p
-    fx.bc.brightness = 0.01 * p
-    fx.vig.darkness = 0.38 + 0.2 * p
-  })
-  return (
-    <EffectComposer multisampling={0} enableNormalPass={false}>
-      {!low && !LITE && <N8AO ref={ao} halfRes aoRadius={4} distanceFalloff={1} intensity={2.4} quality="medium" />}
-      <Bloom mipmapBlur intensity={LITE ? 0.15 : 0.3} luminanceThreshold={1} luminanceSmoothing={0.2} />
-      <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
-      <primitive object={fx.sat} dispose={null} />
-      <primitive object={fx.bc} dispose={null} />
-      <primitive object={fx.sepia} dispose={null} />
-      <primitive object={fx.vig} dispose={null} />
-      <SMAA />
-    </EffectComposer>
-  )
-}
-
 // Software renderers (SwiftShader, llvmpipe) and GPUs without float render targets skip the post stack:
 // it renders black or crawls there. Renderer tone mapping (R3F's ACES default) still applies. ?post=1 forces it on.
 function canPost(gl) {
@@ -214,12 +202,13 @@ export function Look() {
   return (
     <>
       <PerformanceMonitor onDecline={() => setLow(true)} flipflops={3} onFallback={() => setLow(true)} />
-      <SkyBackground />
+      <InstantSky />
+      <Later name="Look sky"><SkyBackground /></Later>
       {/* Image-based light and reflections from the HDRI itself. */}
-      <Environment files={HDRI} environmentIntensity={0.6} environmentRotation={[0, ENV_ROTATION, 0]} />
+      <Later name="Look HDRI"><Environment files={HDRI} environmentIntensity={ENV_INTENSITY} environmentRotation={[0, ENV_ROTATION, 0]} /></Later>
       <Sun mapSize={low || !post ? 2048 : 4096} />
       <SceneUpgrades />
-      {post && <Grade low={low} />}
+      {post && <Later name="Look post"><Grade low={low} /></Later>}
     </>
   )
 }

@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url'
 import { containersOf, clickThrough } from './xray.js'
 import * as THREE from 'three'
 import { PART_IDS } from './parts.js'
-import { KERB_X, FOOTWAY_OUT } from './roadway.js'
+import { KERB_X, FOOTWAY_OUT, roadSurface } from './roadway.js'
 import { createShip, stepShip, WAIT_X, HOLD_X, CRUISE } from './shipSim.js'
 import { leverAfter, leverForKey, leverLabel, KEY_STEP } from './drive.js'
 import { vesselForYear, needsLift, leafInput, CLEARANCE } from './vessels.js'
@@ -72,6 +72,7 @@ assert.ok(eraFor(1975).steam && !eraFor(1976).steam)
 // approach lamps: 1894 gas, 1940 blacked out, 2026 electric
 assert.ok(eraFor(1894).gasLamps && !eraFor(1894).blackout && !eraFor(1938).blackout)
 assert.ok(eraFor(1939).blackout && eraFor(1940).blackout && eraFor(1944).blackout && !eraFor(1945).blackout)
+assert.ok(eraFor(1894).woodBlocks && eraFor(1929).woodBlocks && !eraFor(1930).woodBlocks && !eraFor(2026).woodBlocks)
 assert.ok(!eraFor(1950).gasLamps && !eraFor(2026).gasLamps && !eraFor(2026).blackout)
 assert.ok(!eraFor(2011).nightLighting && eraFor(2012).nightLighting)
 assert.ok(eraFor(2012).olympics && !eraFor(2011).olympics && !eraFor(2013).olympics)
@@ -577,6 +578,15 @@ console.log('geom materials untextured, all kinded ok')
     assert.ok(p.traffic[0] <= BUDGET.baseline.traffic[0] + 2, `${y} traffic draws ${p.traffic[0]} calls`)
     console.log(`  traffic ${y}: ${p.traffic[0]} draw calls, ${Math.round(p.traffic[1])} triangles`)
   }
+}
+// Road surface by era: waits for Look's maps, then swaps in place (no new material, no draw call).
+{
+  const stub = (variant) => ({ map: variant, normalMap: 0, roughnessMap: 0, normalScale: new THREE.Vector2(1, 1) })
+  const m = new THREE.MeshStandardMaterial()
+  assert.ok(!roadSurface(m, 'wood', stub), 'road surface waits for Look to texture the material')
+  m.map = 'look'
+  assert.ok(roadSurface(m, 'wood', stub) && m.map === 'wood:block' && m.userData.surface === 'wood')
+  assert.ok(roadSurface(m, 'asphalt', stub) && m.map === 'asphalt')
 }
 // Lite tier (phones): the approach balustrade drops the turned balusters, under ~2k vertices per half.
 {

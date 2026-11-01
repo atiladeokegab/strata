@@ -42,6 +42,7 @@ export const shown = (kind, stage) => {
 // Fallback years from the Tower Bridge history (wiki-tb); resolveYears() overrides from events.
 export const ERAS = {
   walkwaysClosed: 1910, // closed to the public for lack of use
+  asphalt: 1930, // carriageway wood blocks -> asphalt, and painted markings; inferred, no dated source yet
   blackout: 1939, // wartime: lamps dark, kerbs and lamp posts banded white, sandbags (blackout from 1 Sept 1939)
   blackoutEnd: 1945,
   electricLamps: 1950, // approach lanterns gas -> electric; inferred, no dated source yet
@@ -100,6 +101,7 @@ export function eraFor(year, eras = FALLBACK) {
     walkwayOpen: year < y('walkwaysClosed') || year >= y('walkwaysReopened'),
     blackout: year >= y('blackout') && year < y('blackoutEnd'),
     gasLamps: year < y('electricLamps'),
+    woodBlocks: year < y('asphalt'),
     glazed: year >= y('walkwaysReopened'),
     steam: year < y('electricDrive'),
     nightLighting: year >= y('nightLighting'),

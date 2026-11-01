@@ -173,7 +173,7 @@ function sandbags(out, x, z, w, d, courses) {
 export function ApproachDetails({ era }) {
   return (
     <Meshes
-      deps={[era?.blackout]}
+      deps={[era?.blackout, era?.woodBlocks]}
       materials={lanternFor(era)}
       build={() => {
         const o = kit()
@@ -181,7 +181,7 @@ export function ApproachDetails({ era }) {
         for (let z = L.spanEnd + 6; z < L.pierZ - L.towerHalfZ - 3; z += 12) lamps.push(z)
         balustrade(o, L.spanEnd, L.pierZ - L.towerHalfZ, lamps, LITE)
         for (const z of lamps) for (const x of [-BAL_X, BAL_X]) lamp(o, x, BAL_Y, z, era) // its 1 m base stands in the balustrade as a pedestal
-        dashes(o, L.spanEnd + 1, L.pierZ - L.towerHalfZ - 1)
+        if (!era?.woodBlocks) dashes(o, L.spanEnd + 1, L.pierZ - L.towerHalfZ - 1) // no painted lines on the wood blocks
         footways(o, L.spanEnd, L.pierZ - L.towerHalfZ, era)
         return o
       }}
@@ -193,11 +193,11 @@ export function ApproachDetails({ era }) {
 export function DeckMarkings({ era }) {
   return (
     <Meshes
-      deps={[era?.blackout]}
+      deps={[era?.blackout, era?.woodBlocks]}
       materials={{ sand: SAND }}
       build={() => {
         const o = kit()
-        dashes(o, L.pierZ - 9.5, L.pierZ + 9.5)
+        if (!era?.woodBlocks) dashes(o, L.pierZ - 9.5, L.pierZ + 9.5)
         footways(o, L.pierZ - L.towerHalfZ, L.pierZ + L.towerHalfZ, era)
         if (era?.blackout && !LITE) {
           for (const sx of [-1, 1]) sandbags(o, sx * 8.65, L.pierZ - L.towerHalfZ + 0.7, 0.9, 1.2, 5) // against the tower's shore-side jambs
@@ -213,12 +213,12 @@ export function DeckMarkings({ era }) {
 export function BasculeDetails({ era }) {
   return (
     <Meshes
-      deps={[era?.blackout]}
+      deps={[era?.blackout, era?.woodBlocks]}
       materials={lanternFor(era)}
       build={() => {
         const o = kit()
         for (const z of [-31, -21, -11]) for (const x of [-9, 9]) lamp(o, x, 0.05, z, era)
-        dashes(o, L.pivotZ + 0.5, -0.5)
+        if (!era?.woodBlocks) dashes(o, L.pivotZ + 0.5, -0.5)
         footways(o, L.pierZ + L.towerHalfZ, 0, era)
         for (const gs of Object.values(o)) gs.forEach((g) => g.translate(0, -L.pivotY, -L.pivotZ))
         return o

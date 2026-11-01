@@ -2,6 +2,8 @@ import { useLayoutEffect, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { clickThrough } from './xray.js'
+import { roadSurface } from './roadway.js'
+import { pbr } from '../look/textures.js'
 
 const HIGHLIGHT = new THREE.Color('#ffb547')
 const tmp = new THREE.Vector3()
@@ -53,14 +55,15 @@ export function Part({ id, rt, home = [0, 0, 0], explode = [0, 0, 0], xray = fal
     // Material writes only when something changed: most frames nothing does.
     const clip = clipY === null ? null : clipList.current
     const was = last.current
-    if (was && was.glow === glow && was.fade === fade && was.shell === shell && was.steel === rt.steel.current && was.clip === clip) return
-    last.current = { glow, fade, shell, steel: rt.steel.current, clip }
+    if (was && was.glow === glow && was.fade === fade && was.shell === shell && was.steel === rt.steel.current && was.road === rt.road?.current && was.clip === clip) return
+    last.current = { glow, fade, shell, steel: rt.steel.current, road: rt.road?.current, clip }
     // a see-through shell lets clicks through to what it contains; a dimmed part stays clickable
     for (const o of meshes.current) clickThrough(o, shell > 0.3)
     for (const m of mats.current) {
       m.emissive.copy(HIGHLIGHT)
       m.emissiveIntensity = glow
       if (m.userData.kind === 'steel') m.color.set(rt.steel.current)
+      if (m.userData.kind === 'road' && rt.road && !roadSurface(m, rt.road.current, pbr)) last.current = null // not textured yet: retry
       const own = m.userData.opacity ?? 1 // clear glass keeps its own opacity under the fade
       const t = fade > 0.01 || own < 1
       // three bakes `transparent` into the shader (OPAQUE define), so a flip needs a recompile.

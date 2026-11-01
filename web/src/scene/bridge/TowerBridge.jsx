@@ -158,6 +158,7 @@ export function TowerBridge(props) {
       selected: { current: useStore.getState().selected },
       hovered: { current: null },
       steel: { current: steelColour(year) },
+      road: { current: 'asphalt' },
       select,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -165,6 +166,7 @@ export function TowerBridge(props) {
   )
   rt.select = select
   rt.steel.current = steelColour(year)
+  rt.road.current = era.woodBlocks ? 'wood' : 'asphalt'
 
   useEffect(() => {
     gl.localClippingEnabled = true

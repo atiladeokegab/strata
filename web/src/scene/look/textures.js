@@ -24,6 +24,8 @@ const PALETTES = {
   'slate:roof': { low: [52, 58, 64], high: [86, 94, 102], metalness: 0.05, normalScale: 0.6, roughness: [0.45, 0.75], course: [32, 16], seed: 3371 },
   'wood:dark': { low: [42, 25, 17], high: [90, 57, 37], metalness: 0.08, normalScale: 0.42, roughness: [0.58, 0.86], course: 0, seed: 1103, grain: true },
   'brick:london': { low: [150, 118, 74], high: [196, 164, 112], metalness: 0, normalScale: 0.5, roughness: [0.7, 0.95], course: [32, 16], seed: 2903, speckle: true },
+  // wood-block carriageway (1894): blocks laid across the road in stretcher bond, ~0.2 x 0.1 m at a 3.2 m tile
+  'wood:block': { low: [58, 42, 30], high: [104, 80, 58], metalness: 0, normalScale: 0.5, roughness: [0.6, 0.9], course: [16, 8], seed: 6151 },
   'asphalt': { low: [48, 48, 50], high: [78, 77, 76], metalness: 0, normalScale: 0.35, roughness: [0.78, 0.96], course: 0, seed: 4129, speckle: true },
 }
 export const MATERIAL_TEXTURE_VARIANTS = Object.keys(PALETTES)

@@ -18,7 +18,8 @@ const GoogleCredit = google ? function GoogleCredit({ lidar }) {
   const shown = google.useGoogleShown(lidar)
   const credit = google.useGoogle((s) => s.credit)
   if (!shown) return null
-  return <span className="google-credit"><b>Google</b>{credit && credit !== 'Google' ? ` ${credit}` : ''}</span>
+  // policy wording: name "Google Maps", say which part is Google's, then the providers as given (sorted by frequency, joined by ;)
+  return <span className="google-credit"><b>3D city: Google Maps</b>{credit && credit !== 'Google' ? ` · ${credit}` : ''}</span>
 } : () => null
 const BuildingsCredit = makeSlot('BuildingsCredit', ['../scene/Buildings.jsx']) // OSM ODbL credit while buildings show
 const Guide = makeSlot('Guide', ['../tour/Guide.jsx']) // build-tour's guided tour; inside .app for --sheet

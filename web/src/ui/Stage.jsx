@@ -3,7 +3,7 @@ import { useEffect } from 'react'
 import { Canvas, useThree } from '@react-three/fiber'
 import { Raycaster, Vector3 } from 'three'
 import { Sky } from '@react-three/drei'
-import { useStore } from '../store'
+import { useStore, TILES } from '../store'
 import { CameraRig } from './CameraRig'
 import { makeSlot } from './slots'
 import { BridgeStandIn, GroundStandIn, WaterStandIn } from './StandIns'
@@ -97,7 +97,7 @@ export function Stage() {
       <Tour />
       <CameraRig />
       <LabelGuard />
-      <GoogleTiles />{/* outside the click group: Google meshes and OSM buildings are never parts */}
+      {TILES && <GoogleTiles />}{/* outside the click group: Google meshes and OSM buildings are never parts */}
       <Buildings />
       <group
         name="world"

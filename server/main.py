@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 ROOT = Path(__file__).resolve().parent.parent
 app = FastAPI(title="Strata")
+from server.voice import router as voice_router; app.include_router(voice_router)  # noqa: E402
 
 
 @app.get("/api/health")

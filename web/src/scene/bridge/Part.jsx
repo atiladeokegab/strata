@@ -23,7 +23,7 @@ export function Part({ id, rt, home = [0, 0, 0], explode = [0, 0, 0], xray = fal
     ref.current.traverse((o) => {
       o.name = id
       o.userData.partId = id
-      if (!o.isMesh) return
+      if (!o.isMesh || o.userData.affordance) return // drive gizmos keep their own materials
       if (!o.userData.ownMat) {
         o.material = o.material.clone()
         o.userData.ownMat = true

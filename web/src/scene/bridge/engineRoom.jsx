@@ -12,16 +12,17 @@ import { Part } from './Part.jsx'
 import { L } from './structures.jsx'
 import { OPEN_TIME_S } from './hydraulics.js'
 
+// repeat is tiles per metre on merged geometry (geom.js merge gives metre UVs)
 const mat = (kind, variant, repeat, props) =>
   Object.assign(new THREE.MeshStandardMaterial({ ...pbr(variant, repeat), ...props }), { userData: { kind } })
 let MATS
 const mats = () =>
   (MATS ??= {
-    brick: mat('stone', 'stone:portland', 3, { color: '#b5654c' }),
-    stone: mat('stone', 'stone:portland', 2),
+    brick: mat('stone', 'stone:portland', 0.5, { color: '#b5654c' }),
+    stone: mat('stone', 'stone:portland', 0.25),
     granite: mat('stone', 'granite:cornish', 3),
-    slate: mat('slate', 'slate:roof', 4),
-    iron: mat('iron', 'iron:cast', 1),
+    slate: mat('slate', 'slate:roof', 0.33),
+    iron: mat('iron', 'iron:cast', 0.33),
   })
 
 // House footprint and the machinery layout inside it.

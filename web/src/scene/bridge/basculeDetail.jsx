@@ -16,15 +16,16 @@ const GIRDERS = [-7.5, -3, 3, 7.5]
 // Main girder bottom, tapering 4.4 m deep at the pivot to 1 m at the tip (structures.jsx shape).
 const bottom = (z) => TOP - 0.06 - 4.4 + (3.4 * Math.max(0, z)) / LEN
 
+// repeat is tiles per metre (geom.js merge gives metre UVs)
 const mat = (kind, variant, repeat, props) =>
   Object.assign(new THREE.MeshStandardMaterial({ ...pbr(variant, repeat), ...props }), { userData: { kind } })
 let MATS
 // steel:white map tinted by the 'steel' kind, so Part's year colour shows true rather than doubly blue.
 const mats = () =>
   (MATS ??= {
-    soffit: mat('trim', 'steel:white', 6),
-    fascia: mat('steel', 'steel:white', 4),
-    iron: mat('iron', 'iron:cast', 2),
+    soffit: mat('trim', 'steel:white', 1 / 6),
+    fascia: mat('steel', 'steel:white', 1 / 6),
+    iron: mat('iron', 'iron:cast', 1 / 3),
   })
 
 function build() {

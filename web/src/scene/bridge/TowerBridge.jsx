@@ -7,6 +7,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import { useStore } from '../../store.js'
 import { Part } from './Part.jsx'
+import { BasculeDrive } from './BasculeDrive.jsx'
 import { steelColour } from './geom.js'
 import { createHydraulics, stepHydraulics, SIM_SPEED } from './hydraulics.js'
 import { stageForYear, shown } from './stages.js'
@@ -79,11 +80,13 @@ function Half({ side, rt, st, towerTop }) {
       {shown('bascule', st.stage) && (
         <>
           <Part id={n ? 'bascule-north' : 'bascule-south'} rt={rt} explode={[0, 10, 6]}>
-            <S.PivotFrame sim={sim}>
-              <S.BasculeLeaf />
-              <D.BasculeDetails />
-              <BasculeLeafDetail />
-            </S.PivotFrame>
+            <BasculeDrive sim={sim}>
+              <S.PivotFrame sim={sim}>
+                <S.BasculeLeaf />
+                <D.BasculeDetails />
+                <BasculeLeafDetail />
+              </S.PivotFrame>
+            </BasculeDrive>
           </Part>
           <Part id={id('counterweight')} rt={rt} explode={[0, -10, -4]}>
             <S.PivotFrame sim={sim}>

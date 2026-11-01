@@ -509,6 +509,47 @@ console.log('geom materials untextured, all kinded ok')
         }
   }
   console.log('road corridor ok (clear at 0.5/1.7/3 m, road underfoot every 2 m, 1886-2026)')
+
+  // Render budget, 2026 (the busiest year): draw calls and triangles per part id, ship and traffic
+  // included. Lines and instanced meshes are one call each; instanced triangles count every instance.
+  const tally = (el, part, t) => {
+    if (el == null || typeof el !== 'object') return
+    if (Array.isArray(el)) return el.forEach((e) => tally(e, part, t))
+    const { type, props = {} } = el
+    if (typeof type === 'function')
+      return tally(type(props), type.name === 'Part' ? props.id : (part ?? (['TowerBridge', 'Half'].includes(type.name) ? null : type.name)), t)
+    if (props.visible === false) return
+    const add = (geo, n = 1) => {
+      const row = (t[part ?? '(loose)'] ??= [0, 0])
+      row[0]++
+      if (geo) row[1] += ((geo.index ?? geo.attributes.position).count / 3) * n
+    }
+    const kids = [props.children].flat(Infinity)
+    const g = kids.find((k) => typeof k?.type === 'string' && k.type.endsWith('Geometry'))
+    const geoOf = () => props.geometry ?? kids.find((k) => k?.type === 'primitive' && k.props.attach === 'geometry')?.props.object ?? (g && new T[g.type[0].toUpperCase() + g.type.slice(1)](...(g.props.args ?? [])))
+    if (type === 'mesh') add(geoOf())
+    else if (type === 'instancedMesh') add(props.args[0], props.args[2])
+    else if (type === 'lineSegments' || type === 'line' || type === 'points') add(null)
+    else if (type === 'primitive' && !props.attach) props.object.traverse((o) => o.visible && (o.isMesh ? add(o.geometry, o.count ?? 1) : (o.isLine || o.isPoints) && add(null)))
+    tally(props.children, part, t)
+  }
+  useStore.getState().setYear(2026)
+  const spent = {}
+  tally({ type: TowerBridge, props: {} }, null, spent)
+  const BUDGET = JSON.parse(readFileSync(new URL('./budget.json', import.meta.url)))
+  const rows = Object.entries(spent).sort((a, b) => b[1][1] - a[1][1])
+  const sum = (i, o) => Object.values(o).reduce((s, r) => s + r[i], 0)
+  const total = [sum(0, spent), sum(1, spent)]
+  const base = [sum(0, BUDGET.baseline), sum(1, BUDGET.baseline)]
+  const d = (v, b) => (v === b ? '' : (v > b ? '+' : '') + (v - b))
+  console.log('render budget 2026 (draw calls, triangles; +/- against budget.json baseline)')
+  for (const [id, [c, n]] of [...rows, ['TOTAL', total]]) {
+    const [bc, bn] = id === 'TOTAL' ? base : (BUDGET.baseline[id] ?? [0, 0])
+    console.log(`  ${id.padEnd(26)}${String(c).padStart(5)} ${d(c, bc).padStart(5)} ${String(Math.round(n)).padStart(9)} ${d(Math.round(n), bn).padStart(8)}`)
+  }
+  assert.ok(total[0] <= BUDGET.maxDrawCalls, `bridge draws ${total[0]} meshes, over the ${BUDGET.maxDrawCalls} budget (budget.json)`)
+  assert.ok(total[1] <= BUDGET.maxTriangles, `bridge has ${Math.round(total[1])} triangles, over the ${BUDGET.maxTriangles} budget (budget.json)`)
+  console.log(`render budget ok (${total[0]}/${BUDGET.maxDrawCalls} draw calls, ${Math.round(total[1])}/${BUDGET.maxTriangles} triangles)`)
 }
 // Gate posts and signals vs the deck section and the tower arch: no clash with the masonry.
 {

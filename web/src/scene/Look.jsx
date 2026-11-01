@@ -9,8 +9,9 @@ import * as THREE from 'three'
 import { Guard } from '../ui/slots'
 import { makeLowEnv } from './look/envLow'
 import { ENV_ROTATION, HAZE, HDRI, SKY_JPG, SUN_COLOR, SUN_DIR } from './look/sun'
-import { pbr, warmMaterialTextures } from './look/textures'
+import { loadPhotos, pbr, warmMaterialTextures } from './look/textures'
 import { LITE } from './look/tier'
+import { useStore } from '../store'
 import { worldUVs } from './look/uvs'
 
 const Grade = lazy(() => import('./look/Grade.jsx'))
@@ -59,6 +60,7 @@ const _dir = new THREE.Vector3()
 const _focus = new THREE.Vector3()
 const _right = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), SUN_DIR).normalize()
 const _up = new THREE.Vector3().crossVectors(SUN_DIR, _right).normalize()
+const SHADOW_EVERY = LITE ? 3 : 2
 function Sun({ mapSize }) {
   const light = useRef()
   const last = useRef(0)
@@ -70,7 +72,15 @@ function Sun({ mapSize }) {
     l.shadow.mapSize.set(mapSize, mapSize)
     last.current = 0
   }, [mapSize])
+  const frame = useRef(0)
+  const gl = useThree((s) => s.gl)
+  useEffect(() => () => { gl.shadowMap.autoUpdate = true }, [gl]) // if Look goes, the stand-in light updates its own map
   useFrame(({ camera }) => {
+    // The shadow pass redraws every caster (the LiDAR DSM is millions of triangles), so it runs every
+    // SHADOW_EVERY frames; the light moves only on those frames, so receivers never read a stale map.
+    gl.shadowMap.autoUpdate = false
+    if (frame.current++ % SHADOW_EVERY) return
+    gl.shadowMap.needsUpdate = true
     const l = light.current
     camera.getWorldDirection(_dir)
     const h = Math.max(camera.position.y, 2)
@@ -99,6 +109,22 @@ function Sun({ mapSize }) {
     }
   })
   return <directionalLight ref={light} color={SUN_COLOR} intensity={3.4} castShadow shadow-bias={-0.00005} shadow-radius={4} />
+}
+
+// The first lit frame with the bridge in it (two rendered, so it has settled): tell the shell (its loading
+// card), then start the photo textures and the procedural warm-up, never before that frame.
+function FirstFrame() {
+  const scene = useThree((s) => s.scene)
+  const n = useRef(0)
+  useFrame(() => {
+    if (n.current > 2 || (!n.current && !scene.getObjectByName('tower-bridge'))) return
+    if (++n.current === 3) {
+      useStore.getState().setSceneReady?.(true)
+      loadPhotos()
+      warmMaterialTextures()
+    }
+  })
+  return null
 }
 
 // Bridge materials (tagged by userData.kind in bridge/geom.js) get world-scale texture detail: a grey map
@@ -197,7 +223,6 @@ export function Look() {
   }, [scene])
 
   useEffect(() => { if (low) setDpr(1); else if (LITE) setDpr(Math.min(window.devicePixelRatio, 1.5)) }, [low, setDpr])
-  useEffect(() => warmMaterialTextures(), [])
 
   return (
     <>
@@ -208,6 +233,7 @@ export function Look() {
       <Later name="Look HDRI"><Environment files={HDRI} environmentIntensity={ENV_INTENSITY} environmentRotation={[0, ENV_ROTATION, 0]} /></Later>
       <Sun mapSize={low || !post ? 2048 : 4096} />
       <SceneUpgrades />
+      <FirstFrame />
       {post && <Later name="Look post"><Grade low={low} /></Later>}
     </>
   )

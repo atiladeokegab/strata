@@ -9,6 +9,8 @@ import { useStore } from '../../store'
 import { periodGrade } from './sun'
 import { LITE } from './tier'
 
+const AO = 1.6
+// Lite (phones) keeps only the grade: no AO, bloom or SMAA, so the post stack is 2 passes, not ~20.
 export default function Grade({ low }) {
   const fx = useMemo(() => ({
     sat: new HueSaturationEffect(),
@@ -21,7 +23,7 @@ export default function Grade({ low }) {
   const ao = useRef()
   useFrame(({ camera }, dt) => {
     // AO grounds things up close; from altitude it only greys the dense LiDAR roofscape, so fade it out
-    if (ao.current) ao.current.configuration.intensity = 2.4 * (1 - 0.75 * THREE.MathUtils.smoothstep(camera.position.y, 150, 900))
+    if (ao.current) ao.current.configuration.intensity = AO * (1 - 0.75 * THREE.MathUtils.smoothstep(camera.position.y, 150, 900))
     const p = (k.current = THREE.MathUtils.damp(k.current, periodGrade(useStore.getState().year), 4, dt))
     fx.sat.saturation = 0.04 - 0.4 * p
     fx.sepia.intensity = 0.42 * p
@@ -31,14 +33,14 @@ export default function Grade({ low }) {
   })
   return (
     <EffectComposer multisampling={0} enableNormalPass={false}>
-      {!low && !LITE && <N8AO ref={ao} halfRes aoRadius={4} distanceFalloff={1} intensity={2.4} quality="medium" />}
-      <Bloom mipmapBlur intensity={LITE ? 0.15 : 0.3} luminanceThreshold={1} luminanceSmoothing={0.2} />
+      {!low && !LITE && <N8AO ref={ao} halfRes aoRadius={2} distanceFalloff={1} intensity={AO} quality="medium" />}
+      {!LITE && <Bloom mipmapBlur levels={5} intensity={0.3} luminanceThreshold={1} luminanceSmoothing={0.2} />}
       <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
       <primitive object={fx.sat} dispose={null} />
       <primitive object={fx.bc} dispose={null} />
       <primitive object={fx.sepia} dispose={null} />
       <primitive object={fx.vig} dispose={null} />
-      <SMAA />
+      {!LITE && <SMAA />}
     </EffectComposer>
   )
 }

@@ -49,16 +49,22 @@ const RES = LITE ? '1k' : '2k'
 const photos = new Map() // url -> { source, waiting: [textures] }
 
 // Every clone of one photo shares one THREE.Source, so the GPU holds each image once whatever the repeats.
+// Photos wait for the first lit frame with the bridge in it (Look calls loadPhotos), so on a slow link
+// they never compete with the scene's own downloads.
+let release
+const firstFrame = new Promise((r) => (release = r))
+export const loadPhotos = () => release()
+
 function photo(tex, url) {
   let p = photos.get(url)
   if (!p) {
     photos.set(url, (p = { source: null, waiting: [] }))
-    new THREE.ImageBitmapLoader()
+    firstFrame.then(() => new THREE.ImageBitmapLoader()
       .setOptions({ imageOrientation: 'flipY', premultiplyAlpha: 'none', colorSpaceConversion: 'none' })
       .load(url, (bitmap) => {
         p.source = new THREE.Source(bitmap)
         p.waiting.splice(0).forEach((t) => swap(t, p.source))
-      }, undefined, () => { p.waiting.length = 0 }) // keep the procedural placeholder if the photo fails
+      }, undefined, () => { p.waiting.length = 0 })) // keep the procedural placeholder if the photo fails
   }
   if (p.source) swap(tex, p.source)
   else p.waiting.push(tex)

@@ -32,7 +32,7 @@ const horse = (z) => [
   ...[-0.2, 0.2].flatMap((x) => [-0.7, 0.7].map((dz) => paint(box(0.14, 1.1, 0.14, x, 0.55, z + dz), '#2e1d12'))),
 ]
 
-const BODIES = {
+export const BODIES = {
   cart: () => [
     ...horse(2.1),
     paint(box(0.08, 0.08, 1.8, -0.5, 1.1, 0.9), '#5a4128'),

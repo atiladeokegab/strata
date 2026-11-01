@@ -485,13 +485,37 @@ console.log('geom materials untextured, all kinded ok')
   const out = join(tmpdir(), `bridge-corridor-${process.pid}.mjs`)
   const resolveDir = fileURLToPath(new URL('.', import.meta.url))
   // three is bundled too, so the scene and the components share one copy
-  await bundle({ stdin: { contents: `export { TowerBridge } from './TowerBridge.jsx'; export { useStore } from '../../store.js'; export { Fragment } from 'react/jsx-runtime'; export { setLite } from '../look/tier.js'; export * as T from 'three'`, resolveDir, loader: 'js' }, bundle: true, format: 'esm', platform: 'node', jsx: 'automatic', plugins: [stubs], outfile: out, logLevel: 'error' })
+  await bundle({ stdin: { contents: `export { TowerBridge } from './TowerBridge.jsx'; export { BODIES } from './traffic.jsx'; export { useStore } from '../../store.js'; export { Fragment } from 'react/jsx-runtime'; export { setLite } from '../look/tier.js'; export * as T from 'three'`, resolveDir, loader: 'js' }, bundle: true, format: 'esm', platform: 'node', jsx: 'automatic', plugins: [stubs], outfile: out, logLevel: 'error' })
   const noop = new Proxy(() => noop, { get: () => noop }) // canvas textures draw into a no-op 2D context
   globalThis.document ??= { createElement: () => ({ getContext: () => noop }) }
   globalThis.location ??= { search: '' } // store.js reads ?embed= at import
-  const { TowerBridge, useStore, Fragment, T, setLite } = await import(out)
+  const { TowerBridge, BODIES, useStore, Fragment, T, setLite } = await import(out)
   unlinkSync(out)
 
+  // Vehicle and people bodies (regression: the bus's rear face rendered black): every part is a convex
+  // primitive, so each face's stored normals and its winding must point away from the part's centre.
+  {
+    const a = new T.Vector3(), b = new T.Vector3(), c = new T.Vector3(), n = new T.Vector3(), m = new T.Vector3(), mid = new T.Vector3()
+    let faces = 0
+    for (const era of ['horse', 'interwar', 'modern'])
+      for (const [k, f] of Object.entries(BODIES))
+        f(era).forEach((g, i) => {
+          g.computeBoundingBox()
+          g.boundingBox.getCenter(mid)
+          const p = g.attributes.position, nn = g.attributes.normal, ix = g.index
+          const v = (j) => (ix ? ix.getX(j) : j)
+          for (let j = 0; j < (ix ? ix.count : p.count); j += 3) {
+            a.fromBufferAttribute(p, v(j)), b.fromBufferAttribute(p, v(j + 1)), c.fromBufferAttribute(p, v(j + 2))
+            m.copy(a).add(b).add(c).divideScalar(3).sub(mid)
+            const w = new T.Vector3().crossVectors(b.clone().sub(a), c.clone().sub(a))
+            if (w.lengthSq() < 1e-12 || m.lengthSq() < 1e-9) continue // degenerate (cone tip) or centred face
+            n.fromBufferAttribute(nn, v(j)).add(c.fromBufferAttribute(nn, v(j + 1))).add(c.fromBufferAttribute(nn, v(j + 2)))
+            assert.ok(n.dot(m) > 0 && w.dot(m) > 0, `${era} ${k} part ${i}: face ${j / 3} faces inward (normal ${n.dot(m) > 0 ? 'ok' : 'in'}, winding ${w.dot(m) > 0 ? 'ok' : 'in'})`)
+            faces++
+          }
+        })
+    console.log(`vehicle normals ok (${faces} faces point outward)`)
+  }
   const SKIP = new Set(['Traffic', 'Ship']) // moving road and river users, not structure
   const from = []
   const parts = []

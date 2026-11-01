@@ -2,15 +2,15 @@
 .id-stage { position: relative; width: fit-content; max-width: 100%; margin: 0 auto; border-radius: var(--r); overflow: hidden; background: #000; }
 .id-stage:not(:has(img)) { min-height: 200px; min-width: 280px; }
 .id-photo { display: block; max-width: 100%; max-height: 66vh; }
-.id-box { position: absolute; padding: 0; border: 2px solid var(--accent); border-radius: 4px; background: rgba(214, 179, 110, .08); cursor: pointer; }
-.id-box span { position: absolute; left: 0; top: 0; max-width: 100%; box-sizing: border-box; padding: 1px 5px; border-radius: 0 0 4px 0; background: var(--accent); color: var(--on-ink);
+.id-box { position: absolute; padding: 0; border: 2px solid #fff; border-radius: 4px; background: rgba(255, 255, 255, .08); cursor: pointer; }
+.id-box span { position: absolute; left: 0; top: 0; max-width: 100%; box-sizing: border-box; padding: 1px 5px; border-radius: 0 0 4px 0; background: #fff; color: var(--ink);
   font-size: var(--t1); line-height: 1.15; overflow-wrap: anywhere; overflow: hidden; text-overflow: ellipsis; } /* narrow side-by-side boxes (the bascules) wrap instead of overlapping */
-.id-box:hover, .id-box:focus-visible, .id-on { background: rgba(214, 179, 110, .24); outline: none; }
-.id-on { border-color: #fff; }
-.id-on span { background: #fff; }
+.id-box:hover, .id-box:focus-visible, .id-on { background: rgba(255, 255, 255, .22); outline: none; }
+.id-on { border-color: var(--ink); }
+.id-on span { background: var(--ink); color: var(--on-ink); }
 .id-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px var(--s4); }
 .id-foot p { margin: 0; flex: 1 1 60%; }
-.id-fly { display: inline-flex; align-items: center; height: 40px; padding: 0 var(--s4); border-radius: var(--r); border: 0; background: var(--ink); color: var(--on-ink); font: inherit; font-weight: 500; cursor: pointer; }
+.id-fly { display: inline-flex; align-items: center; height: 40px; padding: 0 var(--s4); border-radius: var(--pill); border: 0; background: var(--ink); color: var(--on-ink); font: inherit; font-weight: 500; cursor: pointer; }
 
 .id-pick { display: flex; flex-direction: column; gap: var(--s3); }
 .id-pick p { margin: 0; }
@@ -23,6 +23,6 @@
 .id-credit { margin: 0; }
 .id-credit a { color: inherit; }
 .id-legend { display: flex; flex-wrap: wrap; gap: 6px; }
-.id-legend button { padding: 6px var(--s3); border-radius: var(--r); border: 1px solid var(--line); background: var(--fill); color: inherit; font: inherit; font-size: var(--t2); cursor: pointer; }
+.id-legend button { padding: 6px var(--s3); border-radius: var(--pill); border: 1px solid var(--line); background: var(--fill); color: inherit; font: inherit; font-size: var(--t2); cursor: pointer; }
 .id-legend button:hover { background: var(--fill-hover); }
-.id-legend button.on { border-color: var(--accent); color: var(--accent); }
+.id-legend button.on { border-color: var(--accent); background: var(--accent); color: var(--on-ink); }

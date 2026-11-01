@@ -12,5 +12,5 @@
 .story-card h2 { margin: 6px 0 var(--s1); font: 600 var(--t3)/1.3 var(--sans); }
 .story-card p { margin: 0 0 var(--s2); line-height: 1.5; }
 .story-sources { display: flex; flex-wrap: wrap; gap: 6px; font-size: var(--t1); }
-.story-sources a, .story-sources span { padding: 2px var(--s2); border: 1px solid var(--line); border-radius: 4px; text-decoration: none; color: var(--muted); }
+.story-sources a, .story-sources span { padding: 2px var(--s2); border: 1px solid var(--line); border-radius: var(--pill); text-decoration: none; color: var(--muted); }
 .story-sources a:hover { color: var(--ink); border-color: var(--line-strong); }

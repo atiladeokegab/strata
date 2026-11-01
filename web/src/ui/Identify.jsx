@@ -67,7 +67,7 @@ export default function Identify() {
   const res = state?.result
   return (
     <>
-      <button className="rm-open" onClick={() => setState({ status: 'pick' })}>Your own eyes</button>
+      <button className="rm-open id-open" onClick={() => setState({ status: 'pick' })}>Your own eyes</button>
       {state && (
         <div className="rm-backdrop" onClick={() => setState(null)}>
           <div className="rm-modal" role="dialog" aria-modal="true" aria-label="Your photo of the bridge" onClick={(e) => e.stopPropagation()}>

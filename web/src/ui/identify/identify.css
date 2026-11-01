@@ -1,4 +1,4 @@
-.id-open { display: inline-block; }
+.rm-open.id-open { position: static; white-space: nowrap; } /* reimagine.css places .rm-open absolutely; inside .controls it must flow */
 .id-stage { position: relative; width: fit-content; max-width: 100%; margin: 0 auto; border-radius: 10px; overflow: hidden; background: #000; }
 .id-stage:not(:has(img)) { min-height: 200px; min-width: 280px; }
 .id-photo { display: block; max-width: 100%; max-height: 66vh; }

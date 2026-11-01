@@ -866,6 +866,50 @@
         "tb-lifts",
         "strata-traffic"
       ]
+    },
+    {
+      "id": "cabin-north",
+      "name": "North bascule control cabin",
+      "group": "machinery",
+      "dims": {},
+      "summary": "Operators used control cabins to coordinate the bascule machinery and interlocked signals. The exact appearance of the rendered cabin is a reconstruction.",
+      "sources": [
+        "tb-engine",
+        "tb-history"
+      ]
+    },
+    {
+      "id": "cabin-south",
+      "name": "South bascule control cabin",
+      "group": "machinery",
+      "dims": {},
+      "summary": "Operators used control cabins to coordinate the bascule machinery and interlocked signals. The exact appearance of the rendered cabin is a reconstruction.",
+      "sources": [
+        "tb-engine",
+        "tb-history"
+      ]
+    },
+    {
+      "id": "cabin-controls-north",
+      "name": "North cabin levers and gauges",
+      "group": "machinery",
+      "dims": {},
+      "summary": "Levers and gauges illustrate the operator controls for the bascule machinery and its interlocked signals. The precise displayed control arrangement is reconstructed.",
+      "sources": [
+        "tb-engine",
+        "tb-history"
+      ]
+    },
+    {
+      "id": "cabin-controls-south",
+      "name": "South cabin levers and gauges",
+      "group": "machinery",
+      "dims": {},
+      "summary": "Levers and gauges illustrate the operator controls for the bascule machinery and its interlocked signals. The precise displayed control arrangement is reconstructed.",
+      "sources": [
+        "tb-engine",
+        "tb-history"
+      ]
     }
   ],
   "events": [
@@ -1003,6 +1047,37 @@
         "tb-inside"
       ],
       "stage": 8
+    },
+    {
+      "year": 1977,
+      "title": "Silver Jubilee: Tower Bridge painted red, white and blue",
+      "text": "Tower Bridge was repainted red, white and blue to celebrate Queen Elizabeth II's Silver Jubilee.",
+      "sources": [
+        "tb-royal-connections",
+        "tb-facts"
+      ],
+      "stage": 8,
+      "status": "text-attested"
+    },
+    {
+      "year": 2014,
+      "title": "Glass floors installed in the high-level walkways",
+      "text": "Glass floors were installed in Tower Bridge's high-level walkways. The West Walkway opened to the public on 1 November and the East Walkway was unveiled on 1 December.",
+      "sources": [
+        "tb-facts"
+      ],
+      "stage": 8,
+      "status": "text-attested"
+    },
+    {
+      "year": 2012,
+      "title": "Olympic rings installed on Tower Bridge",
+      "text": "On 27 June 2012, the Olympic rings were lowered into place on Tower Bridge to mark one month until the Games. That evening, the bridge's new colour-changing lights presented their first Olympic-period display. The rings were a temporary Games installation; they were not the bridge's permanent lighting system.",
+      "sources": [
+        "tb-olympic-rings-2012"
+      ],
+      "stage": 8,
+      "status": "text-attested"
     }
   ],
   "sources": [
@@ -1212,6 +1287,19 @@
       "title": "Environment Agency LiDAR terrain alignment",
       "url": "https://github.com/atiladeokegab/strata/blob/76f0534f1339317557d200c911d19db8c40665ff/web/public/terrain/tower-bridge/meta.json",
       "kind": "measured project terrain alignment"
+    },
+    {
+      "id": "tb-royal-connections",
+      "title": "Tower Bridge Royal Connections",
+      "url": "https://www.towerbridge.org.uk/stories/royal-connections-to-tower-bridge",
+      "kind": "primary institutional"
+    },
+    {
+      "id": "tb-olympic-rings-2012",
+      "title": "Stunning Olympic Rings on Tower Bridge mark countdown to 2012 Games",
+      "url": "https://www.london.gov.uk/press-releases-4742",
+      "kind": "primary institutional",
+      "locator": "Mayor of London press release dated 27 June 2012: Rings lowered into place and first colour light show that evening."
     }
   ],
   "people": [

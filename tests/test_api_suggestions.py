@@ -38,7 +38,7 @@ def test_suggested_question_gets_relevant_cited_answer_without_provider(question
     assert any(topic in answer["answer"].lower() for topic in TOPICS[question]), (question, answer)
 
 
-@pytest.mark.parametrize("part", ["traffic", "ship", "stairs-north", "stairs-south", "lift-north", "lift-south", "works-north", "works-south", "barrier-north", "barrier-south"])
+@pytest.mark.parametrize("part", ["traffic", "ship", "stairs-north", "stairs-south", "lift-north", "lift-south", "works-north", "works-south", "barrier-north", "barrier-south", "cabin-north", "cabin-south", "cabin-controls-north", "cabin-controls-south"])
 def test_visible_scene_selection_can_be_asked_about(part, monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     response = TestClient(app).post("/api/ask", json={"place": "tower-bridge", "part": part, "question": "Explain this part."})

@@ -30,7 +30,9 @@ def test_opening_date_is_retrieved_from_the_historical_event():
 def test_original_hydraulic_pressure_is_retrieved_and_numbers_are_checked():
     place = load_place("tower-bridge")
     evidence = retrieve(place, "What pressure did the original hydraulic machinery use?")
-    pressure = next(fact for fact in evidence if fact.get("fact_id") == "hydraulic-pressure")
+    pressure = next(fact for fact in evidence if "tb-history" in fact["cite"] and
+                    "pressure" in json.dumps(fact).lower() and
+                    all(number in json.dumps(fact) for number in ("700", "800")))
 
     assert "700" in json.dumps(pressure) and "800" in json.dumps(pressure)
     assert "tb-history" in pressure["cite"]

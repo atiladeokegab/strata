@@ -16,6 +16,7 @@ const MAX = (86 * Math.PI) / 180
 const run = (s, target, seconds) => {
   for (let t = 0; t < seconds; t += 0.05) {
     stepHydraulics(s, target, 0.05, MAX)
+    assert.ok(s.angle === 0 || s.bolts === 0, `leaf off its seat only with the bolts fully drawn (bolts ${s.bolts})`)
     assert.ok(s.angle >= 0 && s.angle <= MAX, 'angle within stops')
     assert.ok(s.stored >= 0 && s.stored <= 1, 'stored within 0..1')
   }
@@ -296,6 +297,7 @@ const liftCycle = (scale, fast = false) => {
     s.clear = closed && onLeaves(t) === 0
     if (h.angle > 0.001) assert.equal(onLeaves(t), 0, 'no road user on a moving leaf')
     stepHydraulics(h, heldLever(lever, h, s), dt * SIM_SPEED * k, MAX)
+    assert.ok(h.angle === 0 || h.bolts === 0, `leaves rise only with the nose bolts fully drawn (bolts ${h.bolts})`)
     applyShipWarp(s, ship, CRUISE)
     stepShip(ship, h.angle / MAX, dt * k)
     if (['raising', 'passing'].includes(s.phase) && ship.x > PASSED_X && ship.v < 0.5) still += dt

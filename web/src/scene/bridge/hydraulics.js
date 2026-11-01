@@ -37,6 +37,7 @@ export function stepBolts(s, target, dt) {
 // Advance state `s` by dt seconds towards `target` (0..1 of maxAngleRad). Mutates and returns s.
 export function stepHydraulics(s, target, dt, maxAngleRad) {
   s.max = maxAngleRad
+  stepBolts(s, target, dt)
   const goal = Math.min(1, Math.max(0, target)) * maxAngleRad
   const err = goal - s.angle
   s.valve = Math.max(-1, Math.min(1, err / SLOW_ZONE))
@@ -45,13 +46,15 @@ export function stepHydraulics(s, target, dt, maxAngleRad) {
   const supply = s.stored > 0 ? 1 : Math.min(1, PUMP / draw)
   const want = s.valve * OMEGA_MAX * supply
   s.omega += (want - s.omega) * (1 - Math.exp(-dt / TAU))
+  if (s.angle === 0 && s.bolts > 0) s.omega = Math.min(0, s.omega) // interlock: no lift off the seat until the bolts are fully drawn
   const next = s.angle + s.omega * dt
   s.angle = Math.min(maxAngleRad, Math.max(0, next))
   if (s.angle !== next) s.omega = 0 // hit the stop
+  if (goal === 0 && s.angle < 0.001) (s.angle = 0), (s.omega = 0) // seated: the same 0.001 stepBolts counts as closed
   s.pumping = s.stored < 1
   const used = (Math.abs(s.omega) / OMEGA_MAX) * draw * dt
   s.stored = Math.min(1, Math.max(0, s.stored - used + (s.pumping ? PUMP * dt : 0)))
-  return stepBolts(s, target, dt)
+  return s
 }
 
 // The 1894 passenger lifts ran off the same accumulators. Two cars per tower run counter-phase,

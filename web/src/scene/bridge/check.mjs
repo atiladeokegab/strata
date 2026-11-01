@@ -451,6 +451,7 @@ console.log('geom materials untextured, all kinded ok')
   await bundle({ stdin: { contents: `export { TowerBridge } from './TowerBridge.jsx'; export { useStore } from '../../store.js'; export { Fragment } from 'react/jsx-runtime'; export * as T from 'three'`, resolveDir, loader: 'js' }, bundle: true, format: 'esm', platform: 'node', jsx: 'automatic', plugins: [stubs], outfile: out, logLevel: 'error' })
   const noop = new Proxy(() => noop, { get: () => noop }) // canvas textures draw into a no-op 2D context
   globalThis.document ??= { createElement: () => ({ getContext: () => noop }) }
+  globalThis.location ??= { search: '' } // store.js reads ?embed= at import
   const { TowerBridge, useStore, Fragment, T } = await import(out)
   unlinkSync(out)
 

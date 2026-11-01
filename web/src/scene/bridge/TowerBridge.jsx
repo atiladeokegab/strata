@@ -16,6 +16,7 @@ import * as H from './history.jsx'
 import * as S from './structures.jsx'
 import * as D from './details.jsx'
 import { BasculeLeafDetail } from './basculeDetail.jsx'
+import { Cabin } from './cabin.jsx'
 import { ConstructionSite } from './construction.jsx'
 import { EngineRoom } from './engineRoom.jsx'
 import { Ship } from './ship.jsx'
@@ -49,6 +50,7 @@ function Half({ side, rt, st, towerTop, era }) {
       <Part id={id('pier')} rt={rt} explode={[0, 6, 0]} xray clipY={rising(st, 0, S.L.hw - 3, S.L.pierTop)}>
         <S.Pier />
       </Part>
+      {st.stage >= 5 && <Cabin side={side} rt={rt} />}
       {shown('abutment', st.stage) && (
         <Part id={id('abutment')} rt={rt} explode={[0, 0, -28]} clipY={rising(st, 0, S.L.hw - 1, towerTop)}>
           <S.Abutment />

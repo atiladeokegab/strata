@@ -36,6 +36,7 @@ export function stepBolts(s, target, dt) {
 
 // Advance state `s` by dt seconds towards `target` (0..1 of maxAngleRad). Mutates and returns s.
 export function stepHydraulics(s, target, dt, maxAngleRad) {
+  s.max = maxAngleRad
   const goal = Math.min(1, Math.max(0, target)) * maxAngleRad
   const err = goal - s.angle
   s.valve = Math.max(-1, Math.min(1, err / SLOW_ZONE))
@@ -70,3 +71,6 @@ export function stepCars(l, sim, dt) {
 
 // Car height 0..1 for car i (0 or 1) of a pair.
 export const carHeight = (l, i) => (1 - Math.cos(l.phase + i * Math.PI)) / 2
+// What the cabin's pressure gauge reads: full working pressure while an accumulator ram is up;
+// once it bottoms out, raising sags to the share of the flow the pumps alone can deliver.
+export const gaugePsi = (s) => (s.stored > 0 ? PRESSURE_PSI : PRESSURE_PSI * Math.min(1, PUMP / (s.valve > 0 ? DRAW_UP : DRAW_DOWN)))

@@ -1,6 +1,6 @@
 // Self-check for the pure bridge logic: `node web/src/scene/bridge/check.mjs`
 import assert from 'node:assert/strict'
-import { createHydraulics, stepHydraulics, OPEN_TIME_S, SIM_SPEED, BOLT_SETTLE_S, BOLT_TRAVEL_S, DRAW_UP, LIFT_DRAW, createCars, stepCars, carHeight } from './hydraulics.js'
+import { createHydraulics, stepHydraulics, OPEN_TIME_S, SIM_SPEED, BOLT_SETTLE_S, BOLT_TRAVEL_S, DRAW_UP, LIFT_DRAW, createCars, stepCars, carHeight, gaugePsi, PRESSURE_PSI } from './hydraulics.js'
 import { stageForYear, shown, ERAS, eraFor, resolveYears } from './stages.js'
 import { readFileSync } from 'node:fs'
 import { containersOf } from './xray.js'
@@ -135,6 +135,12 @@ assert.ok(LIFT_DRAW < DRAW_UP / 10)
   stepCars(l, sim, 1)
   assert.equal(l.phase, phase, 'lifts pause on an empty accumulator')
 }
+assert.deepEqual(containersOf('cabin-north'), ['cabin-north'])
+assert.deepEqual(containersOf('cabin-controls-south'), ['cabin-south'])
+// cabin gauge: full pressure on the accumulator, sags to pump-only flow when it is empty and raising
+assert.equal(gaugePsi(createHydraulics()), PRESSURE_PSI)
+const sag = gaugePsi({ stored: 0, valve: 1 })
+assert.ok(sag > 0 && sag < PRESSURE_PSI / 2, `empty accumulator sags the gauge, got ${sag}`)
 console.log('bridge checks ok')
 
 // Ship: waits for the leaves, holds short of the bridge if they drop, but a committed ship keeps going.

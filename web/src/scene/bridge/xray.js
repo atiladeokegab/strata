@@ -5,6 +5,8 @@ export function containersOf(sel) {
   const m = sel.match(/^(stairs|lift|hydraulic-engine|counterweight|pivot)-(north|south)$|^(north|south)-tower$/)
   if (m?.[3]) return [sel]
   if (m) return [m[1] === 'stairs' || m[1] === 'lift' ? `${m[2]}-tower` : `pier-${m[2]}`]
+  const c = sel.match(/^cabin(?:-controls)?-(north|south)$/) // the controls show through their own cabin
+  if (c) return [`cabin-${c[1]}`]
   if (sel === 'accumulator') return ['pier-north', 'pier-south', 'engine-room']
   if (sel === 'engine-room' || /^pier-(north|south)$/.test(sel)) return [sel] // a shell selected shows its insides
   return []

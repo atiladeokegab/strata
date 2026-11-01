@@ -12,22 +12,23 @@ const ease = (u) => 0.5 - 0.5 * Math.cos(Math.PI * Math.min(1, Math.max(0, u)))
 
 // Camera keyframes in the scene frame (metres, origin at the deck centre, x east, y up, z south).
 // The camera sits at target + r * (cos el sin az, sin el, cos el cos az): az 0 = looking north from the south bank,
-// az 90 = from downstream (east), az -90 = from the City side (west). 'part' targets the centre of that mesh if present.
+// az 90 = from downstream (east), az -90 = from the City side (west). A 'part' key aims at that mesh and fits its
+// distance to the mesh's bounds (Tour.jsx), keeping target and r here as the fallback while the mesh is missing.
 export const KEYS = [
   { t: 0, target: [-150, 0, -80], r: 950, az: -122, el: 30 }, // 1. high over the City of London
-  { t: 9, target: [0, 25, 0], r: 290, az: -100, el: 13 }, //    pushed in on the bridge
-  { t: 18, target: [0, 28, 0], r: 230, az: -15, el: 11 }, //    2. golden-hour orbit round to the south bank
-  { t: 20.5, target: [0, 8, 0], r: 175, az: 72, el: 6 }, //    3. low on the river, downstream
-  { t: 30, target: [0, 12, 0], r: 150, az: 98, el: 9 }, //       drift while the bascules open and close
-  { t: 33, part: 'hydraulics', target: [0, -4, -40], r: 80, az: 115, el: 20 }, // 4. the hydraulics
-  { t: 37, part: 'hydraulics', target: [0, -4, -40], r: 68, az: 132, el: 22 },
-  { t: 39.5, target: [0, 20, 0], r: 200, az: 150, el: 22 }, // 5. exploded view
-  { t: 45, target: [0, 20, 0], r: 215, az: 178, el: 24 },
-  { t: 57, target: [0, 15, 0], r: 285, az: 235, el: 18 }, //   6. back to 1886, rebuilt to 1894
-  { t: 60.5, target: [0, 0, 0], r: 820, az: 250, el: 88 }, //  7. top-down topography
-  { t: 65, target: [0, 0, 0], r: 640, az: 275, el: 88 },
-  { t: 70, target: [0, 22, 0], r: 330, az: 300, el: 10 }, //    8. calm hero shot
-  { t: 73, target: [0, 22, 0], r: 315, az: 306, el: 9 },
+  { t: 7, target: [0, 25, 0], r: 290, az: -100, el: 13 }, //    pushed in on the bridge
+  { t: 14, target: [0, 28, 0], r: 230, az: -15, el: 11 }, //    2. golden-hour orbit round to the south bank
+  { t: 16, target: [0, 8, 0], r: 175, az: 72, el: 6 }, //      3. low on the river, downstream
+  { t: 25, target: [0, 12, 0], r: 150, az: 98, el: 9 }, //        drift while the bascules open and close
+  { t: 27.5, part: 'hydraulics', target: [0, -4, -40], r: 80, az: 115, el: 20 }, // 4. the hydraulics
+  { t: 31, part: 'hydraulics', fit: 0.85, target: [0, -4, -40], r: 70, az: 132, el: 22 },
+  { t: 33, target: [0, 20, 0], r: 200, az: 150, el: 22 }, //   5. exploded view
+  { t: 37.5, target: [0, 20, 0], r: 215, az: 178, el: 24 },
+  { t: 47, target: [0, 15, 0], r: 285, az: 235, el: 18 }, //   6. back to 1886, rebuilt to 1894
+  { t: 50, target: [0, 0, 0], r: 650, az: 250, el: 88 }, //    7. top-down topography
+  { t: 53.5, target: [0, 0, 0], r: 540, az: 270, el: 88 },
+  { t: 57, target: [0, 22, 0], r: 330, az: 300, el: 10 }, //   8. calm hero shot
+  { t: 59, target: [0, 22, 0], r: 318, az: 305, el: 9 },
 ]
 export const DURATION = KEYS[KEYS.length - 1].t
 
@@ -36,17 +37,17 @@ const s = () => useStore.getState()
 const yearAt = (a, b) => (u) => s().setYear(Math.round(a + (b - a) * u))
 export const TRACKS = [
   { from: 0, to: 0, set: () => { s().setView('orbit'); s().setExploded(false); s().setBascule(0); s().setYear(THIS_YEAR); s().select(null) } },
-  { from: 21, to: 25.5, set: (u) => s().setBascule(u) },
-  { from: 27, to: 31, set: (u) => s().setBascule(1 - u) },
-  { from: 32, to: 32, set: (_, ctx) => s().select(ctx.hydraulics) },
-  { from: 38, to: 38, set: () => s().select(null) },
-  { from: 39.5, to: 39.5, set: () => s().setExploded(true) },
-  { from: 44, to: 44, set: () => s().setExploded(false) },
-  { from: 46, to: 48.5, set: yearAt(THIS_YEAR, FIRST_YEAR) },
-  { from: 49, to: 56, set: yearAt(FIRST_YEAR, OPENED), linear: true }, // one construction year a second
-  { from: 57.5, to: 57.5, set: () => s().setView('top') },
-  { from: 60.5, to: 64.5, set: yearAt(OPENED, THIS_YEAR) },
-  { from: 65.5, to: 65.5, set: () => s().setView('orbit') },
+  { from: 16.5, to: 20, set: (u) => s().setBascule(u) },
+  { from: 21.5, to: 25, set: (u) => s().setBascule(1 - u) },
+  { from: 26.5, to: 26.5, set: (_, ctx) => s().select(ctx.hydraulics) },
+  { from: 31.5, to: 31.5, set: () => s().select(null) },
+  { from: 33, to: 33, set: () => s().setExploded(true) },
+  { from: 37, to: 37, set: () => s().setExploded(false) },
+  { from: 38, to: 40, set: yearAt(THIS_YEAR, FIRST_YEAR) },
+  { from: 40.5, to: 46.5, set: yearAt(FIRST_YEAR, OPENED), linear: true }, // one construction year every 0.75 s
+  { from: 47.5, to: 47.5, set: () => s().setView('top') },
+  { from: 50, to: 53, set: yearAt(OPENED, THIS_YEAR) },
+  { from: 54, to: 54, set: () => s().setView('orbit') },
 ]
 
 // The part the inspector shows in beat 4: a counterweight or hydraulics part, preferring one the place data
@@ -59,16 +60,16 @@ export function hydraulicsPart(place, inScene = () => false) {
     ?? ids.find((id) => /bascule/.test(id)) ?? 'bascule-north'
 }
 
-// Camera pose at time t: {pos, target} as plain arrays. resolve(key) returns the key's target (part centre if found).
-export function poseAt(t, resolve = (k) => k.target) {
+// Camera pose at time t: {pos, target} as plain arrays. resolve(key) may override the key's target and r.
+export function poseAt(t, resolve = (k) => k) {
   let i = KEYS.findIndex((k) => k.t > t)
   if (i === -1) i = KEYS.length - 1
   const a = KEYS[Math.max(0, i - 1)], b = KEYS[i]
   const u = b.t === a.t ? 1 : ease((t - a.t) / (b.t - a.t))
   const lerp = (x, y) => x + (y - x) * u
-  const ta = resolve(a), tb = resolve(b)
-  const target = ta.map((v, j) => lerp(v, tb[j]))
-  const r = lerp(a.r, b.r), az = (lerp(a.az, b.az) * Math.PI) / 180, el = (lerp(a.el, b.el) * Math.PI) / 180
+  const ka = resolve(a), kb = resolve(b)
+  const target = ka.target.map((v, j) => lerp(v, kb.target[j]))
+  const r = lerp(ka.r, kb.r), az = (lerp(a.az, b.az) * Math.PI) / 180, el = (lerp(a.el, b.el) * Math.PI) / 180
   const pos = [target[0] + r * Math.cos(el) * Math.sin(az), target[1] + r * Math.sin(el), target[2] + r * Math.cos(el) * Math.cos(az)]
   return { pos, target }
 }

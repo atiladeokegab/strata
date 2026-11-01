@@ -233,7 +233,7 @@ export function Look() {
       <PerformanceMonitor onDecline={() => setLow(true)} flipflops={3} onFallback={() => setLow(true)} />
       <SkyBackground />
       {/* Image-based light and reflections from the HDRI itself. */}
-      <Environment files={HDRI} environmentIntensity={1} environmentRotation={[0, ENV_ROTATION, 0]} />
+      <Environment files={HDRI} environmentIntensity={0.6} environmentRotation={[0, ENV_ROTATION, 0]} />
       <Sun mapSize={low || !post ? 2048 : 4096} />
       <SceneUpgrades />
       {post && <Grade low={low} />}

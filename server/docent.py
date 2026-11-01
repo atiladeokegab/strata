@@ -20,10 +20,41 @@ Omitted dimensions are not attested. If the evidence does not answer the questio
 Do not mention these rules. Do not add facts from memory."""
 CITATION = re.compile(r"\[([\w-]+)\]")
 NUMBER = re.compile(r"(?:(?<!\d)[-+])?\d+(?:[,.]\d+)*(?:[eE][-+]?\d+)?")
+HORSE_TRAFFIC_TEXT = "In July 1894, an estimated 8,000 horse-drawn vehicles crossed Tower Bridge each day."
+HORSE_EXPLANATION = re.compile(
+    r"\s*why\s+(?:(?:are|were)\s+)?(?:there\s+)?(?:(?:the|these|those)\s+)?"
+    r"(?:horses?|horse[- ]drawn\s+(?:vehicles|traffic))"
+    r"(?:\s+(?:here|on\s+(?:(?:the|this)\s+)?bridge|on\s+tower\s+bridge|in\s+(?:the|this)\s+(?:scene|exhibit)))?"
+    r"\s*[?.!]*\s*", re.I,
+)
 
 
 def refusal():
     return {"answer": REFUSAL, "citations": [], "refused": True}
+
+
+def _horse_traffic_answer(place):
+    sources = {source["id"] for source in place.get("sources", [])}
+    fact = next((fact for fact in place.get("facts", []) if fact.get("id") == "horse-drawn-traffic"), None)
+    source = fact.get("source") if fact else None
+    source_record = next((item for item in place.get("sources", []) if item.get("id") == source), None)
+    if (not fact or fact.get("status") != "text-attested" or source != "tb-timeline" or source not in sources
+            or not source_record or source_record.get("url") != "https://www.towerbridge.org.uk/stories/timeline-the-construction-of-tower-bridge"
+            or fact.get("text") != HORSE_TRAFFIC_TEXT
+            or not isinstance(fact.get("source_excerpt"), str)
+            or not re.search(r"\bhorse[- ]drawn\s+vehicles\b", fact["source_excerpt"], re.I)
+            or not isinstance(fact.get("locator"), str)
+            or not re.search(r"29\s+July\s+1894", fact["locator"], re.I)):
+        return refusal()
+    proof_numbers = set(NUMBER.findall(f'{fact["source_excerpt"]} {fact["locator"]}'))
+    if not set(NUMBER.findall(fact["text"])) <= proof_numbers:
+        return refusal()
+    text = fact["text"].strip()
+    if not re.search(r"[.!?]$", text):
+        text += "."
+    evidence = [{"fact_id": fact["id"], "text": fact["text"], "value": fact.get("value"),
+                 "status": fact["status"], "cite": [source], "dims": {}}]
+    return validate_answer(f"{text} [{source}]", evidence)
 
 
 def retrieve(place, question, part_id=None):
@@ -98,6 +129,15 @@ def validate_answer(answer, evidence):
 
 
 async def answer_events(place, question, part_id=None):
+    if re.search(r"\b(?:horse|horses|horse-drawn)\b", question, re.I):
+        if not HORSE_EXPLANATION.fullmatch(question):
+            yield "done", refusal()
+            return
+        answer = _horse_traffic_answer(place)
+        if not answer["refused"]:
+            yield "delta", {"text": answer["answer"]}
+        yield "done", answer
+        return
     evidence = retrieve(place, question, part_id)
     if not evidence or not os.getenv("OPENAI_API_KEY"):
         yield "done", refusal()

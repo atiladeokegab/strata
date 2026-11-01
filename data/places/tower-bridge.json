@@ -522,6 +522,19 @@
         null
       ],
       "located": "inferred: map position converted from WGS84 to OSGB36"
+    },
+    {
+      "id": "traffic",
+      "name": "Horse-drawn road traffic",
+      "group": "traffic",
+      "dims": {},
+      "summary": "In July 1894, an estimated 8,000 horse-drawn vehicles crossed Tower Bridge each day.",
+      "sources": [
+        "tb-timeline"
+      ],
+      "fact_ids": [
+        "horse-drawn-traffic"
+      ]
     }
   ],
   "events": [
@@ -938,6 +951,18 @@
       "text": "Steam-powered bridge lifting was replaced by electric operation in 1976.",
       "source": "tb-inside",
       "status": "text-attested"
+    },
+    {
+      "id": "horse-drawn-traffic",
+      "title": "Horses and horse-drawn traffic on Tower Bridge",
+      "text": "In July 1894, an estimated 8,000 horse-drawn vehicles crossed Tower Bridge each day.",
+      "source": "tb-timeline",
+      "sources": [
+        "tb-timeline"
+      ],
+      "status": "text-attested",
+      "locator": "29 July 1894 section",
+      "source_excerpt": "From July, an estimated 8,000 horse-drawn vehicles and 60,000 pedestrians are crossing the Bridge daily."
     }
   ]
 }

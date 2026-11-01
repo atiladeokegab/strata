@@ -4,6 +4,7 @@ import { createHydraulics, stepHydraulics, OPEN_TIME_S } from './hydraulics.js'
 import { stageForYear, shown } from './stages.js'
 import { createShip, stepShip, WAIT_X, HOLD_X } from './shipSim.js'
 import { createTraffic, stepTraffic, TYPES, STOP_U, BASCULE_U } from './trafficSim.js'
+import { vesselForYear, needsLift, leafInput, CLEARANCE } from './vessels.js'
 
 const MAX = (86 * Math.PI) / 180
 const run = (s, target, seconds) => {
@@ -75,4 +76,19 @@ sail(ship, 1, 5)
 assert.ok(ship.x < HOLD_X, 'ship resumes once the leaves are back up')
 sail(ship, 0, 5)
 assert.ok(ship.x < HOLD_X - 20, 'a ship already past the hold point keeps going')
+
+// Vessel by year: only a vessel taller than the closed deck's clearance waits for the leaves.
+assert.equal(vesselForYear(1894).kind, 'barque')
+assert.equal(vesselForYear(1950).kind, 'tug')
+assert.equal(vesselForYear(1985).kind, 'coaster')
+assert.equal(vesselForYear(2026).kind, 'clipper')
+for (const y of [1894, 1950, 1985]) assert.ok(needsLift(vesselForYear(y)), `${y} vessel needs the bascules up`)
+const clipper = vesselForYear(2026)
+assert.ok(!needsLift(clipper) && clipper.airDraft < CLEARANCE, 'the clipper fits under the closed deck')
+const cat = sail(createShip(), 0, 0)
+for (let t = 0; t < 120; t += 0.05) stepShip(cat, leafInput(clipper, 0), 0.05)
+assert.ok(cat.x < HOLD_X - 100, `the clipper passes with the bascules closed, at ${cat.x}`)
+const tall = createShip()
+for (let t = 0; t < 120; t += 0.05) stepShip(tall, leafInput(vesselForYear(1950), 0), 0.05)
+assert.ok(tall.x === WAIT_X, 'the tug waits for the bascules')
 console.log('ship checks ok')

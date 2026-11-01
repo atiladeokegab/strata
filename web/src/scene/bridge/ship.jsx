@@ -1,4 +1,4 @@
-// <Ship />: a three-masted barque that needs the bascules up. Masts reach ~40 m above high water,
+// <Ship />: the year's vessel (vessels.js); the 1894 one is a three-masted barque that needs the bascules up. Masts reach ~40 m above high water,
 // well over the closed deck (9 m) but under the high walkways (44 m). Driven by the hydraulic sim,
 // not keyframes: it waits downstream, sails west once the leaves pass 80% of max, and loops.
 // Frame: metres, bridge centre origin, x east (downstream), y up, water at L.hw. Bow points west (-x).
@@ -10,6 +10,7 @@ import { beam, box, merge } from './geom.js'
 import { L } from './structures.jsx'
 import { pbr } from '../look/textures.js'
 import { createShip, stepShip, CRUISE } from './shipSim.js'
+import { vesselForYear, leafInput } from './vessels.js'
 
 
 // Hull plan outline in (x, z): transom stern at +x, pointed bow at -x.
@@ -177,18 +178,131 @@ function foamTexture() {
 // Live ship state (one ship), for a panel or a test harness that wants to place it. x is metres east.
 export const shipState = createShip()
 
-export function Ship({ rt, maxAngle }) {
+const std = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.6, ...extra })
+
+function Barque({ mats }) {
   const geo = useMemo(buildShip, [])
+  return (
+    <>
+      <mesh geometry={geo.hull} material={mats.hull} castShadow receiveShadow />
+      <mesh geometry={geo.band} material={mats.band} />
+      <mesh geometry={geo.deck} material={mats.deck} receiveShadow />
+      <mesh geometry={geo.works} material={mats.deck} castShadow />
+      <mesh geometry={geo.spars} material={mats.spars} castShadow />
+      <mesh geometry={geo.sails} material={mats.sails} castShadow />
+      <lineSegments geometry={geo.rig} material={mats.rig} />
+    </>
+  )
+}
+
+// Steam tug (~26 m) towing a dumb lighter 30 m astern. Funnel top ~10 m, mast ~14 m.
+function Tug({ mats }) {
+  const geo = useMemo(
+    () => ({
+      hull: hullGeo(-2.5, 6.5).scale(0.5, 0.6, 0.72),
+      band: hullGeo(2.4, 0.7, 1.025).scale(0.5, 0.6, 0.72),
+      house: merge([box(6, 2.6, 4, 1, 3.7, 0), box(3.2, 1.8, 3.4, -2.5, 5.9, 0)]),
+      glass: box(3.3, 0.6, 3.5, -2.5, 6.2, 0),
+      funnel: beam([2.5, 4, 0], [3, 9.4, 0], 0.9, 14),
+      funnelTop: beam([3, 8.6, 0], [3.05, 10, 0], 0.93, 14),
+      mast: merge([beam([-6, 2.4, 0], [-6.2, 14, 0], 0.12), beam([-6.1, 9, -1.6], [-6.1, 9, 1.6], 0.06)]),
+      lighter: merge([box(30, 2.6, 8, 52, -0.4, 0), box(26, 0.4, 6.6, 52, 1.1, 0)]),
+      tow: beam([11, 2.2, 0], [37, 1, 0], 0.06, 4),
+    }),
+    [],
+  )
+  return (
+    <>
+      <mesh geometry={geo.hull} material={mats.black} castShadow />
+      <mesh geometry={geo.band} material={mats.red} />
+      <mesh geometry={geo.house} material={mats.white} castShadow />
+      <mesh geometry={geo.glass} material={mats.glass} />
+      <mesh geometry={geo.funnel} material={mats.buff} castShadow />
+      <mesh geometry={geo.funnelTop} material={mats.black} />
+      <mesh geometry={geo.mast} material={mats.spars} />
+      <mesh geometry={geo.lighter} material={mats.rust} castShadow receiveShadow />
+      <mesh geometry={geo.tow} material={mats.rope} />
+    </>
+  )
+}
+
+// Motor coaster (~45 m): bridge and funnel aft, cargo mast and derrick forward. Mast ~22 m.
+function Coaster({ mats }) {
+  const geo = useMemo(
+    () => ({
+      hull: hullGeo(-2.5, 6.5).scale(0.85, 0.8, 1.15),
+      boot: hullGeo(-2.5, 2.6, 1.02).scale(0.85, 0.8, 1.15),
+      house: merge([box(9, 3, 8.5, 14, 4.7, 0), box(6, 2.6, 9.6, 13, 7.5, 0)]),
+      glass: box(6.1, 0.8, 9.7, 13, 7.9, 0),
+      hatch: box(22, 1.2, 6.4, -6, 3.8, 0),
+      funnel: box(2.6, 4.6, 2.2, 17.5, 9, 0),
+      mast: merge([beam([-17, 3, 0], [-17, 22, 0], 0.3), beam([-17, 4, 0], [-9, 9, 0], 0.18), beam([12, 8.8, 0], [12, 14, 0], 0.1)]),
+    }),
+    [],
+  )
+  return (
+    <>
+      <mesh geometry={geo.hull} material={mats.navy} castShadow />
+      <mesh geometry={geo.boot} material={mats.red} />
+      <mesh geometry={geo.house} material={mats.white} castShadow />
+      <mesh geometry={geo.glass} material={mats.glass} />
+      <mesh geometry={geo.hatch} material={mats.green} />
+      <mesh geometry={geo.funnel} material={mats.red} castShadow />
+      <mesh geometry={geo.mast} material={mats.buff} castShadow />
+    </>
+  )
+}
+
+// Thames Clipper catamaran (~37 m): twin slim hulls, glazed cabin. Air draft ~6 m.
+function Clipper({ mats }) {
+  const geo = useMemo(
+    () => ({
+      hulls: merge([-3.4, 3.4].map((z) => hullGeo(-2.5, 6.5).scale(0.7, 0.42, 0.22).translate(0, 0, z))),
+      deck: box(32, 0.9, 9.4, -1, 2.2, 0),
+      cabin: box(24, 2.6, 8.4, -1.5, 3.9, 0),
+      glass: box(24.2, 1.1, 8.6, -1.5, 4.3, 0),
+      roof: merge([box(25, 0.3, 8.8, -1.5, 5.3, 0), beam([4, 5.4, 0], [4.4, 6.6, 0], 0.08)]),
+    }),
+    [],
+  )
+  return (
+    <>
+      <mesh geometry={geo.hulls} material={mats.navy} castShadow />
+      <mesh geometry={geo.deck} material={mats.white} castShadow />
+      <mesh geometry={geo.cabin} material={mats.white} castShadow />
+      <mesh geometry={geo.glass} material={mats.glass} />
+      <mesh geometry={geo.roof} material={mats.navy} />
+    </>
+  )
+}
+
+const MESH = { barque: Barque, tug: Tug, coaster: Coaster, clipper: Clipper }
+const FLAG_AT = { barque: [26.4, DECK + 6.2, 0], tug: [12.2, 4.6, 0], coaster: [21, 6, 0], clipper: [15, 3.8, 0] }
+const PUFFS = 7
+
+export function Ship({ rt, year, maxAngle }) {
+  const vessel = vesselForYear(year)
+  const Mesh = MESH[vessel.kind]
   const mats = useMemo(
     () => ({
       hull: new THREE.MeshStandardMaterial({ ...pbr('wood:dark', 0.08), color: '#3a3a3a' }),
-      band: new THREE.MeshStandardMaterial({ color: '#e8e1cf', roughness: 0.6 }),
+      band: std('#e8e1cf'),
       deck: new THREE.MeshStandardMaterial({ ...pbr('wood:dark', 0.15), color: '#d8b58a' }),
       spars: new THREE.MeshStandardMaterial({ ...pbr('wood:dark', 0.5), color: '#c49a6c' }),
-      sails: new THREE.MeshStandardMaterial({ color: '#f1e8d2', roughness: 0.95, side: THREE.DoubleSide }),
-      flag: new THREE.MeshStandardMaterial({ map: ensignTexture(), roughness: 0.8, side: THREE.DoubleSide }),
+      sails: std('#f1e8d2', { roughness: 0.95, side: THREE.DoubleSide }),
+      flag: std('#ffffff', { map: ensignTexture(), roughness: 0.8, side: THREE.DoubleSide }),
       rig: new THREE.LineBasicMaterial({ color: '#2a2420' }),
+      black: std('#1d1d1f', { roughness: 0.5 }),
+      red: std('#9b2b20'),
+      white: std('#efefe9', { roughness: 0.45 }),
+      buff: std('#c9a560'),
+      rust: std('#6e3b22', { roughness: 0.85, metalness: 0.2 }),
+      rope: std('#3a3026', { roughness: 0.9 }),
+      navy: std('#1b2a4a', { roughness: 0.35, metalness: 0.3 }),
+      green: std('#3f5a3a', { roughness: 0.8 }),
+      glass: std('#1a2430', { roughness: 0.1, metalness: 0.7 }),
       foam: new THREE.MeshBasicMaterial({ map: foamTexture(), transparent: true, depthWrite: false, opacity: 0 }),
+      smoke: Array.from({ length: PUFFS }, () => new THREE.MeshBasicMaterial({ color: '#4a4744', transparent: true, depthWrite: false })),
     }),
     [],
   )
@@ -196,11 +310,12 @@ export function Ship({ rt, maxAngle }) {
   const bob = useRef()
   const flag = useRef()
   const wake = useRef()
+  const smoke = useRef()
 
   useFrame(({ clock }, dt) => {
     dt = Math.min(dt, 0.1)
     const s = shipState
-    stepShip(s, rt.sim.angle / maxAngle, dt)
+    stepShip(s, leafInput(vessel, rt.sim.angle / maxAngle), dt)
     const t = clock.elapsedTime
     move.current.position.set(s.x, L.hw, 0)
     bob.current.position.y = Math.sin(t * 0.9) * 0.25
@@ -210,25 +325,35 @@ export function Ship({ rt, maxAngle }) {
     const k = s.v / CRUISE
     wake.current.children.forEach((m) => (m.material.opacity = 0.15 + 0.55 * k))
     wake.current.scale.x = 0.4 + 0.6 * k
+    // funnel smoke: puffs rise, swell and fade, streaming aft with the ship's way
+    smoke.current?.children.forEach((p, i) => {
+      const age = (t * 0.35 + i / PUFFS) % 1
+      p.position.set(3 + age * (4 + s.v * 2.2), 10 + age * 9, Math.sin(i * 2.1) * age * 2)
+      p.scale.setScalar(0.8 + age * 3.2)
+      p.material.opacity = 0.55 * (1 - age)
+    })
   })
 
   return (
     <group ref={move}>
       <group ref={bob}>
         <Part id="ship" rt={rt}>
-          <mesh geometry={geo.hull} material={mats.hull} castShadow receiveShadow />
-          <mesh geometry={geo.band} material={mats.band} />
-          <mesh geometry={geo.deck} material={mats.deck} receiveShadow />
-          <mesh geometry={geo.works} material={mats.deck} castShadow />
-          <mesh geometry={geo.spars} material={mats.spars} castShadow />
-          <mesh geometry={geo.sails} material={mats.sails} castShadow />
-          <lineSegments geometry={geo.rig} material={mats.rig} />
-          <group ref={flag} position={[26.4, DECK + 6.2, 0]}>
+          <Mesh mats={mats} />
+          <group ref={flag} position={FLAG_AT[vessel.kind]}>
             <mesh position={[1.6, 0, 0]} material={mats.flag}>
               <planeGeometry args={[3.2, 1.6]} />
             </mesh>
           </group>
         </Part>
+        {vessel.kind === 'tug' && (
+          <group ref={smoke}>
+            {mats.smoke.map((m, i) => (
+              <mesh key={i} material={m}>
+                <icosahedronGeometry args={[1, 1]} />
+              </mesh>
+            ))}
+          </group>
+        )}
       </group>
       {/* wake trails behind the stern; bow waves fan out from the stem */}
       <group ref={wake} position={[0, 0.06, 0]}>

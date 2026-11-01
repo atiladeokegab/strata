@@ -58,12 +58,14 @@ def prompt(year: int) -> str:
         f"Turn this 3D render into a real photograph of this exact scene as it looked in {year}. "
         "Keep the exact camera position, angle, lens and framing. Keep every structure exactly where it is, "
         "with the same shape, proportions and layout: the towers, the walkways, the bascules, the "
-        "suspension chains and the river banks. Replace the flat 3D materials with real stone, granite, "
+        "suspension chains and the river banks. Keep the river exactly as wide as in the render: whatever is "
+        "land in the render stays land (quays, embankment walls, open ground) and never becomes water, and the "
+        "end towers stand at the water's edge. Replace the flat 3D materials with real stone, granite, "
         "painted steel and water, with realistic light, reflections and weather. "
         f"Render it as {era(year)} "
         "Add period-correct river traffic, street life and people's dress at a believable scale. "
         "Do not add any landmark, tower, bridge or building that is not in the render; only the low "
-        "riverside wharves of that period may show faintly along the distant banks, in the haze. "
+        "riverside wharves and warehouses of that period may line the banks. "
         "No text, captions, borders or watermarks."
     )
 

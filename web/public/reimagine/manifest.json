@@ -1,0 +1,77 @@
+{
+ "model": "gpt-image-2.5-flare",
+ "items": [
+  {
+   "view": "hero",
+   "year": 1894,
+   "label": "1894",
+   "file": "hero-1894.jpg",
+   "before": "hero-1894-3d.jpg",
+   "aspect": 1.7778
+  },
+  {
+   "view": "hero",
+   "year": 1944,
+   "label": "1944",
+   "file": "hero-1944.jpg",
+   "before": "hero-1944-3d.jpg",
+   "aspect": 1.7778
+  },
+  {
+   "view": "hero",
+   "year": 2026,
+   "label": "Today",
+   "file": "hero-2026.jpg",
+   "before": "hero-2026-3d.jpg",
+   "aspect": 1.7778
+  },
+  {
+   "view": "south-bank",
+   "year": 1894,
+   "label": "1894",
+   "file": "south-bank-1894.jpg",
+   "before": "south-bank-1894-3d.jpg",
+   "aspect": 1.7778
+  },
+  {
+   "view": "south-bank",
+   "year": 1944,
+   "label": "1944",
+   "file": "south-bank-1944.jpg",
+   "before": "south-bank-1944-3d.jpg",
+   "aspect": 1.7778
+  },
+  {
+   "view": "south-bank",
+   "year": 2026,
+   "label": "Today",
+   "file": "south-bank-2026.jpg",
+   "before": "south-bank-2026-3d.jpg",
+   "aspect": 1.7778
+  },
+  {
+   "view": "aerial",
+   "year": 1894,
+   "label": "1894",
+   "file": "aerial-1894.jpg",
+   "before": "aerial-1894-3d.jpg",
+   "aspect": 1.7778
+  },
+  {
+   "view": "aerial",
+   "year": 1944,
+   "label": "1944",
+   "file": "aerial-1944.jpg",
+   "before": "aerial-1944-3d.jpg",
+   "aspect": 1.7778
+  },
+  {
+   "view": "aerial",
+   "year": 2026,
+   "label": "Today",
+   "file": "aerial-2026.jpg",
+   "before": "aerial-2026-3d.jpg",
+   "aspect": 1.7778
+  }
+ ]
+}

@@ -3,6 +3,7 @@ import { useStore } from './store'
 import { Stage } from './ui/Stage'
 import { Panel } from './ui/Panel'
 import { Dock } from './ui/Dock'
+import Reimagine from './ui/Reimagine'
 import './App.css'
 
 const PLACE = 'tower-bridge'
@@ -43,6 +44,7 @@ export default function App() {
       <Stage />
       <Panel />
       <Dock />
+      <Reimagine />
       <Credit />
       {view === 'walk' && <p className="walk-hint glass">W A S D to walk · drag to look · Shift to run</p>}
       {(!place || error) && <Loading error={error} retry={load} />}

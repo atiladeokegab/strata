@@ -671,6 +671,37 @@
       "stage": 8
     },
     {
+      "year": 1940,
+      "title": "Wartime direct hit disables the bridge",
+      "text": "A direct hit in 1940 struck the high-level span and severed the hydraulic mechanism, leaving Tower Bridge out of service.",
+      "sources": [
+        "tb-ww2-milne"
+      ],
+      "stage": 8,
+      "status": "text-attested"
+    },
+    {
+      "year": 1941,
+      "title": "Parachute mine damages Tower Bridge",
+      "text": "In April 1941, a parachute mine blast near Tower Bridge seriously damaged a bascule, the towers and the engine room.",
+      "sources": [
+        "tb-ww2-milne"
+      ],
+      "stage": 8,
+      "status": "text-attested"
+    },
+    {
+      "year": 1941,
+      "title": "Third steam engine installed",
+      "text": "A third steam engine was added to the original two at Tower Bridge in 1941.",
+      "sources": [
+        "tb-armstrong-engines",
+        "forncett-tower-bridge-engine"
+      ],
+      "stage": 8,
+      "status": "text-attested"
+    },
+    {
       "year": 1976,
       "title": "Electric power replaces steam",
       "text": "Electric operation took over from the original steam-powered hydraulic system. The historic steam engines remain in the engine rooms.",
@@ -869,6 +900,27 @@
       "title": "Wikipedia: Barrage balloon",
       "url": "https://en.wikipedia.org/wiki/Barrage_balloon",
       "kind": "encyclopedia"
+    },
+    {
+      "id": "tb-ww2-milne",
+      "title": "Milne, The Thames at War, p. 153 (as cited by Wikipedia)",
+      "url": "https://en.wikipedia.org/wiki/Tower_Bridge#20th_century",
+      "kind": "secondary citation",
+      "locator": "Gustav Milne, The Thames at War: Saving London From the Blitz (Pen and Sword, 2020), p. 153; cited in the Tower Bridge article's 20th century section. Wikipedia was checked; the book was not consulted directly."
+    },
+    {
+      "id": "tb-armstrong-engines",
+      "title": "Sir William Armstrong — the engines that powered Bridge Lifts",
+      "url": "https://www.towerbridge.org.uk/stories/sir-william-armstrong",
+      "kind": "institutional history",
+      "locator": "The engines that powered Bridge Lifts: third engine installed in 1941."
+    },
+    {
+      "id": "forncett-tower-bridge-engine",
+      "title": "The Tower Bridge Engine — Forncett Industrial Steam Museum",
+      "url": "https://www.forncettsteammuseum.co.uk/tower-bridge",
+      "kind": "museum collection record",
+      "locator": "The engine on display was added to the original two in 1941; separate builder entry also dates it to 1941."
     }
   ],
   "people": [

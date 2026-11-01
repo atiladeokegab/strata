@@ -33,10 +33,17 @@ const ray = new Raycaster()
 const at = new Vector3()
 
 // screen points (px) of label anchors a raised leaf hides: one ray per landmark, tested against the leaf meshes only
+// The leaves are driven by the dock slider, the tour and the ship lift sequence, so no "raised" flag
+// is shared; test always (a closed deck that hides an anchor hides it too). The mesh list is cached 2 s.
+let leafCache = { at: 0, list: [] }
 export function behindLeaves(scene, camera, canvas) {
-  if (useStore.getState().bascule < 0.02) return []
-  const leaves = []
-  scene.traverseVisible((o) => { if (o.isMesh && LEAF.test(o.name)) leaves.push(o) })
+  const now = performance.now()
+  if (now - leafCache.at > 2000) {
+    const list = []
+    scene.traverseVisible((o) => { if (o.isMesh && LEAF.test(o.name)) list.push(o) })
+    leafCache = { at: now, list }
+  }
+  const leaves = leafCache.list
   const marks = scene.getObjectByName('landmarks')
   if (!leaves.length || !marks) return []
   const box = canvas.getBoundingClientRect()

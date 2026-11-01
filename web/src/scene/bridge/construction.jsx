@@ -5,6 +5,7 @@ import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { beam, box, merge, M } from './geom.js'
 import { L } from './structures.jsx'
+import { pbr } from '../look/textures.js'
 
 const Z = L.pierZ
 const tx = L.towerHalfX + 1.5
@@ -80,7 +81,9 @@ function Derrick({ y }) {
     for (const s of [-1, 1]) mast.push(beam([s * 11, 0, 8], [0, h - 1, 0], 0.18, 5))
     const jib = [beam([0, 1.5, 0], [0, h - 2, 22], 0.28, 6), beam([0, h, 0], [0, h - 2, 22], 0.06, 4)]
     iron.push(beam([0, h - 2, 22], [0, 0, 22], 0.05, 4))
-    return { mast: merge(mast), jib: merge(jib), rope: merge(iron), hook: merge([box(0.8, 1, 0.8), box(3, 2, 3, 0, -2, 0)]) }
+    // the rope's scale.y animates, and Look bakes world UVs once, so it keeps its own map and Look skips it
+    const ropeMat = Object.assign(M.iron.clone(), pbr('iron:cast', 1 / 3))
+    return { ropeMat, mast: merge(mast), jib: merge(jib), rope: merge(iron), hook: merge([box(0.8, 1, 0.8), box(3, 2, 3, 0, -2, 0)]) }
   }, [])
   const slew = useRef()
   const hook = useRef()
@@ -98,7 +101,7 @@ function Derrick({ y }) {
       <mesh geometry={g.mast} material={M.timber} castShadow />
       <group ref={slew}>
         <mesh geometry={g.jib} material={M.timber} castShadow />
-        <mesh ref={rope} geometry={g.rope} material={M.iron} />
+        <mesh ref={rope} geometry={g.rope} material={g.ropeMat} />
         <mesh ref={hook} geometry={g.hook} material={M.iron} position={[0, 8, 22]} castShadow />
       </group>
     </group>

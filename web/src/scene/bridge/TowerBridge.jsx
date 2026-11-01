@@ -205,7 +205,7 @@ export function TowerBridge(props) {
             dim={st.stage >= 5 && !era.walkwayOpen ? 0.7 : 0}
           >
             <S.Walkway x={side === 'east' ? S.L.walkX : -S.L.walkX} glazed={era.glazed} glassFloor={era.glassFloor} />
-            <D.WalkwayDetails x={side === 'east' ? S.L.walkX : -S.L.walkX} />
+            <D.WalkwayDetails x={side === 'east' ? S.L.walkX : -S.L.walkX} era={era} />
             {st.stage >= 5 && era.walkwayOpen && <H.WalkwayPeople x={side === 'east' ? S.L.walkX : -S.L.walkX} />}
             {era.olympics && side === 'east' && <H.OlympicRings x={side === 'east' ? S.L.walkX : -S.L.walkX} />}
           </Part>

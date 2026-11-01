@@ -7,7 +7,7 @@ import { L } from './structures.jsx'
 import { KERB_X, KERB_W, FOOTWAY_H, FOOTWAY_OUT } from './roadway.js'
 import { balustrade, BAL_X, BAL_Y } from './balustrade.js'
 import { LITE } from '../look/tier.js'
-import { walkwayKnees } from './walkway.js'
+import { walkwayKnees, walkwayLamps } from './walkway.js'
 import { POST_X, POST_Z } from './trafficSim.js'
 
 // Renders { materialKey: [geometries] } as one merged mesh per material.
@@ -259,10 +259,12 @@ export function BasculeDetails({ era }) {
 }
 
 // ---- high walkways: pointed portal frames at the tower faces, finials on the roof ----
-export function WalkwayDetails({ x }) {
+export function WalkwayDetails({ x, era }) {
+  const gas = !!era?.gasLamps
   return (
     <Meshes
-      deps={[x]}
+      deps={[x, gas]}
+      materials={lanternFor(era)}
       build={() => {
         const steel = [], gold = [], w = 1.6 + 0.35, y0 = L.walkY, y1 = L.walkY + L.walkH
         const ze = -(L.pierZ + L.towerHalfZ) - 0.3
@@ -278,7 +280,10 @@ export function WalkwayDetails({ x }) {
           gold.push(new THREE.ConeGeometry(0.12, 0.8, 6).translate(x, y1 + 1.05, z))
         }
         steel.push(...walkwayKnees(x, -(L.pierZ + L.towerHalfZ), y0))
-        return { steel, gold }
+        if (LITE) return { steel, gold } // phones: no interior lamps
+        const lamps = walkwayLamps(x, -(L.pierZ + L.towerHalfZ), y1, gas)
+        steel.push(...lamps.steel)
+        return { steel, gold, lantern: lamps.lantern }
       }}
     />
   )

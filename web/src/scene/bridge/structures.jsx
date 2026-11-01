@@ -6,7 +6,7 @@ import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { beam, box, merge, M } from './geom.js'
-import { walkwayTruss, walkwayInfill } from './walkway.js'
+import { walkwayTruss, walkwayInfill, walkwayJunctions } from './walkway.js'
 import { LITE } from '../look/tier.js'
 import { abutmentTower, abutmentArch } from './abutment.js'
 
@@ -322,28 +322,24 @@ export function Accumulators({ sim }) {
 
 // ---- high walkways (span between the towers, built once at the root) ----
 export function Walkway({ x, glazed = true, glassFloor = false }) {
+  // one mesh per material: the era's frames join the truss steel, its glazing and glass floor share one pane mesh
   const g = useMemo(() => {
     const ze = -(L.pierZ + L.towerHalfZ), y0 = L.walkY, y1 = L.walkY + L.walkH
-    const parts = walkwayInfill(x, ze, y0, y1)
-    return { truss: walkwayTruss(x, ze, y0, y1, LITE), ...Object.fromEntries(Object.entries(parts).map(([k, gs]) => [k, merge(gs)])) }
-  }, [x])
+    const p = walkwayInfill(x, ze, y0, y1), j = walkwayJunctions(x, ze, y0, y1)
+    const pane = [...(glazed ? p.glazing : []), ...(glassFloor ? p.glassFloor : [])]
+    return {
+      steel: merge([walkwayTruss(x, ze, y0, y1, LITE), ...j.steel, ...(glazed ? p.frames : []), ...(glassFloor ? p.glassFrames : [])]),
+      slate: merge([...p.roof, ...j.slate]),
+      timber: merge(glassFloor ? p.floorGap : p.floor),
+      pane: pane.length ? merge(pane) : null,
+    }
+  }, [x, glazed, glassFloor])
   return (
     <>
-      <mesh geometry={g.truss} material={M.steel} castShadow />
-      <mesh geometry={g.roof} material={M.slate} castShadow />
-      <mesh geometry={glassFloor ? g.floorGap : g.floor} material={M.timber} receiveShadow />
-      {glassFloor && (
-        <>
-          <mesh geometry={g.glassFloor} material={M.pane} />
-          <mesh geometry={g.glassFrames} material={M.steel} />
-        </>
-      )}
-      {glazed && (
-        <>
-          <mesh geometry={g.glazing} material={M.pane} />
-          <mesh geometry={g.frames} material={M.steel} />
-        </>
-      )}
+      <mesh geometry={g.steel} material={M.steel} castShadow />
+      <mesh geometry={g.slate} material={M.slate} castShadow />
+      <mesh geometry={g.timber} material={M.timber} receiveShadow />
+      {g.pane && <mesh geometry={g.pane} material={M.pane} />}
     </>
   )
 }

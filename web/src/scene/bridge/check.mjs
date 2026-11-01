@@ -785,6 +785,24 @@ console.log('geom materials untextured, all kinded ok')
   const near = bb(walkwayKnees(10.5, ze, y0).filter((g) => (g.computeBoundingBox(), g.boundingBox.max.z > 0)))
   assert.ok(near.min.z >= ze - KNEE.reach - 0.1, 'the +z knees stay within reach of the +z tower')
   console.log('walkway knee brackets ok')
+  // tower junctions: doorway and landing frame stand on the deck, inside the walkway, against each face
+  const { walkwayJunctions, walkwayLamps, DOOR } = await import('./walkway.js')
+  const jn = walkwayJunctions(10.5, ze, y0, y1)
+  const js = bb([...jn.steel, ...jn.slate])
+  assert.ok(js.min.z >= -ze - 1e-4 && js.max.z <= ze + 1e-4, 'junctions stay out of the towers')
+  assert.ok(js.min.y >= y0 + FLOOR_TOP - 1e-4 && js.max.y <= y1 - 0.3 + 1e-4, 'junctions between the deck and the roof girders')
+  assert.ok(js.min.x >= 10.5 - WALK.w && js.max.x <= 10.5 + WALK.w, 'junctions inside the girders')
+  for (const sz of [-1, 1]) {
+    const d = bb(jn.slate.filter((g) => (g.computeBoundingBox(), Math.sign(g.boundingBox.max.z) === sz)))
+    assert.ok(Math.abs(d.max.z - sz * (ze - 0.01)) < 0.02 && d.max.y - y0 - FLOOR_TOP >= DOOR.spring + DOOR.half - 0.01, `doorway at the ${sz > 0 ? '+' : '-'}z face`)
+  }
+  // lamps: one set per era, under the roof girders and clear of heads (WalkwayPeople ~1.8 m)
+  for (const gas of [true, false]) {
+    const lp = walkwayLamps(10.5, ze, y1, gas), l = bb([...lp.steel, ...lp.lantern])
+    assert.ok(lp.lantern.length >= 8 && l.max.y <= y1 - 0.3 + 1e-4 && l.min.y >= y0 + FLOOR_TOP + 2.2, `${gas ? 'gas' : 'electric'} lamps hang clear`)
+    assert.ok(l.min.z >= -ze + 3 && l.max.z <= ze - 3, 'lamps clear of the doorways')
+  }
+  console.log('walkway junctions and lamps ok')
 }
 
 // Street past the ramp foot follows the terrain: median across the lane (kerbs and vans in the DSM

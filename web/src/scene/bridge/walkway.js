@@ -120,3 +120,54 @@ export function walkwayKnees(x, ze, y0) {
     }
   return steel
 }
+
+// Tower junctions: where each walkway enters a tower face, an arched doorway (cast-iron architrave around a dark
+// opening) inside a landing frame (stanchions, head and haunches against the face, threshold plate on the deck).
+// Lists per material, merged into the walkway's own steel and slate meshes.
+export const DOOR = { half: 0.95, spring: 2.3, frame: 0.16, depth: 0.12 }
+const archShape = (half, spring) => {
+  const s = new THREE.Shape()
+  s.moveTo(-half, 0)
+  s.lineTo(half, 0)
+  s.lineTo(half, spring)
+  s.absarc(0, spring, half, 0, Math.PI, false)
+  s.closePath()
+  return s
+}
+export function walkwayJunctions(x, ze, y0, y1) {
+  const { w } = WALK, { half, spring, frame, depth } = DOOR, yf = y0 + FLOOR_TOP
+  const steel = [], slate = []
+  for (const sz of [-1, 1]) {
+    const face = sz * ze, at = (g, d) => g.rotateY(sz > 0 ? Math.PI : 0).translate(x, yf, face - sz * d)
+    const ring = archShape(half + frame, spring)
+    ring.holes.push(archShape(half, spring))
+    steel.push(at(new THREE.ExtrudeGeometry(ring, { depth, bevelEnabled: false, curveSegments: 10 }), 0))
+    slate.push(at(new THREE.ShapeGeometry(archShape(half, spring), 10), 0.01)) // the dark opening, facing into the walkway
+    const zf = face - sz * 0.12, ys = y1 - 0.3 // landing frame against the face, up to the roof cross girder
+    for (const sx of [-1, 1]) {
+      steel.push(box(0.16, ys - yf, 0.16, x + sx * (w - 0.2), (yf + ys) / 2, zf))
+      steel.push(beam([x + sx * (w - 0.2), ys - 0.7, zf], [x + sx * (w - 0.9), ys - 0.08, zf], 0.05, 4)) // haunch
+    }
+    steel.push(box(2 * (w - 0.12), 0.24, 0.16, x, ys - 0.12, zf))
+    steel.push(box(2 * (w - 0.2), 0.03, 0.7, x, yf + 0.015, face - sz * 0.35)) // threshold plate
+  }
+  return { steel, slate }
+}
+
+// Interior lamps hung from the roof cross girders: square gas lanterns until ERAS.electricLamps, then shaded
+// electric globes. Glass goes on the `lantern` key (lanternFor(era) picks warm gas, blackout or clear electric).
+export const WALK_LAMPS = { step: 7.5, drop: 0.75 }
+export function walkwayLamps(x, ze, y1, gas) {
+  const steel = [], lantern = [], top = y1 - 0.3, y = top - WALK_LAMPS.drop
+  for (let z = -ze + 3.5; z <= ze - 3.5 + 1e-6; z += (2 * ze - 7) / Math.round((2 * ze - 7) / WALK_LAMPS.step)) {
+    steel.push(box(0.03, WALK_LAMPS.drop, 0.03, x, top - WALK_LAMPS.drop / 2, z))
+    if (gas) {
+      lantern.push(box(0.26, 0.34, 0.26, x, y - 0.17, z))
+      steel.push(new THREE.ConeGeometry(0.22, 0.16, 4).rotateY(Math.PI / 4).translate(x, y + 0.06, z), box(0.3, 0.03, 0.3, x, y - 0.35, z))
+    } else {
+      steel.push(new THREE.ConeGeometry(0.26, 0.14, 12).translate(x, y - 0.07, z)) // shade
+      lantern.push(new THREE.SphereGeometry(0.12, 12, 8).translate(x, y - 0.2, z))
+    }
+  }
+  return { steel, lantern }
+}

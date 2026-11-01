@@ -12,7 +12,9 @@
   <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"><img alt="Open Government Licence v3" src="https://img.shields.io/badge/data-OGL%20v3-1d70b8"></a>
 </p>
 
-<h3 align="center">Famous places rebuilt from real LiDAR and their own history</h3>
+<h3 align="center">History is text and flat photos. You can't watch a landmark being built.</h3>
+
+<p align="center">Strata rebuilds famous places from real LiDAR and their own sourced history, for visitors, students and teachers.</p>
 
 <!-- TODO(demo): record the demo and drop it at docs/img/demo.gif, then uncomment.
 <p align="center"><img src="docs/img/demo.gif" alt="Strata demo: flying over Tower Bridge, opening the bascules, scrubbing 1886 to today" width="100%"></p>

@@ -7,6 +7,7 @@ import { containersOf, clickThrough } from './xray.js'
 import * as THREE from 'three'
 import { PART_IDS } from './parts.js'
 import { createShip, stepShip, WAIT_X, HOLD_X, CRUISE } from './shipSim.js'
+import { leverAfter, leverForKey, leverLabel, KEY_STEP } from './drive.js'
 import { vesselForYear, needsLift, leafInput, CLEARANCE } from './vessels.js'
 import { createRiver, stepRiver, gap, CRAFT, CLEAR } from './riverSim.js'
 import { createTraffic, stepTraffic, onLeaves, TYPES, STOP_U, BASCULE_U } from './trafficSim.js'
@@ -341,3 +342,16 @@ for (const year of [1900, 2026])
     }
   }
 console.log(`manual lever interlock ok (leaves held at most ${worstHold.toFixed(1)} s)`)
+
+// Drive handle: lever maths scales with the place's max angle, keys clamp, label reads as percent.
+const M70 = (70 * Math.PI) / 180
+assert.equal(leverAfter(0.5, -M70 / 2, M70), 1, 'raising half the max angle from half opens fully')
+assert.equal(leverAfter(0.2, M70, M70), 0, 'clamps at closed')
+assert.ok(Math.abs(leverForKey('ArrowUp', 0, M70) - KEY_STEP / M70) < 1e-12, 'arrow steps by the place max angle')
+assert.equal(leverForKey('ArrowDown', 0, M70), 0)
+assert.equal(leverForKey('Home', 0.7, M70), 0)
+assert.equal(leverForKey('End', 0.1, M70), 1)
+assert.equal(leverForKey('a', 0.3, M70), null)
+assert.equal(leverLabel('north', 0.256), 'North bascule lever, 26 percent open')
+assert.equal(leverLabel('south', 1), 'South bascule lever, 100 percent open')
+console.log('drive checks ok')

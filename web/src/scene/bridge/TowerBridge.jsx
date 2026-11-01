@@ -35,7 +35,7 @@ const dim = (place, id, key, fallback) => place?.parts?.find((p) => p.id === id)
 // Height a rising part has reached this year (scene-local y), or null when not rising.
 const rising = (st, stage, from, to) => (st.stage === stage ? from + (to - from) * st.progress : null)
 
-function Half({ side, rt, st, towerTop, era }) {
+function Half({ side, rt, st, towerTop, era, maxAngle }) {
   const n = side === 'north'
   const id = (base) => `${base}-${side}`
   const towerId = n ? 'north-tower' : 'south-tower'
@@ -87,7 +87,7 @@ function Half({ side, rt, st, towerTop, era }) {
       {shown('bascule', st.stage) && (
         <>
           <Part id={n ? 'bascule-north' : 'bascule-south'} rt={rt} explode={[0, 10, 6]}>
-            <BasculeDrive sim={sim}>
+            <BasculeDrive sim={sim} side={side} maxAngle={maxAngle}>
               <S.PivotFrame sim={sim}>
                 <S.BasculeLeaf />
                 <D.BasculeDetails />
@@ -180,8 +180,8 @@ export function TowerBridge(props) {
 
   return (
     <group ref={root} name="tower-bridge" {...props}>
-      <Half side="north" rt={rt} st={st} towerTop={towerTop} era={era} />
-      <Half side="south" rt={rt} st={st} towerTop={towerTop} era={era} />
+      <Half side="north" rt={rt} st={st} towerTop={towerTop} era={era} maxAngle={maxAngle} />
+      <Half side="south" rt={rt} st={st} towerTop={towerTop} era={era} maxAngle={maxAngle} />
       {year >= 1894 && <Ship rt={rt} year={year} maxAngle={maxAngle} />}
       {shown('walkway', st.stage) &&
         ['east', 'west'].map((side) => (

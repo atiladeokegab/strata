@@ -9,9 +9,8 @@ import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { useStore } from '../../store.js'
 import { L } from './structures.jsx'
+import { leverAfter, leverForKey, leverLabel } from './drive.js'
 
-const MAX_ANGLE = (86 * Math.PI) / 180 // shortcut: drag scale assumes the default 86° max, fine unless place data changes it a lot
-const keyboardDriveStep = Math.PI / 36
 const pointerTapDistancePx = 5
 const pointerTapDurationMs = 300
 const LEAF = -L.pivotZ // pivot to the bascule tip, metres
@@ -25,9 +24,9 @@ const isPointerTap = (intent, e) =>
 const normalizeAngle = (d) => (d > Math.PI ? d - Math.PI * 2 : d < -Math.PI ? d + Math.PI * 2 : d)
 
 // Positive delta = rotation about the leaf's +x axis, which closes the leaf (PivotFrame uses -angle).
-function drive(delta) {
+function drive(delta, maxAngle) {
   const s = useStore.getState()
-  s.setBascule(s.bascule - delta / MAX_ANGLE)
+  s.setBascule(leverAfter(s.bascule, delta, maxAngle))
 }
 
 // A drag is not a tap: eat the click the browser sends after pointerup, before R3F sees it, so
@@ -128,8 +127,9 @@ function DriveGizmo({ active, dragging }) {
 }
 
 // ---- DriveHandle ----
-// Wrap a bascule's PivotFrame: <BasculeDrive sim={sim}><S.PivotFrame .../></BasculeDrive>.
-export function BasculeDrive({ sim, children }) {
+// Wrap a bascule's PivotFrame: <BasculeDrive sim={sim} side="north" maxAngle={rad}><S.PivotFrame .../></BasculeDrive>.
+export function BasculeDrive({ sim, side, maxAngle, children }) {
+  const lever = useStore((s) => s.bascule)
   const camera = useThree((s) => s.camera)
   const gl = useThree((s) => s.gl)
   const controls = useThree((s) => s.controls)
@@ -163,13 +163,19 @@ export function BasculeDrive({ sim, children }) {
     }
   }, [controls, dragging])
 
+  const stopWatching = useRef(null)
+  useEffect(() => () => stopWatching.current?.(), [])
+
   useFrame(() => {
     tip.current.rotation.x = -sim.angle
   })
 
   const beginDrag = (e) => {
+    // Only the first finger drives the lever; later fingers belong to the camera gesture.
+    if (activePointer.current !== null || !e.nativeEvent.isPrimary) return
     // Only grab when the leaf (or gizmo) is the nearest thing hit, not through a tower in front.
-    let o = e.intersections[0]?.object
+    // Cars ride on the leaf, so look through traffic.
+    let o = e.intersections.find((i) => i.object.name !== 'traffic')?.object
     while (o && o !== root.current) o = o.parent
     if (!o) return
     e.stopPropagation()
@@ -204,6 +210,22 @@ export function BasculeDrive({ sim, children }) {
     }
     e.target.setPointerCapture(e.pointerId)
     if (controls) controls.enabled = false // now, not a render later, so the orbit never starts
+    // A second finger means pinch or two-finger orbit, not a lever drag: drop the drag and hand the
+    // camera back. Added now, not in an effect, so a quick second finger is not missed; window
+    // capture runs before OrbitControls' canvas listener, so the controls see that finger.
+    const onSecond = (ev) => {
+      if (ev.pointerId === activePointer.current) return
+      stopWatching.current?.()
+      activePointer.current = null
+      intent.current = null
+      if (controls) controls.enabled = true
+      setDragging(false)
+    }
+    window.addEventListener('pointerdown', onSecond, { capture: true })
+    stopWatching.current = () => {
+      window.removeEventListener('pointerdown', onSecond, { capture: true })
+      stopWatching.current = null
+    }
     setDragging(true)
   }
 
@@ -215,7 +237,7 @@ export function BasculeDrive({ sim, children }) {
     activated.current = true
     let delta = 0
     if (useScreenY.current) {
-      delta = ((n.clientY - lastY.current) / (height.current * 0.5)) * MAX_ANGLE
+      delta = ((n.clientY - lastY.current) / (height.current * 0.5)) * maxAngle
       lastY.current = n.clientY
     } else if (useScreenArc.current) {
       const angle = Math.atan2(n.clientY - screenCenter.current.y, n.clientX - screenCenter.current.x)
@@ -231,13 +253,14 @@ export function BasculeDrive({ sim, children }) {
       delta = Math.atan2(axisWorld.current.dot(hit.current.crossVectors(lastRadial.current, radial.current)), lastRadial.current.dot(radial.current))
       lastRadial.current.copy(radial.current)
     }
-    if (Number.isFinite(delta) && Math.abs(delta) > 1e-6) drive(delta)
+    if (Number.isFinite(delta) && Math.abs(delta) > 1e-6) drive(delta, maxAngle)
   }
 
   const endDrag = (e) => {
     if (activePointer.current !== e.pointerId) return
     e.stopPropagation()
     if (!(intent.current && isPointerTap(intent.current, e.nativeEvent))) swallowNextClick()
+    stopWatching.current?.()
     activePointer.current = null
     intent.current = null
     activated.current = false
@@ -246,10 +269,10 @@ export function BasculeDrive({ sim, children }) {
   }
 
   const onKeyDown = (e) => {
-    const delta = e.key === 'ArrowUp' || e.key === 'ArrowRight' ? -keyboardDriveStep : e.key === 'ArrowDown' || e.key === 'ArrowLeft' ? keyboardDriveStep : 0
-    if (!delta) return
+    const next = leverForKey(e.key, useStore.getState().bascule, maxAngle)
+    if (next === null) return
     e.preventDefault()
-    drive(delta)
+    useStore.getState().setBascule(next)
   }
 
   return (
@@ -270,7 +293,7 @@ export function BasculeDrive({ sim, children }) {
             <Html center zIndexRange={[10, 0]}>
               <button
                 type="button"
-                aria-label="Bascule lever: arrow keys raise and lower"
+                aria-label={leverLabel(side, lever)}
                 onKeyDown={onKeyDown}
                 style={{ position: 'absolute', width: 1, height: 1, padding: 0, overflow: 'hidden', clipPath: 'inset(50%)', border: 0 }}
               />

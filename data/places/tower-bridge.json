@@ -150,7 +150,15 @@
       "id": "pier-north",
       "name": "North river pier",
       "group": "foundations",
-      "dims": {},
+      "dims": {
+        "square_caisson_side": {
+          "value": 28,
+          "unit": "ft",
+          "source": "tb-history",
+          "status": "text-attested",
+          "note": "Each of the square caissons used around the river-pier foundation; the layout also included triangular caissons."
+        }
+      },
       "summary": "Massive masonry pier founded in the Thames riverbed and supporting the north tower.",
       "sources": [
         "tb-history"
@@ -160,7 +168,15 @@
       "id": "pier-south",
       "name": "South river pier",
       "group": "foundations",
-      "dims": {},
+      "dims": {
+        "square_caisson_side": {
+          "value": 28,
+          "unit": "ft",
+          "source": "tb-history",
+          "status": "text-attested",
+          "note": "Each of the square caissons used around the river-pier foundation; the layout also included triangular caissons."
+        }
+      },
       "summary": "Massive masonry pier founded in the Thames riverbed and supporting the south tower.",
       "sources": [
         "tb-history"
@@ -204,50 +220,167 @@
       "id": "counterweight-north",
       "name": "North bascule counterweight",
       "group": "machinery",
-      "dims": {},
+      "dims": {
+        "lead_ballast": {
+          "value": 290,
+          "unit": "tons",
+          "source": "tb-history",
+          "status": "text-attested"
+        },
+        "cast_iron_ballast": {
+          "value": 60,
+          "unit": "tons",
+          "source": "tb-history",
+          "status": "text-attested"
+        },
+        "moving_leaf_total_weight": {
+          "value": 1200,
+          "unit": "tons",
+          "source": "tb-history",
+          "status": "text-attested"
+        }
+      },
       "summary": "Counterbalance at the tail of the north moving leaf reduces the lifting effort.",
       "sources": [
-        "tb-engine"
+        "tb-engine",
+        "tb-history"
       ]
     },
     {
       "id": "counterweight-south",
       "name": "South bascule counterweight",
       "group": "machinery",
-      "dims": {},
+      "dims": {
+        "lead_ballast": {
+          "value": 290,
+          "unit": "tons",
+          "source": "tb-history",
+          "status": "text-attested"
+        },
+        "cast_iron_ballast": {
+          "value": 60,
+          "unit": "tons",
+          "source": "tb-history",
+          "status": "text-attested"
+        },
+        "moving_leaf_total_weight": {
+          "value": 1200,
+          "unit": "tons",
+          "source": "tb-history",
+          "status": "text-attested"
+        }
+      },
       "summary": "Counterbalance at the tail of the south moving leaf reduces the lifting effort.",
       "sources": [
-        "tb-engine"
+        "tb-engine",
+        "tb-history"
       ]
     },
     {
       "id": "pivot-north",
       "name": "North bascule pivot",
       "group": "machinery",
-      "dims": {},
+      "dims": {
+        "shaft_diameter": {
+          "value": 21,
+          "unit": "in",
+          "source": "tb-history",
+          "status": "text-attested"
+        },
+        "shaft_length": {
+          "value": 48,
+          "unit": "ft",
+          "source": "tb-history",
+          "status": "text-attested"
+        },
+        "shaft_weight": {
+          "value": 25,
+          "unit": "tons",
+          "source": "tb-history",
+          "status": "text-attested"
+        }
+      },
       "summary": "Large hinge pin and bearing carry the north leaf as it rotates.",
       "sources": [
-        "tb-engine"
+        "tb-engine",
+        "tb-history"
       ]
     },
     {
       "id": "pivot-south",
       "name": "South bascule pivot",
       "group": "machinery",
-      "dims": {},
+      "dims": {
+        "shaft_diameter": {
+          "value": 21,
+          "unit": "in",
+          "source": "tb-history",
+          "status": "text-attested"
+        },
+        "shaft_length": {
+          "value": 48,
+          "unit": "ft",
+          "source": "tb-history",
+          "status": "text-attested"
+        },
+        "shaft_weight": {
+          "value": 25,
+          "unit": "tons",
+          "source": "tb-history",
+          "status": "text-attested"
+        }
+      },
       "summary": "Large hinge pin and bearing carry the south leaf as it rotates.",
       "sources": [
-        "tb-engine"
+        "tb-engine",
+        "tb-history"
       ]
     },
     {
       "id": "accumulator",
       "name": "Hydraulic accumulator",
       "group": "machinery",
-      "dims": {},
-      "summary": "Stores pressurised water so the bridge leaves can be raised on demand.",
+      "dims": {
+        "plant_accumulator_count": {
+          "value": 6,
+          "unit": "accumulators",
+          "source": "tb-history",
+          "status": "text-attested",
+          "note": "Two in the accumulator house and two at each pier; original water-pressure system."
+        },
+        "house_ram_diameter": {
+          "value": 20,
+          "unit": "in",
+          "source": "tb-history",
+          "status": "text-attested",
+          "note": "Each of the two accumulator-house rams."
+        },
+        "pier_ram_diameter": {
+          "value": 22,
+          "unit": "in",
+          "source": "tb-history",
+          "status": "text-attested",
+          "note": "Each ram beneath a hydraulic engine pair at a pier."
+        },
+        "working_pressure_min": {
+          "value": 700,
+          "unit": "psi",
+          "source": "tb-history",
+          "status": "text-attested",
+          "note": "Original water-hydraulic system; lower end of the specified operating range."
+        },
+        "working_pressure_max": {
+          "value": 800,
+          "unit": "psi",
+          "source": "tb-history",
+          "status": "text-attested",
+          "note": "Original water-hydraulic system; upper end of the specified operating range."
+        }
+      },
+      "summary": "The Victorian system stored recirculated water under pressure in weighted rams: two large accumulators by the south approach and one accumulator at each end of both piers. The present bridge uses electric pumps and oil hydraulics.",
       "sources": [
-        "tb-engine"
+        "tb-history",
+        "tb-work"
       ]
     },
     {
@@ -261,11 +394,38 @@
           "source": "tb-inside",
           "status": "text-attested",
           "note": "Time reported for the original steam engines; not a calibration of the interactive simulator."
+        },
+        "pumping_engines": {
+          "value": 2,
+          "unit": "steam engines",
+          "source": "tb-history",
+          "status": "text-attested",
+          "note": "Original pumping plant."
+        },
+        "pump_speed": {
+          "value": 45,
+          "unit": "rpm",
+          "source": "tb-history",
+          "status": "text-attested"
+        },
+        "hydraulic_pumps_per_engine": {
+          "value": 2,
+          "unit": "pumps",
+          "source": "tb-history",
+          "status": "text-attested"
+        },
+        "steam_cylinders_per_engine": {
+          "value": 4,
+          "unit": "cylinders",
+          "source": "tb-history",
+          "status": "text-attested"
         }
       },
-      "summary": "Victorian steam plant supplied hydraulic power for bridge lifts before electrification.",
+      "summary": "Original coal-fired boilers and steam pumping engines pressurised a recirculating water system. Since 1976, electric pumps use oil hydraulics for bridge lifts; the historic equipment is preserved in the Engine Rooms.",
       "sources": [
-        "tb-inside"
+        "tb-history",
+        "tb-inside",
+        "tb-work"
       ]
     },
     {
@@ -312,40 +472,110 @@
       "id": "cofferdam-north",
       "name": "North cofferdam",
       "group": "construction",
-      "dims": {},
-      "summary": "Temporary enclosure isolated the north pier worksite from the river during foundation construction.",
+      "dims": {
+        "square_caissons_per_pier": {
+          "value": 8,
+          "unit": "caissons",
+          "source": "tb-history",
+          "status": "text-attested"
+        },
+        "triangular_caissons_per_pier": {
+          "value": 4,
+          "unit": "caissons",
+          "source": "tb-history",
+          "status": "text-attested"
+        }
+      },
+      "summary": "Temporary caisson enclosures ringed the river-pier site so excavation and concrete work could proceed in the tidal river. The ring combined square units with triangular cutwater units.",
       "sources": [
-        "tb-timeline"
+        "tb-timeline",
+        "tb-history"
       ]
     },
     {
       "id": "cofferdam-south",
       "name": "South cofferdam",
       "group": "construction",
-      "dims": {},
-      "summary": "Temporary enclosure isolated the south pier worksite from the river during foundation construction.",
+      "dims": {
+        "square_caissons_per_pier": {
+          "value": 8,
+          "unit": "caissons",
+          "source": "tb-history",
+          "status": "text-attested"
+        },
+        "triangular_caissons_per_pier": {
+          "value": 4,
+          "unit": "caissons",
+          "source": "tb-history",
+          "status": "text-attested"
+        }
+      },
+      "summary": "Temporary caisson enclosures ringed the river-pier site so excavation and concrete work could proceed in the tidal river. The ring combined square units with triangular cutwater units.",
       "sources": [
-        "tb-timeline"
+        "tb-timeline",
+        "tb-history"
       ]
     },
     {
       "id": "hydraulic-engine-north",
       "name": "North hydraulic machinery",
       "group": "machinery",
-      "dims": {},
-      "summary": "Hydraulic equipment in the north pier drives the north bascule and bridge lifts.",
+      "dims": {
+        "hydraulic_engines_per_pier": {
+          "value": 4,
+          "unit": "engines",
+          "source": "tb-history",
+          "status": "text-attested",
+          "note": "Two at each end of the pier."
+        },
+        "cylinders_per_engine": {
+          "value": 3,
+          "unit": "cylinders",
+          "source": "tb-history",
+          "status": "text-attested"
+        },
+        "piston_stroke": {
+          "value": 12,
+          "unit": "in",
+          "source": "tb-history",
+          "status": "text-attested"
+        }
+      },
+      "summary": "The original water-hydraulic drive had four engines at the north pier, working through pinions and racks on the bascule quadrants. On a calm day one engine could open a leaf; high wind called for two together.",
       "sources": [
-        "tb-engine"
+        "tb-history",
+        "tb-work"
       ]
     },
     {
       "id": "hydraulic-engine-south",
       "name": "South hydraulic machinery",
       "group": "machinery",
-      "dims": {},
-      "summary": "Hydraulic equipment in the south pier drives the south bascule and bridge lifts.",
+      "dims": {
+        "hydraulic_engines_per_pier": {
+          "value": 4,
+          "unit": "engines",
+          "source": "tb-history",
+          "status": "text-attested",
+          "note": "Two at each end of the pier."
+        },
+        "cylinders_per_engine": {
+          "value": 3,
+          "unit": "cylinders",
+          "source": "tb-history",
+          "status": "text-attested"
+        },
+        "piston_stroke": {
+          "value": 12,
+          "unit": "in",
+          "source": "tb-history",
+          "status": "text-attested"
+        }
+      },
+      "summary": "The original water-hydraulic drive had four engines at the south pier, working through pinions and racks on the bascule quadrants. On a calm day one engine could open a leaf; high wind called for two together.",
       "sources": [
-        "tb-engine"
+        "tb-history",
+        "tb-work"
       ]
     }
   ],
@@ -515,7 +745,8 @@
       "id": "tb-history",
       "title": "Tower Bridge: its history and construction",
       "url": "https://libarch.nmu.org.ua/bitstream/handle/GenofondUA/26131/e9a4a94a9986f225e2406b8592438ce8.pdf?isAllowed=y&sequence=1",
-      "kind": "contemporary engineering account"
+      "kind": "contemporary engineering account",
+      "locator": "J. E. Tuit, 1894: “The Foundations,” printed pp. 63–70; “The Hydraulic Machinery,” printed pp. 99–101 (accumulator pressures and dimensions, pump speed, drive engines and pivots)."
     },
     {
       "id": "tb-photo-1891",
@@ -576,6 +807,13 @@
       "title": "The history of City Bridge Foundation",
       "url": "https://www.towerbridge.org.uk/stories/the-history-of-city-bridge-foundation",
       "kind": "primary institutional"
+    },
+    {
+      "id": "tb-work",
+      "title": "How does Tower Bridge work?",
+      "url": "https://www.towerbridge.org.uk/stories/how-does-tower-bridge-work",
+      "kind": "primary institutional",
+      "locator": "Sections “Raising Tower Bridge” and “How does Tower Bridge open now?”: original steam and water pressure cycle; post-1976 electric pumps and oil hydraulics."
     }
   ],
   "people": [
@@ -715,6 +953,61 @@
       "text": "Steam-powered bridge lifting was replaced by electric operation in 1976.",
       "source": "tb-inside",
       "status": "text-attested"
+    },
+    {
+      "id": "hydraulic-cycle",
+      "title": "Original water-hydraulic lift cycle",
+      "text": "The Victorian steam engines pumped recirculated water into weighted accumulators; released pressurised water drove hydraulic engines, pinions and quadrant racks to move each bascule. Today electric pumps power an oil-hydraulic system.",
+      "source": "tb-work",
+      "sources": [
+        "tb-work",
+        "tb-history"
+      ],
+      "status": "text-attested"
+    },
+    {
+      "id": "hydraulic-pressure",
+      "title": "Original accumulator pressure",
+      "text": "The two south-approach accumulators each had a 20-inch ram and worked at 700–800 pounds per square inch. Two additional 22-inch ram accumulators were installed at each pier.",
+      "source": "tb-history",
+      "sources": [
+        "tb-history"
+      ],
+      "status": "text-attested",
+      "locator": "Printed p. 100, “The Hydraulic Machinery.”"
+    },
+    {
+      "id": "pump-plant",
+      "title": "Original pumping plant",
+      "text": "The pumping plant had two steam engines. Each had four steam cylinders and two hydraulic pumps; the engines ran at 45 revolutions per minute.",
+      "source": "tb-history",
+      "sources": [
+        "tb-history"
+      ],
+      "status": "text-attested",
+      "locator": "Printed p. 100, “The Hydraulic Machinery.”"
+    },
+    {
+      "id": "pier-drive",
+      "title": "Original hydraulic drive engines",
+      "text": "Each pier had four hydraulic engines, with three cylinders and a 12-inch stroke per engine. One engine could open a bascule in calm conditions; two could work together against greater wind pressure.",
+      "source": "tb-history",
+      "sources": [
+        "tb-history"
+      ],
+      "status": "text-attested",
+      "locator": "Printed pp. 100–101, “The Hydraulic Machinery.”"
+    },
+    {
+      "id": "foundation-caissons",
+      "title": "River-pier caisson layout",
+      "text": "Each pier foundation used eight square caissons measuring 28 feet on each side, plus four triangular cutwater caissons.",
+      "source": "tb-history",
+      "sources": [
+        "tb-history"
+      ],
+      "status": "text-attested",
+      "locator": "Printed p. 64, “The Foundations.”"
     }
   ]
 }

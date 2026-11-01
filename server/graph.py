@@ -3,12 +3,14 @@ import json
 import logging
 import os
 from pathlib import Path
+import re
 
 import httpx
 
 from scripts.validate import SLUG, assert_valid
 
 DATA = Path(__file__).resolve().parents[1] / "data" / "places"
+IDENTIFIER = re.compile(r"[A-Za-z][A-Za-z0-9_-]{0,63}\Z")
 log = logging.getLogger(__name__)
 
 
@@ -46,6 +48,31 @@ def _query(sql: str, variables: dict) -> list:
     if any(r.get("status") != "OK" for r in results):
         raise RuntimeError("SurrealDB statement failed")
     return results
+
+
+def setup_database() -> None:
+    """Create the configured database once before CLI seeding; requires admin credentials."""
+    namespace = os.getenv("SURREAL_NS", "strata")
+    database = os.getenv("SURREAL_DB", "strata")
+    if not IDENTIFIER.fullmatch(namespace) or not IDENTIFIER.fullmatch(database):
+        raise ValueError("SURREAL_NS and SURREAL_DB must be simple identifiers")
+    url = os.environ["SURREAL_URL"].rstrip("/")
+    auth = None
+    if os.getenv("SURREAL_USER"):
+        auth = (os.environ["SURREAL_USER"], os.getenv("SURREAL_PASS", ""))
+    sql = (f"DEFINE NAMESPACE IF NOT EXISTS `{namespace}`; "
+           f"USE NS `{namespace}`; USE DB `{database}`; "
+           f"DEFINE DATABASE IF NOT EXISTS `{database}`;")
+    response = httpx.post(
+        f"{url}/sql", content=sql,
+        headers={"Accept": "application/json", "Content-Type": "text/plain",
+                 "Surreal-NS": "main", "Surreal-DB": "main"},
+        auth=auth, timeout=5,
+    )
+    response.raise_for_status()
+    results = response.json()
+    if not isinstance(results, list) or any(r.get("status") != "OK" for r in results):
+        raise RuntimeError("SurrealDB namespace/database setup failed")
 
 
 def get_place(place_id: str) -> dict | None:
@@ -106,6 +133,7 @@ def seed_place(place: dict) -> None:
 
 
 if __name__ == "__main__":
+    setup_database()
     for path in sorted(DATA.glob("*.json")):
         seed_place(load_place(path.stem))
         print(f"Seeded {path.stem}")

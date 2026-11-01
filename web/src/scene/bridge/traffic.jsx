@@ -10,7 +10,7 @@ import { useStore } from '../../store.js'
 import { Part } from './Part.jsx'
 import { box, merge, M } from './geom.js'
 import { createTraffic, stepTraffic, onLeaves, TYPES, GATE_U } from './trafficSim.js'
-import { lift, stepLift, liftSpeed } from './liftSequence.js'
+import { lift, stepLift, liftSpeed, gatesClosed } from './liftSequence.js'
 import { shipState } from './ship.jsx'
 
 // ---- low-poly bodies: origin at the centre, ground at y=0, facing +z ----
@@ -92,7 +92,7 @@ export function Traffic({ rt, year, sim, maxAngle }) {
     const io = { dt, onLeaves: onLeaves(t), angle: sim.angle, maxAngle, locked: sim.locked, shipX: shipState.x, shipSailing: shipState.sailing }
     const lever = stepLift(lift, io)
     if (lever !== null && lever !== store.bascule) store.setBascule(lever)
-    g.closed = lift.red || store.bascule > 0 || sim.angle > 0.001 || !sim.locked
+    g.closed = gatesClosed(sim, store.bascule)
     g.swing += ((g.closed ? 1 : 0) - g.swing) * (1 - Math.exp(-Math.min(dt, 0.1) * 1.5))
     stepTraffic(t, Math.min(dt, 0.1), g.closed, liftSpeed())
     for (const k in n) n[k] = 0

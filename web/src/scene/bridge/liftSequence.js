@@ -44,6 +44,10 @@ export function liftForShip({ fast = FILM_URL } = {}, s = lift) {
   return s
 }
 
+// The one rule for the road gates (road barriers, signals and the top view all read it): shut while
+// the lift holds the signals red, the lever is up, a leaf is off its seat, or the bolts are not home.
+export const gatesClosed = (sim, lever, s = lift) => s.red || lever > 0 || sim.angle > 0.001 || !sim.locked
+
 // The driver calls this with the live ship state each frame before stepping it.
 export function applyShipWarp(s, ship, cruise) {
   if (!s.warpShip) return

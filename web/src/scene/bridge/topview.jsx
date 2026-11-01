@@ -15,6 +15,7 @@ import { box, merge } from './geom.js'
 import { OPEN_TIME_S, PRESSURE_PSI } from './hydraulics.js'
 import { WAIT_X, END_X } from './shipSim.js'
 import { GATE_U } from './trafficSim.js'
+import { gatesClosed } from './liftSequence.js'
 
 const FAR = 900 // metres from the bridge centre beyond which callouts hide
 const WATER = L.hw + 0.25
@@ -195,7 +196,7 @@ function Mains({ sim }) {
 
 // The ship's track down the river centreline and the road gates, as faint dashed lines; the
 // gates sit inside the towers, so they draw over them (over).
-function Dashed({ pts, color, dash = 4, y = WATER + 0.2, over = false }) {
+function Dashed({ pts, color, dash = 4, y = WATER + 0.2, over = false, live = null }) {
   const line = useMemo(() => {
     const g = new THREE.BufferGeometry().setFromPoints(pts.map(([x, z]) => new THREE.Vector3(x, y, z)))
     // over: drawn last, untoned and through the towers, so red reads red from the sky
@@ -204,6 +205,7 @@ function Dashed({ pts, color, dash = 4, y = WATER + 0.2, over = false }) {
     l.computeLineDistances()
     return l
   }, [pts, color, dash, y, over])
+  useFrame(() => live && line.material.color.set(live()))
   return <primitive object={line} />
 }
 const TRACK = [[WAIT_X, 0], [END_X, 0]]
@@ -267,7 +269,9 @@ export function TopView({ st, year, maxAngle, sim }) {
       {stage >= 5 && (
         <>
           <Dashed pts={TRACK} color="#f3efe6" dash={6} />
-          {GATES.map((g, i) => <Dashed key={i} pts={g} color="#ff1e10" dash={1.2} y={0.6} over />)}
+          {GATES.map((g, i) => (
+            <Dashed key={i} pts={g} color="#ff1e10" dash={1.2} y={0.6} over live={() => (gatesClosed(sim, useStore.getState().bascule) ? '#ff1e10' : '#30d158')} />
+          ))}
         </>
       )}
     </>

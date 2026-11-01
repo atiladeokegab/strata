@@ -10,7 +10,7 @@ import { createShip, stepShip, WAIT_X, HOLD_X, CRUISE } from './shipSim.js'
 import { vesselForYear, needsLift, leafInput, CLEARANCE } from './vessels.js'
 import { createRiver, stepRiver, gap, CRAFT, CLEAR } from './riverSim.js'
 import { createTraffic, stepTraffic, onLeaves, TYPES, STOP_U, BASCULE_U } from './trafficSim.js'
-import { createLift, liftForShip, stepLift, liftSpeed, setLiftTimeScale, applyShipWarp, PASSED_X, FILM_SCALE } from './liftSequence.js'
+import { createLift, liftForShip, stepLift, liftSpeed, setLiftTimeScale, applyShipWarp, gatesClosed, PASSED_X, FILM_SCALE } from './liftSequence.js'
 
 const MAX = (86 * Math.PI) / 180
 const run = (s, target, seconds) => {
@@ -289,7 +289,8 @@ const liftCycle = (scale, fast = false) => {
     if (next !== null) lever = next
     if (s.phase !== phases.at(-1)) phases.push(s.phase)
     const k = liftSpeed(s)
-    const closed = s.red || lever > 0 || h.angle > 0.001 || !h.locked
+    const closed = gatesClosed(h, lever, s)
+    assert.equal(closed, s.red || lever > 0 || h.angle > 0.001 || !h.locked, 'one gate rule for road and top view')
     if (!closed) assert.ok(h.locked, 'gates never open on an unbolted leaf')
     stepTraffic(t, dt, closed, k)
     if (h.angle > 0.001) assert.equal(onLeaves(t), 0, 'no road user on a moving leaf')
@@ -310,3 +311,6 @@ assert.ok(film.secs < 50, `film lift completes in under 50 s of sim time, took $
 assert.ok(fast.secs <= 22, `fast lift completes within 22 s of sim time, took ${fast.secs.toFixed(1)} s`)
 assert.ok(fast.still <= 3, `in a fast lift the ship waits at most 3 s, waited ${fast.still.toFixed(1)} s`)
 console.log(`lift checks ok (cycle ${slow.secs.toFixed(0)} s at scale 1, ${film.secs.toFixed(0)} s at FILM_SCALE, ${fast.secs.toFixed(1)} s fast, ship still ${fast.still.toFixed(1)} s)`)
+// top view and road read the same gate rule: no file draws gates from its own condition
+for (const f of ['traffic.jsx', 'topview.jsx'])
+  assert.ok(readFileSync(new URL(f, import.meta.url), 'utf8').includes('gatesClosed(sim, '), `${f} gates follow gatesClosed`)

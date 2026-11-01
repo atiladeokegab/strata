@@ -334,19 +334,21 @@ function Flow({ rt, steam }) {
   const colour = steam ? WATER : OIL
   for (const mat of Object.values(m)) (mat.emissive ?? mat.color).set(colour)
   const geo = useMemo(
-    () => ({ supply: merge(PATHS.supply.map((p) => tube(p, 0.26))), drive: merge(PATHS.drive.map((p) => tube(p, 0.26))), river: tube(PATHS.river, 0.3), ghost: tube(GHOST, 0.35) }),
+    // LITE: the river main rides in the supply mesh (it carries the same water) and there is no ghost
+    () => ({ supply: merge([...PATHS.supply.map((p) => tube(p, 0.26)), ...(LITE ? [tube(PATHS.river, 0.3)] : [])]), drive: merge(PATHS.drive.map((p) => tube(p, 0.26))), river: tube(PATHS.river, 0.3), ghost: tube(GHOST, 0.35) }),
     [],
   )
   useFrame((_, dt) => {
     ref.current.visible = rt.explode.current < 0.05 // the mains don't follow exploded parts
     const drive = Math.min(1, Math.abs(sim.omega) / OMEGA_MAX)
     const supply = Math.min(1, drive + (sim.pumping ? 0.35 : 0))
-    for (const [k, base] of MAINS) {
+    for (const [k, base] of LITE ? MAINS.slice(0, 2) : MAINS) {
       const mat = m[k]
       const level = k === 'drive' ? drive : supply
       mat.emissiveIntensity = base + level * 2.5
       mat.emissiveMap.offset.x -= level * 1.2 * Math.min(dt, 0.1) // dashes run start -> end of each path
     }
+    if (LITE) return
     const on = Math.max(rt.explode.current, rt.fades.current.includes('pier-north') ? 1 : 0)
     const x = (ghost.current += (on - ghost.current) * Math.min(1, dt * 3))
     ghostRef.current.visible = x > 0.02
@@ -355,9 +357,9 @@ function Flow({ rt, steam }) {
   return (
     <>
       <group ref={ref}>
-        {['supply', 'drive', 'river'].map((k) => <mesh key={k} geometry={geo[k]} material={m[k]} />)}
+        {(LITE ? ['supply', 'drive'] : ['supply', 'drive', 'river']).map((k) => <mesh key={k} geometry={geo[k]} material={m[k]} />)}
       </group>
-      <mesh ref={ghostRef} geometry={geo.ghost} material={m.ghost} renderOrder={2} />
+      {!LITE && <mesh ref={ghostRef} geometry={geo.ghost} material={m.ghost} renderOrder={2} />}
     </>
   )
 }

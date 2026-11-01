@@ -17,6 +17,7 @@
 .home-story svg { width: 12px; height: 12px; fill: currentColor; }
 .home-enter { border: 1px solid var(--line-strong); background: var(--surface-solid); color: var(--ink); }
 .home-enter:hover { background: var(--fill-hover); }
+.home-link { height: 44px; padding: 0 var(--s3); border: 0; background: none; color: var(--ink); font-weight: 500; text-decoration: underline; text-underline-offset: 4px; }
 .home-enter span { color: var(--muted); }
 .home-next { grid-column: 1 / -1; grid-row: 2; }
 .home-next ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s3); }

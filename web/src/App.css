@@ -152,7 +152,13 @@ input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 
 /* data credit, top: the LiDAR source stays named on screen */
 .credit { position: absolute; top: var(--gap); left: calc(var(--panel-w) + var(--gap) * 2); margin: 0; display: flex; align-items: center; gap: var(--s2); padding: 6px var(--s3) 6px 6px;
   border-radius: var(--pill); background: var(--surface); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); border: 1px solid var(--line); font-size: var(--t1); color: var(--muted); max-width: calc(100% - var(--panel-w) - 360px); }
-.lidar-tag { padding: 2px var(--s2); border-radius: var(--pill); border: 1px solid var(--line-strong); color: var(--ink); font: 600 11px/1.4 var(--sans); letter-spacing: .04em; }
+/* one line: the LiDAR source leads, the rest ellipsised; hover, focus or tap "Sources" shows it all */
+.credit-full { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.credit:hover .credit-full, .credit:focus-within .credit-full, .credit.open .credit-full { white-space: normal; }
+.credit:hover, .credit:focus-within, .credit.open { z-index: 3; border-radius: var(--r-lg); align-items: flex-start; }
+.credit-more { flex: none; height: 24px; padding: 0 var(--s2); border: 0; border-radius: var(--pill); background: var(--fill); color: var(--ink); font: 500 var(--t1)/1 var(--sans); }
+.credit-more { display: inline-flex; align-items: center; gap: 4px; } .credit-more svg { width: 12px; height: 12px; }
+.lidar-tag { flex: none; padding: 2px var(--s2); border-radius: var(--pill); border: 1px solid var(--line-strong); color: var(--ink); font: 600 11px/1.4 var(--sans); letter-spacing: .04em; }
 .lidar-tag.on { background: var(--accent); border-color: var(--accent); color: var(--on-ink); }
 .walk-hint { position: absolute; left: calc(50% + var(--panel-w) / 2); top: 64px; transform: translateX(-50%); margin: 0; padding: var(--s2) var(--s3); font-size: var(--t2); color: var(--muted); }
 
@@ -168,7 +174,7 @@ input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 
 .help .n { grid-row: span 2; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--line-strong); color: var(--muted); font: 500 var(--t1)/1 var(--sans); }
 .help b { font-weight: 500; font-size: var(--t2); }
 .help .d { color: var(--muted); font-size: var(--t2); line-height: 1.4; }
-.help .actions { display: flex; gap: var(--s2); }
+.help .actions { display: flex; flex-wrap: wrap; gap: var(--s2); }
 .help .primary { flex: 1; justify-content: center; }
 .no-webgl { position: absolute; z-index: 1; left: calc(50% + var(--panel-w) / 2 + var(--gap) / 2); top: 40%; transform: translate(-50%, -50%); width: min(420px, calc(100% - 32px)); padding: var(--s5); display: grid; gap: var(--s4); justify-items: start; }
 .no-webgl p { margin: 0; font-size: var(--t3); }
@@ -211,8 +217,7 @@ input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 
   .controls .rm-open, .story-btn { height: 44px; padding: 0 var(--s3); }
   .help-btn, .ctl-row .help-btn { width: 44px; height: 44px; }
   .app:not(.sheet-open) .docent { display: none; }
-  .credit { top: 8px; left: 8px; right: 8px; max-width: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
-  .credit .lidar-tag { margin-right: 6px; }
+  .credit { top: 8px; left: 8px; right: 8px; max-width: none; }
   .help { left: 8px; right: 8px; top: auto; bottom: calc(var(--sheet) + 180px); transform: none; width: auto; padding: var(--s4); }
   .help ol { gap: var(--s3); margin-bottom: var(--s4); }
   .move-pad { right: 8px; bottom: calc(var(--sheet) + 150px); }

@@ -14,21 +14,26 @@ import './App.css'
 const PLACE = 'tower-bridge'
 const GoogleCredit = makeSlot('GoogleCredit', ['../scene/GoogleTiles.jsx']) // Google's copyright must show while its tiles do
 const BuildingsCredit = makeSlot('BuildingsCredit', ['../scene/Buildings.jsx']) // OSM ODbL credit while buildings show
+const Guide = makeSlot('Guide', ['../tour/Guide.jsx']) // build-tour's guided tour; inside .app for --sheet
 
 function Credit() {
   const lidar = useStore((s) => s.lidar)
   const old = useStore((s) => s.year < 1950) // Terrain drapes the NLS 1890s map then
   const [meta, setMeta] = useState(null)
+  const [open, setOpen] = useState(false)
   useEffect(() => {
     fetch(`/terrain/${PLACE}/meta.json`).then((r) => (r.ok ? r.json() : null)).then(setMeta).catch(() => {})
   }, [])
   return (
-    <p className="credit">
+    <p className={`credit${open ? ' open' : ''}`}>
       <span className={`lidar-tag${lidar ? ' on' : ''}`}>LiDAR</span>
+      <span className="credit-full">
       {meta ? (meta.attribution ?? `${meta.source}${meta.licence ? ` · ${meta.licence}` : ''}`) : 'Environment Agency 1 m LiDAR, terrain loading'}
       {old && <> · 1890s map: OS London 1893-96, <a href="https://maps.nls.uk/" target="_blank" rel="noreferrer">reproduced with the permission of the National Library of Scotland</a> (CC-BY)</>}
       <GoogleCredit />
       <BuildingsCredit />
+      </span>
+      <button type="button" className="credit-more" aria-expanded={open} onClick={() => setOpen(!open)}>Sources <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" strokeWidth="1.3" /><path d="M8 7v4.2M8 4.6v.1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg></button>
     </p>
   )
 }
@@ -119,6 +124,7 @@ export default function App() {
         <div className="ctl-row"><StoryButton /><HelpButton /></div>
       </Controls>
       <Help />
+      <Guide />
       <Credit />
       {view === 'walk' && <p className="walk-hint glass">W A S D to walk · drag to look · Shift to run</p>}
       {view === 'walk' && <MovePad />}

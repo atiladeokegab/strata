@@ -2,7 +2,12 @@
 import { Component, Suspense, lazy } from 'react'
 
 // globs of files that do not exist yet are simply empty, so the build never fails on a missing slot
-const mods = import.meta.glob(['../scene/Terrain.jsx', '../scene/Water.jsx', '../scene/bridge/TowerBridge.jsx', '../scene/bridge/index.jsx', '../scene/Look.jsx', '../scene/Tour.jsx', '../scene/GoogleTiles.jsx', '../scene/Buildings.jsx', '../scene/Landmarks.jsx'])
+const mods = import.meta.glob(['../scene/Terrain.jsx', '../scene/Water.jsx', '../scene/bridge/TowerBridge.jsx', '../scene/bridge/index.jsx', '../scene/Look.jsx', '../scene/Tour.jsx', '../scene/GoogleTiles.jsx', '../scene/Buildings.jsx', '../scene/Landmarks.jsx', '../tour/Guide.jsx'])
+
+// build-tour's guided tour: the buttons show only once tour/guide.js exists
+const guide = import.meta.glob('../tour/guide.js')['../tour/guide.js']
+export const hasGuide = !!guide
+export const startGuide = () => guide?.().then((m) => m.startGuide())
 
 export class Guard extends Component {
   state = { failed: false }

@@ -1,6 +1,7 @@
 // First-visit "How to use" card. Dismissal is remembered per browser; the "?" button in the map controls reopens it.
 import { useStore } from '../store'
 import { useTour, startTour, stopTour } from '../tour/tour.js'
+import { hasGuide, startGuide } from './slots'
 
 const KEY = 'strata.help.seen'
 export const helpSeen = () => { try { return localStorage.getItem(KEY) === '1' } catch { return false } }
@@ -26,8 +27,13 @@ export function Help() {
         {STEPS.map(([t, d], i) => <li key={t}><span className="n">{i + 1}</span><b>{t}</b><span className="d">{d}</span></li>)}
       </ol>
       <div className="actions">
-        <button type="button" className="primary" onClick={() => { close(); startTour() }}>
-          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" /></svg>Play the 60 s story
+        {hasGuide && (
+          <button type="button" className="primary" onClick={() => { close(); startGuide() }}>
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" /></svg>Take the guided tour
+          </button>
+        )}
+        <button type="button" className={hasGuide ? 'secondary' : 'primary'} onClick={() => { close(); startTour() }}>
+          {!hasGuide && <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" /></svg>}Play the 60 s story
         </button>
         <button type="button" className="secondary" onClick={close}>Got it</button>
       </div>

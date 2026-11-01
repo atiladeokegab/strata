@@ -4,7 +4,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { ACESFilmicToneMapping, CanvasTexture, SRGBColorSpace } from 'three'
-import { makeSlot } from '../slots'
+import { makeSlot, hasGuide, startGuide } from '../slots'
 import { startTour } from '../../tour/tour.js'
 import { BridgeStandIn } from '../StandIns'
 import { pbr } from '../../scene/look/textures'
@@ -138,10 +138,15 @@ export default function Home({ onEnter }) {
           <span className="home-sub">History is text and flat photos. Strata lets visitors, students and teachers watch a landmark being built, from real LiDAR and sourced history.</span>
         </h1>
         <div className="home-actions">
-          <button type="button" className="home-story" onClick={() => { onEnter(); startTour() }}>
-            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" /></svg>Play the 60 s story
+          {hasGuide && (
+            <button type="button" className="home-story" onClick={() => { onEnter(); startGuide() }}>
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" /></svg>Take the guided tour
+            </button>
+          )}
+          <button type="button" className={hasGuide ? 'home-enter' : 'home-story'} onClick={() => { onEnter(); startTour() }}>
+            {!hasGuide && <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" /></svg>}Play the 60 s story
           </button>
-          <button type="button" className="home-enter" onClick={onEnter}>
+          <button type="button" className={hasGuide ? 'home-link' : 'home-enter'} onClick={onEnter}>
             Enter Tower Bridge <span aria-hidden="true">→</span>
           </button>
         </div>

@@ -8,7 +8,6 @@ import * as THREE from 'three'
 import { Part } from './Part.jsx'
 import { beam, box, merge } from './geom.js'
 import { L } from './structures.jsx'
-import { pbr } from '../look/textures.js'
 import { createShip, stepShip, CRUISE } from './shipSim.js'
 import { lift, liftSpeed, applyShipWarp } from './liftSequence.js'
 import { vesselForYear, leafInput } from './vessels.js'
@@ -180,6 +179,8 @@ function foamTexture() {
 // Live ship state (one ship), for a panel or a test harness that wants to place it. x is metres east.
 export const shipState = createShip()
 
+// Look.jsx textures wood by kind; the colour is the old tint times the wood:dark map it used to carry.
+const timber = (color) => Object.assign(new THREE.MeshStandardMaterial({ color, roughness: 0.72, metalness: 0.08 }), { userData: { kind: 'timber' } })
 const std = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.6, ...extra })
 
 function Barque({ mats }) {
@@ -288,10 +289,10 @@ export function Ship({ rt, year, maxAngle }) {
   const Mesh = MESH[vessel.kind]
   const mats = useMemo(
     () => ({
-      hull: new THREE.MeshStandardMaterial({ ...pbr('wood:dark', 0.08), color: '#3a3a3a' }),
+      hull: timber('#0f0906'),
       band: std('#e8e1cf'),
-      deck: new THREE.MeshStandardMaterial({ ...pbr('wood:dark', 0.15), color: '#d8b58a' }),
-      spars: new THREE.MeshStandardMaterial({ ...pbr('wood:dark', 0.5), color: '#c49a6c' }),
+      deck: timber('#381d0f'),
+      spars: timber('#33190b'),
       sails: std('#f1e8d2', { roughness: 0.95, side: THREE.DoubleSide }),
       flag: std('#ffffff', { map: ensignTexture(), roughness: 0.8, side: THREE.DoubleSide }),
       rig: new THREE.LineBasicMaterial({ color: '#2a2420' }),

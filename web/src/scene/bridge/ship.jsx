@@ -9,7 +9,7 @@ import { Part } from './Part.jsx'
 import { beam, box, merge } from './geom.js'
 import { L } from './structures.jsx'
 import { createShip, stepShip, CRUISE } from './shipSim.js'
-import { lift, liftSpeed, applyShipWarp } from './liftSequence.js'
+import { lift, liftSpeed, applyShipWarp, substep } from './liftSequence.js'
 import { vesselForYear, leafInput } from './vessels.js'
 import { RiverCraft } from './river.jsx'
 import { LITE } from '../look/tier.js'
@@ -380,11 +380,9 @@ export function Ship({ rt, year, maxAngle }) {
   const smoke = useRef()
 
   useFrame(({ clock }, dt) => {
-    dt = Math.min(dt, 0.1)
     const s = shipState
     applyShipWarp(lift, s, CRUISE)
-    const sdt = dt * liftSpeed()
-    stepShip(s, leafInput(vessel, rt.sim.angle / maxAngle), sdt)
+    substep(dt, (h) => stepShip(s, leafInput(vessel, rt.sim.angle / maxAngle), h * liftSpeed()))
     const t = clock.elapsedTime
     move.current.position.set(s.x, L.hw, 0)
     bob.current.position.y = Math.sin(t * 0.9) * 0.25

@@ -14,7 +14,7 @@ import { createTraffic, stepTraffic, onLeaves, roadY, streetProfile, eraOf, hasT
 import { LITE } from '../look/tier.js'
 import { STREET_DROP } from './structures.jsx'
 import { FOOTWAY_H } from './roadway.js'
-import { lift, stepLift, liftSpeed, gatesClosed } from './liftSequence.js'
+import { lift, stepLift, liftSpeed, gatesClosed, substep } from './liftSequence.js'
 import { shipState } from './ship.jsx'
 
 // ---- low-poly bodies: origin at the centre, ground at y=0, facing +z ----
@@ -160,7 +160,7 @@ export function Traffic({ rt, year, sim, maxAngle }) {
     if (lever !== null && lever !== store.bascule) store.setBascule(lever)
     g.closed = gatesClosed(sim, store.bascule)
     g.swing += ((g.closed ? 1 : 0) - g.swing) * (1 - Math.exp(-Math.min(dt, 0.1) * 1.5))
-    stepTraffic(t, Math.min(dt, 0.1), g.closed, liftSpeed())
+    substep(dt, (h) => stepTraffic(t, h, g.closed, liftSpeed()))
     lift.clear = g.closed && onLeaves(t) === 0 // measured after a step taken with the gates shut
     for (const k in n) n[k] = 0
     t.lanes.forEach((L, li) => {

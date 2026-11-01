@@ -17,7 +17,7 @@ import { leverAfter, leverForKey, leverLabel, KEY_STEP } from './drive.js'
 import { vesselForYear, needsLift, leafInput, CLEARANCE } from './vessels.js'
 import { createRiver, stepRiver, gap, CRAFT, CLEAR } from './riverSim.js'
 import { createTraffic, stepTraffic, onLeaves, roadY, streetProfile, RAMP_FOOT, TYPES, STOP_U, BASCULE_U, START_U, END_U, ABUT_Z, RAMP_LEN, POST_X, POST_Z, POST_W, GATE_U, tramZ, TRAM_STOP, TRAM_OUT, TRAM_CYCLE, nearCam, CAM_CLEAR } from './trafficSim.js'
-import { createLift, liftForShip, stepLift, liftSpeed, setLiftTimeScale, applyShipWarp, gatesClosed, heldLever, PASSED_X, FILM_SCALE } from './liftSequence.js'
+import { createLift, liftForShip, stepLift, liftSpeed, setLiftTimeScale, applyShipWarp, gatesClosed, heldLever, PASSED_X, FILM_SCALE, substep } from './liftSequence.js'
 
 const MAX = (86 * Math.PI) / 180
 const run = (s, target, seconds) => {
@@ -365,14 +365,14 @@ assert.ok(Object.keys(cp).length >= 5, 'most of the column still gets labels')
 }
 console.log('callout checks ok')
 // lift for a ship: the full cycle over the real hydraulic, ship and traffic sims, wired as in the app
-const liftCycle = (scale, fast = false) => {
+const liftCycle = (scale, fast = false, dt = 0.05) => {
   setLiftTimeScale(scale)
   const h = createHydraulics(), ship = createShip(), t = createTraffic(2026, 3), s = createLift()
-  let lever = 0, phases = ['idle'], dt = 0.05, still = 0
+  let lever = 0, phases = ['idle'], still = 0
   liftForShip({ fast }, s)
   assert.equal(s.caption, 'Signals to red')
   let i = 0
-  for (; i < 20 * 60 * 4 && !(s.phase === 'idle' && phases.length > 1); i++) {
+  for (; i < (20 * 60 * 4 * 0.05) / dt && !(s.phase === 'idle' && phases.length > 1); i++) {
     const io = { dt, onLeaves: onLeaves(t), angle: h.angle, maxAngle: MAX, locked: h.locked, shipX: ship.x, shipSailing: ship.sailing }
     const prev = s.phase
     const next = stepLift(s, io)
@@ -385,13 +385,13 @@ const liftCycle = (scale, fast = false) => {
     const closed = gatesClosed(h, lever, s)
     assert.equal(closed, s.red || lever > 0 || h.angle > 0.001 || !h.locked, 'one gate rule for road and top view')
     if (!closed) assert.ok(h.locked, 'gates never open on an unbolted leaf')
-    stepTraffic(t, dt, closed, k)
+    substep(dt, (d) => stepTraffic(t, d, closed, k))
     s.clear = closed && onLeaves(t) === 0
     if (h.angle > 0.001) assert.equal(onLeaves(t), 0, 'no road user on a moving leaf')
-    stepHydraulics(h, heldLever(lever, h, s), dt * SIM_SPEED * k, MAX)
+    substep(dt, (d) => stepHydraulics(h, heldLever(lever, h, s), d * SIM_SPEED * k, MAX))
     assert.ok(h.angle === 0 || h.bolts === 0, `leaves rise only with the nose bolts fully drawn (bolts ${h.bolts})`)
     applyShipWarp(s, ship, CRUISE)
-    stepShip(ship, h.angle / MAX, dt * k)
+    substep(dt, (d) => stepShip(ship, h.angle / MAX, d * k))
     if (['raising', 'passing'].includes(s.phase) && ship.x > PASSED_X && ship.v < 0.5) still += dt
   }
   assert.deepEqual(phases, ['idle', 'red', 'raising', 'passing', 'lowering', 'resume', 'idle'], `lift phases ${phases}`)
@@ -405,6 +405,11 @@ const slow = liftCycle(1), film = liftCycle(FILM_SCALE), fast = liftCycle(1, tru
 assert.ok(film.secs < 50, `film lift completes in under 50 s of sim time, took ${film.secs.toFixed(1)} s`)
 assert.ok(fast.secs <= 22, `fast lift completes within 22 s of sim time, took ${fast.secs.toFixed(1)} s`)
 assert.ok(fast.still <= 3, `in a fast lift the ship waits at most 3 s, waited ${fast.still.toFixed(1)} s`)
+// clock time, not frame count (next17: stalled at 'red' on a ~30 fps L4): the fast lift keeps its pace at any fps
+for (const fps of [30, 8, 3]) {
+  const low = liftCycle(1, true, 1 / fps)
+  assert.ok(Math.abs(low.secs - fast.secs) < 2, `fast lift at ${fps} fps takes ${low.secs.toFixed(1)} s, ${fast.secs.toFixed(1)} s at 20 fps`)
+}
 console.log(`lift checks ok (cycle ${slow.secs.toFixed(0)} s at scale 1, ${film.secs.toFixed(0)} s at FILM_SCALE, ${fast.secs.toFixed(1)} s fast, ship still ${fast.still.toFixed(1)} s)`)
 // top view and road read the same gate rule: no file draws gates from its own condition
 for (const f of ['traffic.jsx', 'topview.jsx'])

@@ -17,6 +17,11 @@ export const FAST_SCALE = 4
 export const FAST_SHIP_X = 160 // shortcut: fast lift only; the ship jumps here under way as the leaves start up
 export let liftTimeScale = 1
 export const setLiftTimeScale = (k) => (liftTimeScale = k)
+// Clock time, not frame count: a long frame is split into steps of at most `max` s, so the lift
+// runs at the same pace at any fps. Capped at `cap` s so a tab coming back does not replay minutes.
+export function substep(dt, fn, max = 0.1, cap = 1) {
+  for (let left = Math.min(dt, cap); left > 1e-6; left -= max) fn(Math.min(left, max))
+}
 export const liftSpeed = (s = lift) => (s.phase === 'idle' ? 1 : s.fast ? FAST_SCALE : liftTimeScale)
 // read once: ?film=1 makes every liftForShip() fast
 const FILM_URL = typeof location !== 'undefined' && new URLSearchParams(location.search).get('film') === '1'

@@ -25,7 +25,7 @@ import { Stairs, Lifts } from './interiors.jsx'
 import { Traffic } from './traffic.jsx'
 import { OpeningDay } from './opening.jsx'
 import { TopView } from './topview.jsx'
-import { liftSpeed, heldLever } from './liftSequence.js'
+import { liftSpeed, heldLever, substep } from './liftSequence.js'
 import { LiftControls } from './liftControls.jsx'
 import { useHomeDisc } from './homeDisc.js'
 import { LITE } from '../look/tier.js'
@@ -204,7 +204,7 @@ export function TowerBridge(props) {
     rt.fades.current = containersOf(rt.selected.current)
     // Bascules can only be worked once the bridge is open (stage 5); before that they sit closed.
     const lever = st.stage >= 5 ? useStore.getState().bascule : 0
-    stepHydraulics(rt.sim, heldLever(lever, rt.sim), Math.min(dt, 0.1) * SIM_SPEED * liftSpeed(), maxAngle)
+    substep(dt, (h) => stepHydraulics(rt.sim, heldLever(lever, rt.sim), h * SIM_SPEED * liftSpeed(), maxAngle))
   })
 
   return (

@@ -42,7 +42,8 @@ export default function Tour() {
       .then((a) => a?.answer && setAnswer({ text: a.answer.replace(/\s*\[[\w-]+\]/g, ''), citations: a.citations ?? [], refused: a.refused }))
       .catch(() => {})
     const el = gl.domElement
-    const interrupt = () => {
+    const interrupt = (e) => {
+      if (/^(F\d{1,2}|Shift|Control|Alt|Meta|Escape)$/.test(e?.key ?? '')) return // fullscreen, modifiers, Esc: not a request to stop
       stopTour()
       const s = useStore.getState() // leave the place in a sane state, wherever the story was cut
       s.setBascule(0); s.setExploded(false); s.setYear(THIS_YEAR); s.setLidar?.(false)

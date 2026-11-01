@@ -1,4 +1,4 @@
-import { Suspense, use, useEffect, useMemo } from 'react'
+import { Suspense, use, useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../store'
@@ -12,30 +12,71 @@ export const useGoogleShown = google?.useGoogleShown ?? (() => false)
 const BASE = '/terrain/tower-bridge/'
 let cache
 
-// Loads meta.json and decodes height.png (RGB 16-bit, see scripts/terrain/build.py) once per page.
+// Decodes a height.png (RGB 16-bit, see scripts/terrain/build.py) to metres OD.
+async function decodeHeights(url, meta) {
+  const blob = await (await fetch(url)).blob()
+  const bmp = await createImageBitmap(blob, { colorSpaceConversion: 'none', premultiplyAlpha: 'none' })
+  const ctx = new OffscreenCanvas(bmp.width, bmp.height).getContext('2d', { willReadFrequently: true })
+  ctx.drawImage(bmp, 0, 0)
+  const px = ctx.getImageData(0, 0, bmp.width, bmp.height).data
+  const scale = (meta.max_h - meta.min_h) / 65535
+  const heights = new Float32Array(bmp.width * bmp.height)
+  for (let i = 0; i < heights.length; i++) heights[i] = meta.min_h + (px[i * 4] * 256 + px[i * 4 + 1]) * scale
+  return { heights, w: bmp.width, h: bmp.height }
+}
+
+// Loads meta.json and the outer 1 m tile once per page.
 export function loadTerrain() {
   cache ??= (async () => {
     const meta = await (await fetch(BASE + 'meta.json')).json()
-    const blob = await (await fetch(BASE + 'height.png')).blob()
-    const bmp = await createImageBitmap(blob, { colorSpaceConversion: 'none', premultiplyAlpha: 'none' })
-    const ctx = new OffscreenCanvas(bmp.width, bmp.height).getContext('2d', { willReadFrequently: true })
-    ctx.drawImage(bmp, 0, 0)
-    const px = ctx.getImageData(0, 0, bmp.width, bmp.height).data
-    const scale = (meta.max_h - meta.min_h) / 65535
-    const heights = new Float32Array(bmp.width * bmp.height)
-    for (let i = 0; i < heights.length; i++) heights[i] = meta.min_h + (px[i * 4] * 256 + px[i * 4 + 1]) * scale
+    const { heights, w, h } = await decodeHeights(BASE + 'height.png', meta)
     // before 1950: the DSM without its modern buildings (see bareEarth.js)
-    return { meta, heights, old: bareEarth(heights, bmp.width, bmp.height), w: bmp.width, h: bmp.height }
+    return { meta, heights, old: bareEarth(heights, w, h), w, h, base: BASE }
   })()
   return cache
+}
+
+// Desktop tier: the 600 m near field at 0.5 m with 4096 px drapes (scripts/terrain/near.py). Resolves only
+// once its height and both drapes are in, so it never shows a blank square over the outer tile.
+let nearCache
+function loadNear() {
+  nearCache ??= (async () => {
+    const t = await loadTerrain()
+    const meta = { ...t.meta, bbox_osgb: t.meta.near.bbox_osgb }
+    const [{ heights, w, h }, ...maps] = await Promise.all([
+      decodeHeights(BASE + 'near/height.png', meta),
+      ...['color.jpg', 'color-1890s.jpg'].map((f) => new THREE.TextureLoader().loadAsync(BASE + 'near/' + f)),
+    ])
+    // bare earth sampled from the outer tile's, so both meshes sink to the same 1890s ground
+    const res = (meta.bbox_osgb[2] - meta.bbox_osgb[0]) / w, [minE, , , maxN] = meta.bbox_osgb, [oE, oN] = meta.origin_osgb
+    const outerOld = { ...t, heights: t.old }, old = new Float32Array(w * h)
+    for (let i = 0; i < h; i++) for (let j = 0; j < w; j++) {
+      old[i * w + j] = Math.min(heights[i * w + j], heightAt(outerOld, minE + (j + 0.5) * res - oE, oN - (maxN - (i + 0.5) * res)) + meta.origin_h)
+    }
+    return { meta, heights, old, w, h, base: BASE + 'near/', maps }
+  })()
+  return nearCache
+}
+
+// The near tile, or null: phones and ?lite=1 never fetch it; desktop starts it after the outer tile is up.
+function useNear() {
+  const [near, setNear] = useState(null)
+  useEffect(() => {
+    if (LITE) return
+    let live = true
+    const id = setTimeout(() => loadNear().then((n) => live && n.meta.near && setNear(n)).catch(() => {}), 1500)
+    return () => { live = false; clearTimeout(id) }
+  }, [])
+  return near
 }
 
 export const useTerrain = () => use(loadTerrain())
 
 // Scene frame: metres, origin at the deck centre (meta.origin_osgb, meta.origin_h), x east, y up, z south.
 function grid({ meta, heights, old, w, h }, step) {
-  const [minE, , , maxN] = meta.bbox_osgb
+  const [minE, , maxE, maxN] = meta.bbox_osgb
   const [oE, oN] = meta.origin_osgb
+  const res = (maxE - minE) / w // metres per pixel: 1 outer, 0.5 near
   const cols = Math.floor((w - 1) / step) + 1
   const rows = Math.floor((h - 1) / step) + 1
   const pos = new Float32Array(cols * rows * 3)
@@ -45,10 +86,10 @@ function grid({ meta, heights, old, w, h }, step) {
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++, k++) {
       const i = r * step, j = c * step
-      pos[k * 3] = minE + 0.5 + j - oE
+      pos[k * 3] = minE + (j + 0.5) * res - oE
       pos[k * 3 + 1] = heights[i * w + j] - meta.origin_h
       low[k] = old[i * w + j] - meta.origin_h
-      pos[k * 3 + 2] = oN - (maxN - 0.5 - i)
+      pos[k * 3 + 2] = oN - (maxN - (i + 0.5) * res)
       uv[k * 2] = (j + 0.5) / w
       uv[k * 2 + 1] = 1 - (i + 0.5) / h
     }
@@ -56,11 +97,12 @@ function grid({ meta, heights, old, w, h }, step) {
   return { pos, uv, low, cols, rows }
 }
 
-/** Ground height (scene y) at scene x, z, bilinear on the 1 m grid; null outside the tile. */
+/** Ground height (scene y) at scene x, z, bilinear on the tile's grid; null outside the tile. */
 export function heightAt({ meta, heights, w, h }, x, z) {
-  const [minE, , , maxN] = meta.bbox_osgb
+  const [minE, , maxE, maxN] = meta.bbox_osgb
   const [oE, oN] = meta.origin_osgb
-  const j = x + oE - minE - 0.5, i = z - oN + maxN - 0.5
+  const res = (maxE - minE) / w
+  const j = (x + oE - minE) / res - 0.5, i = (z - oN + maxN) / res - 0.5
   if (!(j >= 0 && i >= 0 && j <= w - 1 && i <= h - 1)) return null
   const j0 = Math.min(Math.floor(j), w - 2), i0 = Math.min(Math.floor(i), h - 2)
   const fj = j - j0, fi = i - i0, k = i0 * w + j0
@@ -141,8 +183,14 @@ function facades(shader) {
     )
 }
 
-function TerrainMesh({ step }) {
-  const t = useTerrain()
+// Scene-space rect [x0, z0, x1, z1] of an OSGB bbox, for cutting the near tile's hole in the outer one.
+function rect(meta, [minE, minN, maxE, maxN]) {
+  const [oE, oN] = meta.origin_osgb
+  return [minE - oE, oN - maxN, maxE - oE, oN - minN]
+}
+const inside = (p, k, r) => r && p[k * 3] >= r[0] && p[k * 3] <= r[2] && p[k * 3 + 2] >= r[1] && p[k * 3 + 2] <= r[3]
+
+function TerrainMesh({ t, step, hole, name = 'terrain' }) {
   const gl = useThree((s) => s.gl)
   const geometry = useMemo(() => {
     const { pos, uv, low, cols, rows } = grid(t, step)
@@ -164,18 +212,33 @@ function TerrainMesh({ step }) {
     g.computeBoundingSphere()
     return g
   }, [t, step])
+  // once the near tile is up, drop the outer cells it covers (only the index changes, so no rebuild hitch)
+  useLayoutEffect(() => {
+    const full = geometry.index
+    if (!hole) return
+    const pos = geometry.attributes.position.array, idx = full.array, r = rect(t.meta, hole)
+    const keep = new Uint32Array(idx.length)
+    let n = 0
+    for (let q = 0; q < idx.length; q += 6) {
+      if (inside(pos, idx[q], r) && inside(pos, idx[q + 5], r)) continue // a 0.25 m overlap with the near tile, no gap
+      keep.set(idx.subarray(q, q + 6), n)
+      n += 6
+    }
+    geometry.setIndex(new THREE.BufferAttribute(keep.subarray(0, n), 1))
+    return () => geometry.setIndex(full)
+  }, [geometry, hole, t])
   const old = useStore((s) => s.year < 1950) // before 1950 the ground is the OS 1893-96 London Town Plan (NLS)
-  const maps = useMemo(() => ['color.jpg', 'color-1890s.jpg'].map((f) => {
-    const tex = new THREE.TextureLoader().load(BASE + f) // both up front, so the year scrub swaps without a blank frame
+  const maps = useMemo(() => (t.maps ?? ['color.jpg', 'color-1890s.jpg'].map((f) => new THREE.TextureLoader().load(t.base + f))).map((tex) => {
+    // both up front, so the year scrub swaps without a blank frame
     tex.colorSpace = THREE.SRGBColorSpace
     tex.anisotropy = gl.capabilities.getMaxAnisotropy()
     return tex
-  }), [gl])
+  }), [gl, t])
   const map = maps[old ? 1 : 0]
   useEffect(() => { ERA.value = old ? 1 : 0 }, [old])
   useEffect(() => () => geometry.dispose(), [geometry])
   return (
-    <mesh name="terrain" geometry={geometry} raycast={noRaycast} castShadow={!old} receiveShadow>{/* the shadow pass draws the raw DSM */}
+    <mesh name={name} geometry={geometry} raycast={noRaycast} castShadow={!old} receiveShadow>{/* the shadow pass draws the raw DSM */}
       <meshStandardMaterial map={map} roughness={0.92} metalness={0} onBeforeCompile={facades} customProgramCacheKey={() => 'terrain-facades'} />
     </mesh>
   )
@@ -184,10 +247,11 @@ function TerrainMesh({ step }) {
 // Height ramp for the LiDAR look: deep blue at the river, through cyan and green, to warm white on the towers.
 const RAMP = ['#0b1d4d', '#1565c0', '#00bcd4', '#43e97b', '#f9d423', '#ff6b35', '#fff4e6'].map((c) => new THREE.Color(c))
 
-function LidarPoints({ step }) {
-  const t = useTerrain()
+function LidarPoints({ t, step, hole, name = 'terrain-lidar' }) {
+  const res = (t.meta.bbox_osgb[2] - t.meta.bbox_osgb[0]) / t.w
   const geometry = useMemo(() => {
-    const { pos } = grid(t, step)
+    const all = grid(t, step).pos, r = hole && rect(t.meta, hole)
+    const pos = r ? all.filter((_, i) => !inside(all, Math.floor(i / 3), r)) : all
     const col = new Float32Array(pos.length)
     const lo = t.meta.water_h - t.meta.origin_h, span = 60
     const c = new THREE.Color()
@@ -201,21 +265,35 @@ function LidarPoints({ step }) {
     g.setAttribute('color', new THREE.BufferAttribute(col, 3))
     g.computeBoundingSphere()
     return g
-  }, [t, step])
+  }, [t, step, hole])
   useEffect(() => () => geometry.dispose(), [geometry])
   return (
-    <points name="terrain-lidar" geometry={geometry} raycast={noRaycast}>
-      <pointsMaterial vertexColors size={step * 1.1} sizeAttenuation toneMapped={false} />
+    <points name={name} geometry={geometry} raycast={noRaycast}>
+      <pointsMaterial vertexColors size={step * res * 1.1} sizeAttenuation toneMapped={false} />
     </points>
   )
 }
 
-/** Real EA 1 m LiDAR DSM of Tower Bridge with aerial imagery draped. `lidar` swaps to a height-coloured point cloud. */
+// The outer 1.5 km tile, plus on desktop the 0.5 m near field around the bridge once it has loaded.
+function Tiles({ lidar, step }) {
+  const t = useTerrain()
+  const near = useNear()
+  const hole = near?.meta.bbox_osgb
+  const Look = lidar ? LidarPoints : TerrainMesh
+  return (
+    <>
+      <Look t={t} step={step} hole={hole} />
+      {near && <Look t={near} step={1} name={lidar ? 'terrain-lidar-near' : 'terrain-near'} />}
+    </>
+  )
+}
+
+/** Real EA LiDAR DSM of Tower Bridge with aerial imagery draped. `lidar` swaps to a height-coloured point cloud. */
 export default function Terrain({ lidar = false, step = LITE ? 2 : 1 }) {
   const google = useGoogleShown(lidar)
   return (
     <Suspense fallback={null}>
-      {lidar ? <LidarPoints step={step} /> : !google && <TerrainMesh step={step} />}{/* Ground stays: walk mode stands on it */}
+      {(lidar || !google) && <Tiles lidar={lidar} step={step} />}{/* Ground stays: walk mode stands on it */}
       <Ground />
     </Suspense>
   )

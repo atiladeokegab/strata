@@ -69,15 +69,16 @@ Everything in this repo was built at the DevDay Community Hackathon London on 1 
 - **The app shell:** a museum-of-places Home stage, a full-screen 3D stage, a calm glass panel with the place card, search, part inspector and docent, orbit, top-down and walk views, fly-to-part, a phone move pad, and a timeline with story markers and sourced story cards.
 - **The bridge:** a procedural Tower Bridge whose meshes are named by part id, from the towers' parapets, pinnacles and turrets down to the bascule girders, chains and anchor plates. It explodes into its parts, and its cladding x-rays to show the steel frame.
 - **The interiors:** the Victorian stairs and hydraulic lifts inside the towers.
-- **The machine:** bascules driven by a weighted-accumulator hydraulic simulation, with a live readout, power flowing along the hydraulic mains, a drag handle on each leaf that works the operator's lever, road traffic held by gates and signals at each bascule, and the 1894 hydraulic engine house on the south bank.
-- **The ship:** a vessel that matches the year waits downstream until the leaves are up, then sails through. A low one ignores the bascules.
+- **The machine:** bascules driven by a weighted-accumulator hydraulic simulation, with a live readout, power flowing along the hydraulic mains, a drag handle on each leaf that works the operator's lever, road traffic held by gates and signals at each bascule, the 1894 hydraulic engine house on the south bank, and its 1976 electro-hydraulic changeover.
+- **The river:** a vessel that matches the year waits downstream until the leaves are up, then sails through, and era small craft yield to it. Before 1950, lighters and sailing barges lie moored in tiers along the Pool of London.
 - **The construction stages and works:** the bridge rises from 1886 to 1894 with the period's site works around it: staging, a piling rig, barges, derricks, centring, cradles and scaffold.
-- **The look:** a physical sky and sun, fitted soft shadows, haze, and a post stack with a period colour grade by year.
-- **The history:** 24 parts, 14 sourced events, people and nearby places, held in a SurrealDB graph, with a validator that fails any number without a source.
+- **Top view:** part callouts with leader lines, a 50 m scale bar, a north arrow and the bascules' swing envelopes.
+- **The look:** a Poly Haven HDRI sky and matched sun, fitted soft shadows, haze, and a post stack with a period colour grade by year.
+- **The history:** 24 bridge parts, 9 places around it pinned on the ground by the years they stood, 14 sourced events, and the people behind it, held in a SurrealDB graph, with a validator that fails any number without a source.
 - **The streaming docent:** answers stream into the chat with citation chips for every fact, and it refuses questions it can't source.
 - **Search:** semantic search over parts, events and sources.
 - **Reimagine:** "See it in" a year repaints the 3D view as a period photograph, with cached views for 1894, 1944 and today in a Then and now strip.
-- **Identify:** upload a real photo of the bridge to have its parts named and boxed, and to see where the photographer stood.
+- **Identify:** upload a real photo of the bridge, or pick one of three samples, to have its parts named and boxed, and to see where the photographer stood.
 - **Voice:** talk to the guide out loud.
 - **From the archive:** 10 real photographs of the bridge from 1892 to 1940, matched to the year on the timeline and credited on screen.
 - **The tour:** a guided story through the whole timeline, cut to fit the 90-second film.
@@ -144,7 +145,7 @@ flowchart LR
 ## Coming next
 
 - The surrounding city: buildings and Google 3D tiles. The slots and the on-screen Google credit are in the app.
-- Historic maps draped on the ground before 1950.
+- Historic maps draped on the ground before 1950. The 1890s OS Town Plan is already mosaicked onto the LiDAR grid.
 - More places. The Home stage already lists Stonehenge, Hadrian's Wall and the Tower of London.
 
 ## Setup
@@ -172,11 +173,13 @@ Checks: `make smoke` runs the Python tests, and `uv run python scripts/validate.
 
 Existing code, data and ideas this project stands on. File-by-file detail and licence texts are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-- **[Mechanica](https://github.com/Caleb0796/mechanica)** (MIT, commit `27b5f8b`): the idea that data is law, sourced numbers with a status, and mechanisms driven by simulated state. Adapted code: the scene look (light rig, ACES grade, haze), the procedural PBR textures, the museum Home stage, the tour's part close-up, the bascule drag handle, box-projected UVs, and the docent's sourcing and refusal contract.
+- **[Mechanica](https://github.com/Caleb0796/mechanica)** (MIT, commit `27b5f8b`): the idea that data is law, sourced numbers with a status, and mechanisms driven by simulated state. Adapted code: the ACES grade and haze, the procedural PBR textures, the museum Home stage, the tour's part close-up, the bascule drag handle, and the docent's sourcing and refusal contract.
 - **Environment Agency LiDAR:** LiDAR Composite DSM, 1 m. © Environment Agency copyright and/or database right. [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/). For the terrain and the point cloud.
 - **OpenStreetMap:** © OpenStreetMap contributors, [Open Database Licence (ODbL)](https://opendatacommons.org/licenses/odbl/), for the surrounding buildings, which are coming next.
 - **Google Photorealistic 3D Tiles:** © Google and its data providers. The attribution shows on screen whenever the tiles do. The tiles layer is coming next.
 - **Aerial imagery:** Esri World Imagery, © Esri, Maxar, Earthstar Geographics and the GIS User Community, under the Esri World Imagery terms of use.
+- **Sky and light:** [Poly Haven](https://polyhaven.com/a/evening_road_01_puresky) `evening_road_01_puresky`, CC0.
+- **Historic map:** OS London Town Plan, five feet to the mile, 1893 to 1896. Reproduced with the permission of the [National Library of Scotland](https://maps.nls.uk/) (CC BY).
 - **Archive photographs:** 10 photographs from Wikimedia Commons (public domain, CC0 and CC BY-SA 3.0), credited on screen and in THIRD_PARTY_NOTICES.md.
 - **History and dimensions:** each figure cites its own source in `data/places/tower-bridge.json`.
 - **3D:** [three.js](https://threejs.org/) (MIT), [React Three Fiber](https://github.com/pmndrs/react-three-fiber) (MIT) and [drei](https://github.com/pmndrs/drei) (MIT).

@@ -9,6 +9,7 @@ import * as THREE from 'three'
 import { beam, box, merge, M } from './geom.js'
 import { L, leafParts } from './structures.jsx'
 import { LITE } from '../look/tier.js'
+import { worldUVs } from '../look/uvs.js'
 
 const LEN = -L.pivotZ
 const TOP = -L.pivotY // deck top
@@ -18,31 +19,82 @@ const GIRDERS = [-7.5, -3, 3, 7.5]
 const bottom = (z) => TOP - 0.06 - 4.4 + (3.4 * Math.max(0, z)) / LEN
 
 // The shared kinded materials; Look.jsx textures them, and Part tints the 'steel' fascia by year.
-const mats = () => ({ soffit: M.white, fascia: M.steel, iron: M.iron })
+// The soffit has its own riveted-plate relief instead (plateMaterial), so it does not read as flat card.
+const mats = () => ({ soffit: plateMaterial(), fascia: M.steel, iron: M.iron })
+
+// Lapped, slightly dished soffit plates 1.5 m x 1 m, each lap 2 cm proud of the next, with double rivet rows along every
+// seam: a normal and roughness map in metres (world UVs), PLATE_M per repeat. Kind 'plate' is not one
+// Look.jsx knows, so it keeps these maps. Built once, on first use.
+const PLATE_M = 3
+let plate
+export function plateMaterial() {
+  if (plate) return plate
+  const N = 512, px = N / PLATE_M, h = new Float32Array(N * N), rough = new Uint8Array(N * N * 4)
+  const rivet = (cx, cy) => {
+    const r = 0.016 * px
+    for (let y = Math.floor(cy - r); y <= cy + r; y++)
+      for (let x = Math.floor(cx - r); x <= cx + r; x++) {
+        const d2 = ((x - cx) ** 2 + (y - cy) ** 2) / (r * r)
+        if (d2 < 1) h[((y + N) % N) * N + ((x + N) % N)] += 1.6 * Math.sqrt(1 - d2)
+      }
+  }
+  for (let y = 0; y < N; y++)
+    for (let x = 0; x < N; x++) {
+      const u = x / px / 1.5, v = y / px // plate coordinates: each lap 2 cm proud, each plate dished between its rivets
+      h[y * N + x] = ((Math.floor(u) + Math.floor(v)) % 2) * 3 - 40 * Math.sin(Math.PI * (u % 1)) * Math.sin(Math.PI * (v % 1))
+    }
+  for (let u = 0; u < PLATE_M; u += 0.1)
+    for (let v = 0; v < PLATE_M; v += 1) for (const o of [0.04, -0.04]) rivet(u * px, (v + o) * px) // along the 1 m seams
+  for (let u = 0; u < PLATE_M; u += 1.5)
+    for (let v = 0; v < PLATE_M; v += 0.1) for (const o of [0.04, -0.04]) rivet((u + o) * px, v * px) // and the 1.5 m ones
+  const nrm = new Uint8Array(N * N * 4), at = (x, y) => h[((y + N) % N) * N + ((x + N) % N)]
+  for (let y = 0; y < N; y++)
+    for (let x = 0; x < N; x++) {
+      const dx = at(x + 1, y) - at(x - 1, y), dy = at(x, y + 1) - at(x, y - 1), l = Math.hypot(dx, dy, 2)
+      const i = (y * N + x) * 4
+      nrm.set([128 - (127 * dx) / l, 128 - (127 * dy) / l, 128 + (127 * 2) / l, 255], i)
+      const edge = Math.min(1, Math.hypot(dx, dy)) // seams and rivet heads catch dirt: rougher
+      rough.set([0, 90 + 90 * edge + ((x * 7919 + y * 104729) % 23), 0, 255], i)
+    }
+  const tex = (data) => {
+    const t = new THREE.DataTexture(data, N, N)
+    Object.assign(t, { wrapS: THREE.RepeatWrapping, wrapT: THREE.RepeatWrapping, magFilter: THREE.LinearFilter, minFilter: THREE.LinearMipmapLinearFilter, generateMipmaps: true, anisotropy: 4 })
+    t.repeat.set(1 / PLATE_M, 1 / PLATE_M)
+    t.needsUpdate = true
+    return t
+  }
+  plate = M.white.clone()
+  plate.color.set('#16191c') // weathered dark: the underside never sees rain or sun, and the bays read as shadow
+  plate.metalness = 0.05 // paint is a dielectric; metal here mirrors the sky and washes the plate out
+  Object.assign(plate, { normalMap: tex(nrm), roughnessMap: tex(rough), roughness: 1, userData: { kind: 'plate' } })
+  plate.normalScale.set(3, 3)
+  return plate
+}
 
 function build() {
   const soffit = [], fascia = [], iron = [], bolts = [], tailBars = []
 
-  // ribbed soffit: thin plate under the road with longitudinal stringers between the girders
+  // soffit: the riveted plate under the road, in a darker grime tone; the framing below it is painted steel,
+  // so the cross-girders, stringers and bracing read as a grid against the plate when the leaf is raised
   soffit.push(box(17.6, 0.04, LEN, 0, PLATE, LEN / 2))
   for (let x = -8.25; x <= 8.25; x += 1.5) {
     if (GIRDERS.some((g) => Math.abs(g - x) < 0.6)) continue
-    soffit.push(box(0.12, 0.3, LEN - 0.4, x, PLATE - 0.15, LEN / 2))
+    fascia.push(box(0.14, 0.6, LEN - 0.4, x, PLATE - 0.3, LEN / 2), box(0.36, 0.05, LEN - 0.4, x, PLATE - 0.6, LEN / 2)) // web + flange
   }
 
   // cross-girders every 3 m, tied to the edge girders; X bracing in the bays below
   const bays = []
   for (let z = 1.5; z < LEN - 0.5; z += 3) {
     const d = Math.min(1.4, (TOP - bottom(z)) * 0.6)
-    soffit.push(box(15, d, 0.3, 0, PLATE - d / 2, z), box(0.12, d + 0.1, 0.5, 0, PLATE - d / 2 - 0.05, z)) // web + splice
-    soffit.push(box(15, 0.06, 0.6, 0, PLATE - d, z)) // bottom flange
-    for (const s of [-1, 1]) soffit.push(box(1.1, 0.8, 0.25, s * 8.35, PLATE - 0.4, z))
+    fascia.push(box(15, d, 0.3, 0, PLATE - d / 2, z), box(0.12, d + 0.1, 0.5, 0, PLATE - d / 2 - 0.05, z)) // web + splice
+    fascia.push(box(15, 0.12, 0.7, 0, PLATE - d, z)) // bottom flange
+    for (const s of [-1, 1]) fascia.push(box(1.1, 0.8, 0.25, s * 8.35, PLATE - 0.4, z))
     bays.push([z, PLATE - d + 0.05])
   }
   for (let i = 0; i + 1 < bays.length; i++) {
     const [za, ya] = bays[i], [zb, yb] = bays[i + 1]
     for (const [x0, x1] of [[-7.15, -3.35], [-2.65, 2.65], [3.35, 7.15]]) {
-      soffit.push(beam([x0, ya, za], [x1, yb, zb], 0.07, 4), beam([x1, ya, za], [x0, yb, zb], 0.07, 4))
+      fascia.push(beam([x0, ya, za], [x1, yb, zb], 0.07, 4), beam([x1, ya, za], [x0, yb, zb], 0.07, 4))
     }
   }
 
@@ -117,6 +169,8 @@ function build() {
 
 // lite: every static piece of the leaf (this file's and BasculeLeaf's) as kit lists; BasculeDetails
 // (details.jsx) draws them with its own lamps and footways, one mesh per material.
+// shortcut: the soffit joins the shared white here, so phones get no plate relief (rivets are sub-pixel
+// at phone size anyway); give it its own key if a phone shot shows the underside flat.
 export function leafKit() {
   const { soffit, fascia, iron } = build(), p = leafParts()
   return { white: [...soffit, ...p.white], steel: [...fascia, ...p.steel], iron: [...iron, ...p.iron], road: p.road }
@@ -130,7 +184,9 @@ export function BasculeLeafDetail({ sim }) {
   const { bolts, tailBars, ...fixed } = useMemo(() => {
     const { bolts, tailBars, ...rest } = build()
     const all = LITE ? { bolts, tailBars } : { ...rest, bolts, tailBars } // lite: the static rest is in leafKit()
-    return Object.fromEntries(Object.entries(all).map(([k, gs]) => [k, merge(gs)]))
+    const out = Object.fromEntries(Object.entries(all).map(([k, gs]) => [k, merge(gs)]))
+    if (out.soffit) { const m = new THREE.Mesh(out.soffit); worldUVs(m); out.soffit = m.geometry } // metre UVs for the plate maps
+    return out
   }, [])
   const m = mats()
   const boltRef = useRef(), tailRef = useRef()

@@ -798,11 +798,12 @@ console.log('geom materials untextured, all kinded ok')
 // Abutment towers: clear of the road (nothing in |x| < 9.5 below 6 m), and the chain ends
 // (x=±walkX, y=15 and the top chord at 16.8, z=spanEnd) land on the iron anchorage.
 {
-  const { abutmentTower, ROAD_CLEAR } = await import('./abutment.js')
+  const { abutmentTower, abutmentArch, ARCH, ROAD_CLEAR } = await import('./abutment.js')
   const spanEnd = -138.5, z = spanEnd - 5, walkX = 10.5
   for (const sx of [-1, 1]) {
     const o = { stone: [], slate: [], granite: [], gold: [], iron: [], windows: [], doors: [] }
-    abutmentTower(sx, z, o, { hw: -9, walkX })
+    abutmentTower(sx, z, o, { hw: -9, walkX }, { blind: sx < 0 })
+    if (sx > 0) abutmentArch(z, o)
     for (const [k, gs] of Object.entries(o))
       for (const g of gs) {
         const p = g.getAttribute('position')
@@ -812,6 +813,11 @@ console.log('geom materials untextured, all kinded ok')
     const anchor = new THREE.Box3()
     o.iron.forEach((g) => (g.computeBoundingBox(), anchor.union(g.boundingBox)))
     for (const y of [15, 16.8]) assert.ok(anchor.containsPoint(new THREE.Vector3(sx * walkX, y, spanEnd)), `chain end at y=${y} lands on the anchorage`)
+    // the south accumulator tower (world x 16.1+, z 141..146 = local x < -16, z -146..-141) butts the east face
+    if (sx < 0)
+      for (const g of [...o.stone, ...o.granite, ...o.windows])
+        g.computeBoundingBox(), assert.ok(!(g.boundingBox.min.x < -16.45 && g.boundingBox.max.z > -146 && g.boundingBox.min.z < -141), 'nothing of the east tower inside the accumulator tower')
   }
-  console.log('abutment checks ok')
+  assert.ok(ARCH.spring >= ROAD_CLEAR.belowY && ARCH.half >= ROAD_CLEAR.halfX, 'the arch springs above the road clearance')
+  console.log('abutment checks ok (arch springs at 6 m over |x| < 10)')
 }

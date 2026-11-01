@@ -551,6 +551,20 @@ console.log('geom materials untextured, all kinded ok')
   assert.ok(total[1] <= BUDGET.maxTriangles, `bridge has ${Math.round(total[1])} triangles, over the ${BUDGET.maxTriangles} budget (budget.json)`)
   console.log(`render budget ok (${total[0]}/${BUDGET.maxDrawCalls} draw calls, ${Math.round(total[1])}/${BUDGET.maxTriangles} triangles)`)
 }
+// Lite tier (phones): the approach balustrade drops the turned balusters, under ~2k vertices per half.
+{
+  const { balustrade } = await import('./balustrade.js')
+  const { merge } = await import('./geom.js')
+  const verts = (lite) => {
+    const o = { steel: [] }
+    balustrade(o, -138.5, -55.5, [], lite) // L.spanEnd to L.pierZ - L.towerHalfZ, no lamp gaps (worst case)
+    return merge(o.steel).attributes.position.count
+  }
+  const [lite, full] = [verts(true), verts(false)]
+  assert.ok(lite < 2000, `lite balustrade has ${lite} vertices per half, over ~2k`)
+  assert.ok(full > 20 * lite, `full balustrade (${full}) is the detailed one`)
+  console.log(`balustrade ok (lite ${lite} vertices per half, full ${full})`)
+}
 // Gate posts and signals vs the deck section and the tower arch: no clash with the masonry.
 {
   const src = readFileSync(new URL('structures.jsx', import.meta.url), 'utf8')

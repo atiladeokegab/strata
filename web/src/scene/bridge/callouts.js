@@ -45,10 +45,11 @@ export function crosses(x1, y1, x2, y2, r) {
 // -> {id: {dx, dy}} for labels that fit, offset of the label centre from its anchor.
 // A spot is clear when its label misses every other label, anchor dot and leader line, and its
 // own leader (anchor to label edge) misses every other label and anchor dot. Labels whose anchor
-// is off screen or that find no clear spot are left out.
-export function placeLabels(items, width, height) {
+// is off screen or that find no clear spot are left out. fixed: [{x, y, w, h}] screen boxes of tags
+// that do not move (scale bar, north arrow, captions); labels and leaders keep off them too.
+export function placeLabels(items, width, height, fixed = []) {
   const dots = items.map((it) => ({ id: it.id, x: it.x - DOT / 2, y: it.y - DOT / 2, w: DOT, h: DOT }))
-  const boxes = []
+  const boxes = [...fixed]
   const leaders = []
   const out = {}
   for (const it of items) {

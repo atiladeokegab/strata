@@ -1,4 +1,5 @@
 """Strata API: place data, the docent, and the built web app."""
+import asyncio
 import json
 import os
 from contextlib import asynccontextmanager
@@ -20,6 +21,7 @@ from .graph import get_place
 from .search import semantic_search, warm_search
 
 ROOT = Path(__file__).resolve().parent.parent
+STARTUP_WARMUP_TIMEOUT = 12
 load_dotenv(ROOT / ".env")
 
 
@@ -29,16 +31,17 @@ async def lifespan(app):
     app.state.openai = client
     try:
         data = await run_in_threadpool(place, "tower-bridge")
-        await warm_search(data, client=client)
-        if client is not None:
-            try:
-                # Pay the first inference cost before accepting a visitor's question.
-                await client.responses.create(
-                    model=os.getenv("OPENAI_DOCENT_MODEL", docent.DEFAULT_MODEL),
-                    input="Reply ready.", max_output_tokens=16, store=False, timeout=8,
-                )
-            except (OpenAIError, HTTPError, TimeoutError):
-                pass
+        try:
+            async with asyncio.timeout(STARTUP_WARMUP_TIMEOUT):
+                await warm_search(data, client=client)
+                if client is not None:
+                    # Pay the first inference cost before accepting a visitor's question.
+                    await client.responses.create(
+                        model=os.getenv("OPENAI_DOCENT_MODEL", docent.DEFAULT_MODEL),
+                        input="Reply ready.", max_output_tokens=16, store=False, timeout=8,
+                    )
+        except (OpenAIError, HTTPError, TimeoutError):
+            pass
         yield
     finally:
         if client is not None:

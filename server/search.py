@@ -66,7 +66,7 @@ async def warm_search(place, client=None):
     docs = [document for document, _ in documents(place)]
     signature = _signature(docs)
     key = place["id"]
-    if not os.getenv("OPENAI_API_KEY") or (_cache.get(key) or (None,))[0] == signature:
+    if (client is None and not os.getenv("OPENAI_API_KEY")) or (_cache.get(key) or (None,))[0] == signature:
         return
     try:
         vectors = await _embed([_text(document) for document in docs], client)
@@ -80,7 +80,7 @@ async def semantic_search(place, question, limit=20, client=None):
     docs = [document for document, _ in documents(place)]
     signature = _signature(docs)
     cached = _cache.get(place["id"])
-    if not os.getenv("OPENAI_API_KEY") or not cached or cached[0] != signature or not question.strip():
+    if (client is None and not os.getenv("OPENAI_API_KEY")) or not cached or cached[0] != signature or not question.strip():
         return search(place, question, limit)
     try:
         query = (await _embed([question], client))[0]

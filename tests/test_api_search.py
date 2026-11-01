@@ -67,7 +67,7 @@ def test_cached_embedding_failure_uses_keyword_fallback(monkeypatch):
 
 
 def test_supplied_client_is_reused_and_not_closed(monkeypatch):
-    monkeypatch.setenv("OPENAI_API_KEY", "fake")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.setattr(module, "_cache", {})
     calls = []
 

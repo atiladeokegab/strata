@@ -769,6 +769,20 @@ console.log('geom materials untextured, all kinded ok')
     assert.equal(floating.length, 0, `floating pieces: ${floating.slice(0, 5).map((c) => `${c.where} ${f(c.b)}`).join('; ')}`)
     console.log(`no stray shards (${comps.length} pieces touch, no degenerate triangles)`)
   }
+  // Picking: every part the finished bridge shows still owns a mesh of its own (click, hover, explode and x-ray
+  // all work per Part), on both tiers, after the per-material joins. Construction parts are gone by 2026; barriers, traffic and ship sit in SKIP.
+  for (const lite of [false, true]) {
+    setLite(lite)
+    useStore.getState().setYear(2026)
+    const root = new T.Group(), owned = new Set()
+    build({ type: TowerBridge, props: {} }, root)
+    root.traverse((o) => o.isMesh && o.userData.part && owned.add(o.userData.part))
+    const hidden = lite ? ['stairs', 'lift', 'cabin-controls', 'hydraulic-engine', 'accumulator'] : [] // interior.jsx: lite shows them when x-rayed or selected
+    const want = PART_IDS.filter((id) => !/^(cofferdam|works|barrier)-|^(traffic|ship)$/.test(id) && !hidden.some((h) => id.startsWith(h)))
+    for (const id of want) assert.ok(owned.has(id), `${lite ? 'lite' : 'full'} 2026: part ${id} has no pickable mesh`)
+    console.log(`picking ok (${lite ? 'lite' : 'full'} 2026: ${want.length} parts each own a mesh)`)
+  }
+  setLite(false)
 
   // Render budget, 2026 (the busiest year): draw calls and triangles per part id, ship and traffic
   // included. Lines and instanced meshes are one call each; instanced triangles count every instance.
@@ -826,6 +840,8 @@ console.log('geom materials untextured, all kinded ok')
       assert.ok(c <= B.maxDrawCalls, `${tier} ${y}: bridge draws ${c} meshes, over the ${B.maxDrawCalls} budget (budget.json).${hint}`)
       assert.ok(n <= B.maxTriangles, `${tier} ${y}: bridge has ${Math.round(n)} triangles, over the ${B.maxTriangles} budget (budget.json).${hint}`)
     })
+    // desktop static joins (towers, abutments with ramps, bascule leaves, walkways): 216 -> ~187 calls in 2026 (+1 soffit plate per leaf, +1 outside mains)
+    if (tier === 'full') assert.ok(totals[0][0] <= 188, `full 2026: ${totals[0][0]} calls, over the 188 the desktop joins allow; join new static meshes per material`)
     console.log(`render budget ${tier} ok (${years.map((y, i) => `${y}: ${totals[i][0]}/${B.maxDrawCalls} calls, ${Math.round(totals[i][1])}/${B.maxTriangles} tris`).join('; ')})`)
   }
   // 1890 (centring under the leaves, derricks on the frames): phones render the build years too, so the

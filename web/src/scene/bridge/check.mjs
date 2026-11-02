@@ -670,13 +670,17 @@ console.log('geom materials untextured, all kinded ok')
     let meshes = 0
     root.traverse((o) => o.isMesh && meshes++)
     assert.ok(meshes > 10, `${year}: the bridge renders in node (${meshes} meshes)`)
-    // next21 south-end-out-1890 black face: N8AO and lighting go black on a missing or NaN normal, or a mirrored (negative-scale) mesh
+    // next21 south-end-out-1890 black face: N8AO and lighting go black on a missing, NaN or zero-length normal, or a mirrored (negative-scale) mesh
     const bad = []
     root.traverse((o) => {
       if (!o.isMesh) return
       const n = o.geometry.attributes.normal
       if (!n || n.count !== o.geometry.attributes.position.count) return bad.push(`${o.userData.from}: no normals`)
-      for (let i = 0; i < n.array.length; i++) if (!Number.isFinite(n.array[i])) return bad.push(`${o.userData.from}: NaN normal`)
+      const a = n.array
+      for (let i = 0; i < a.length; i += 3) {
+        if (![a[i], a[i + 1], a[i + 2]].every(Number.isFinite)) return bad.push(`${o.userData.from}: NaN normal`)
+        if (a[i] * a[i] + a[i + 1] * a[i + 1] + a[i + 2] * a[i + 2] < 0.25) return bad.push(`${o.userData.from}: zero normal at vertex ${i / 3}`)
+      }
       if (o.matrixWorld.determinant() <= 0) bad.push(`${o.userData.from}: mirrored`)
     })
     assert.deepEqual(bad, [], `${year}: bridge meshes need finite normals and no mirroring`)

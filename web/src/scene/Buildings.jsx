@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from 'react'
 import * as THREE from 'three'
 import { useStore } from '../store'
 import { onBridgeGround } from './bareEarth.js'
+import { LITE } from './look/tier'
 
 const URL = '/buildings/tower-bridge.json'
 // the 1890s riverside, traced from the OS Town Plan 1893-96 (scripts/history/period_city.py); shown before 1950
@@ -88,7 +89,9 @@ function eraPatch(uniforms, shade) {
 
 // One mesh per look: footprints -> extruded walls + roofs, packed into four big geometries.
 function build(data) {
-  const out = { s: newBucket(), b: newBucket(), g: newBucket(), w: newBucket(), r: newBucket(), roof: newBucket(), slate: newBucket(), drape: newBucket() }
+  // one set of looks per era, so a year draws only its own: o = standing by 1894 (always), p = the 1890s city (to 1950), m = modern
+  const looks = () => ({ s: newBucket(), b: newBucket(), g: newBucket(), w: newBucket(), r: newBucket(), roof: newBucket(), slate: newBucket(), drape: newBucket() })
+  const sets = { o: looks(), p: looks(), m: looks() }
   // the terrain's uv mapping (Terrain.jsx grid): u east across the tile, v = 1 at its north edge
   const [minE, minN, maxE, maxN] = data.frame.bbox_osgb
   const [oE, oN] = data.frame.origin_osgb
@@ -96,12 +99,14 @@ function build(data) {
   const axis = data.frame.axis_deg
   for (const bd of data.buildings) {
     if (onBridgeGround(bd.o, axis)) continue // the bridge draws its own towers, abutments, approaches and engine house
+    if (LITE && beyond(bd, NEAR.osm) && bd.t - bd.b < SKYLINE) continue
     const geo = extrude(bd)
     // before 1950 only buildings with evidence of standing by 1894 show; the period city (below) carries the rest
     const dated = data.dates[bd.id.split('-')[0]]?.s
     const s = dated ?? bd.s
     // shortcut: a real OSM start_date of exactly 1950 on a building over 40 m also waits; none is known here
     const start = s != null && s <= BUILT_BY ? s : dated == null && s === TALL_GUESS && bd.t - bd.b > 40 ? GOOGLE_FROM : Math.max(s ?? HISTORIC_BEFORE, HISTORIC_BEFORE)
+    const out = sets[start <= BUILT_BY ? 'o' : 'm']
     for (const grp of geo.groups) {
       if (grp.materialIndex !== 0) push(out[bd.k] || out.b, geo, grp, start, bd.b)
       else if (bd.l) push(out.drape, geo, grp, start, bd.b, tileUv)
@@ -112,7 +117,8 @@ function build(data) {
   // the 1890s riverside: from before the bridge until 1950, brick walls under slate; the Blitz ends some in 1940
   // and leaves rubble ("r") and roofless wall stubs on their plots (period_city.py)
   data.period?.buildings.forEach((bd, i) => {
-    if (onBridgeGround(bd.o, axis)) return
+    if (onBridgeGround(bd.o, axis) || (LITE && beyond(bd, NEAR.period))) return
+    const out = sets.p
     const geo = extrude(bd)
     const tint = TINTS[bd.k === 'w' ? 'w' : 'b'][(i * 7919) % 5] // a stable mix of brick and stucco, house by house
     const from = bd.s ?? PERIOD_FROM, to = bd.e ?? HISTORIC_BEFORE
@@ -127,8 +133,13 @@ function build(data) {
       roof.dispose()
     }
   })
-  return Object.fromEntries(Object.entries(out).map(([k, b]) => [k, toGeometry(b)]))
+  return Object.entries(sets).flatMap(([era, set]) => Object.entries(set).filter(([, b]) => b.pos.length).map(([look, b]) => ({ era, look, geometry: toGeometry(b) })))
 }
+
+// lite: the city within these radii of the bridge (m), plus the skyline; 1890 ~45k triangles instead of ~150k
+const NEAR = { osm: 700, period: 500 }, SKYLINE = 60
+const beyond = (bd, r) => { let x = 0, z = 0; const n = bd.o.length / 2; for (let i = 0; i < n; i++) { x += bd.o[2 * i]; z += bd.o[2 * i + 1] } return Math.hypot(x / n, z / n) > r }
+const ERA_SHOWN = { o: () => true, p: (y) => y < HISTORIC_BEFORE, m: (y) => y >= HISTORIC_BEFORE }
 
 // multipliers on the facade colour: yellow London stock, sooted stock, red brick, painted stucco (houses only)
 const TINTS = {
@@ -219,26 +230,26 @@ export function Buildings() {
 
   const meshes = useMemo(() => {
     if (!data) return null
-    const geos = build(data)
-    return Object.entries(geos).map(([k, geometry]) => {
-      const map = k === 'drape' ? photos[0] : FACADES[k]?.()
-      const material = new THREE.MeshStandardMaterial({ ...LOOK[k], ...(map && { map }), vertexColors: true })
+    return build(data).map(({ era, look, geometry }) => {
+      const k = `${era}.${look}`
+      const map = look === 'drape' ? photos[0] : FACADES[look]?.()
+      const material = new THREE.MeshStandardMaterial({ ...LOOK[look], ...(map && { map }), vertexColors: true })
       material.onBeforeCompile = eraPatch(uniforms, true)
       material.customProgramCacheKey = () => 'strata-era'
       const depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking })
       depth.onBeforeCompile = eraPatch(uniforms, false)
-      return { k, geometry, material, depth }
+      return { k, era, look, geometry, material, depth }
     })
   }, [data, uniforms, photos])
 
-  useEffect(() => { const m = meshes?.find((m) => m.k === 'drape'); if (m) m.material.map = photo }, [meshes, photo])
-  useEffect(() => () => meshes?.forEach((m) => { m.geometry.dispose(); if (m.k !== 'drape') m.material.map?.dispose(); m.material.dispose(); m.depth.dispose() }), [meshes])
+  useEffect(() => { meshes?.filter((m) => m.look === 'drape').forEach((m) => { m.material.map = photo }) }, [meshes, photo])
+  useEffect(() => () => meshes?.forEach((m) => { m.geometry.dispose(); if (m.look !== 'drape') m.material.map?.dispose(); m.material.dispose(); m.depth.dispose() }), [meshes])
 
   if (!meshes) return null
   return (
     <group name="osm-buildings" rotation-y={THREE.MathUtils.degToRad(data.frame.axis_deg)} visible={shown}>
       {meshes.map((m) => (
-        <mesh key={m.k} geometry={m.geometry} material={m.material} customDepthMaterial={m.depth} castShadow receiveShadow raycast={() => null} />
+        <mesh key={m.k} visible={ERA_SHOWN[m.era](year)} geometry={m.geometry} material={m.material} customDepthMaterial={m.depth} castShadow receiveShadow raycast={() => null} />
       ))}
     </group>
   )

@@ -33,14 +33,17 @@ export const PART_STAGE = {
   engine: { from: 5 }, // south-bank power house, 1894
 }
 
-// Shore approach works: the abutment towers rise in stage 0 (with the piers), the ramp embankment
+// Shore approach works: the abutment piers rise in stage 0 (with the river piers), the ramp embankment
 // and parapets rise through stages 1-3, and the road surface is laid in 1893, the last year of
-// stage 4. -> {ramp 0..1, road, label}; label null when no work is going on.
+// stage 4. The abutment towers are built like the river towers: "a steel superstructure and an outer
+// masonry skin" on a brick pier (towerbridge.me.uk, Design), the steel under Arrol's May 1889 contract and
+// the masonry under Perry's, so they stand as bare steel through stages 1-3 and are clad in stage 4 (inferred
+// from the river towers' sequence). -> {ramp 0..1, road, towers 'pier'|'frame'|'clad', label}; label null when idle.
 export function approachWorks({ stage, progress }) {
-  if (stage >= 5) return { ramp: 1, road: true, label: null }
-  if (stage < 1) return { ramp: 0, road: false, label: stage < 0 ? null : 'Abutment towers rising' }
-  if (stage <= 3) return { ramp: Math.min(1, (stage - 1 + progress) / 3), road: false, label: 'Approach ramp: embankment and parapets rising' }
-  return progress < 1 ? { ramp: 1, road: false, label: 'Approach ramp built, road to be laid' } : { ramp: 1, road: true, label: 'Road surface laid' }
+  if (stage >= 5) return { ramp: 1, road: true, towers: 'clad', label: null }
+  if (stage < 1) return { ramp: 0, road: false, towers: 'pier', label: stage < 0 ? null : 'Abutment piers rising' }
+  if (stage <= 3) return { ramp: Math.min(1, (stage - 1 + progress) / 3), road: false, towers: 'frame', label: 'Approach ramp: embankment and parapets rising' }
+  return { ramp: 1, road: progress >= 1, towers: 'clad', label: progress < 1 ? 'Approach ramp built, road to be laid' : 'Road surface laid' }
 }
 
 export const shown = (kind, stage) => {

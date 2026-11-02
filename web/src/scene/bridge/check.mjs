@@ -364,6 +364,8 @@ assert.ok(Object.keys(cp).length >= 5, 'most of the column still gets labels')
   assert.equal(approachWorks(stageForYear(1887)).ramp, 0)
   assert.ok(approachWorks(stageForYear(1889)).ramp > 0 && approachWorks(stageForYear(1889)).ramp < 1)
   assert.equal(approachWorks(stageForYear(1891)).ramp, 1)
+  // abutment towers follow the river towers: pier in 1886-87, bare steel 1888-91 (as hero-1890 shows the river towers), clad from 1892
+  for (let y = 1886; y <= 1895; y++) assert.equal(approachWorks(stageForYear(y)).towers, y < 1888 ? 'pier' : y < 1892 ? 'frame' : 'clad', `abutment towers in ${y}`)
 }
 console.log('callout checks ok')
 // lift for a ship: the full cycle over the real hydraulic, ship and traffic sims, wired as in the app
@@ -887,13 +889,16 @@ console.log('geom materials untextured, all kinded ok')
 // Abutment towers: clear of the road (nothing in |x| < 9.5 below 6 m), and the chain ends
 // (x=±walkX, y=15 and the top chord at 16.8, z=spanEnd) land on the iron anchorage.
 {
-  const { abutmentTower, abutmentArch, ARCH, ROAD_CLEAR } = await import('./abutment.js')
+  const { abutmentTower, abutmentArch, abutmentFrame, ARCH, ROAD_CLEAR } = await import('./abutment.js')
   const spanEnd = -138.5, z = spanEnd - 5, walkX = 10.5
   for (const sx of [-1, 1]) {
     const o = { stone: [], slate: [], granite: [], gold: [], iron: [], windows: [], doors: [] }
     abutmentTower(sx, z, o, { hw: -9, walkX }, { blind: sx < 0 })
     if (sx > 0) abutmentArch(z, o)
-    for (const [k, gs] of Object.entries(o))
+    const f = { stone: [], steel: [] } // the bare steel stage keeps the same clearance
+    abutmentFrame(sx, z, f, { hw: -9 })
+    assert.ok(f.steel.length > 0)
+    for (const [k, gs] of [...Object.entries(o), ['frame steel', f.steel], ['frame pier', f.stone]])
       for (const g of gs) {
         const p = g.getAttribute('position')
         for (let i = 0; i < p.count; i++)

@@ -1,7 +1,7 @@
 // The Gothic shore towers on each abutment (Abutment() in structures.jsx). Plain JS so check.mjs
 // can build them under node and test the road clearance.
 import * as THREE from 'three'
-import { box } from './geom.js'
+import { beam, box } from './geom.js'
 import { LITE } from '../look/tier.js'
 
 export const ROAD_CLEAR = { halfX: 9.5, belowY: 6 } // nothing of the towers inside this
@@ -70,6 +70,20 @@ export function abutmentTower(sx, z, o, { hw, walkX }, { blind = false, lite = L
   o.iron.push(new THREE.CylinderGeometry(0.28, 0.28, 2, 10).rotateZ(Math.PI / 2).translate(ax, 15.9, river + 0.7))
 }
 
+// The same tower during construction (stages 0-3): the brick pier up to the plinth, and from stage 1 its steel
+// superstructure, four octagonal corner columns (towerbridge.me.uk, Design) tied at the string-course levels
+// and cross-braced on each face. Into o.stone and o.steel; same footprint, so the road stays clear.
+export function abutmentFrame(sx, z, o, { hw }, { steel = true } = {}) {
+  const xc = sx * 13, hx = 3, hz = 5
+  o.stone.push(box(2 * hx + 0.6, 1.5 - hw, 2 * hz + 0.6, xc, (1.5 + hw) / 2, z))
+  if (!steel) return
+  const pts = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => [xc + a * (hx - 0.4), z + b * (hz - 0.4)])
+  for (const [x, zz] of pts) o.steel.push(beam([x, 1.5, zz], [x, ABUT_TOP, zz], 0.35, 8))
+  for (const [y0, y1] of [[1.5, 8.2], [8.2, 13], [13, ABUT_TOP]]) for (let i = 0; i < 4; i++) {
+    const [ax, az] = pts[i], [bx, bz] = pts[(i + 1) % 4]
+    o.steel.push(beam([ax, y1, az], [bx, y1, bz], 0.25, 4), beam([ax, y0, az], [bx, y1, bz], 0.12, 4), beam([bx, y0, bz], [ax, y1, az], 0.12, 4))
+  }
+}
 
 // The arch block joining the two towers over the road: listed as "a large elliptical archway
 // spanning the road" (Historic England 1385980, south; the north tower is its twin). Springs at 6 m

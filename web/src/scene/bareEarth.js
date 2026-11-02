@@ -33,29 +33,34 @@ export function bareEarth(heights, w, h, r = 30) {
 }
 
 // The approach roads are raised on viaducts and embankments (1894 onwards), which the opening above takes for
-// buildings and sinks ~7 m, leaving the bridge's ramp ends in mid-air. Keep the DSM along both approaches, but no
-// higher than the road itself (the lowest point within 6 m of the centre line, metre by metre): roadside roofs inside
-// the corridor would otherwise stand as cliffs draped with the old map.
-export const APPROACH = { from: 133, to: 320, half: 20 } // m along / either side of the bridge axis
-const CENTRE = 6 // m either side of the axis that is roadway
+// buildings and sinks ~7 m, leaving the bridge's ramp ends in mid-air. Keep the DSM along both approaches, but
+// no higher than the road itself (the lowest point within APPROACH.road of the centre line, bin by bin): the roofs
+// and trees lining the corridor otherwise stand as cliffs and spikes draped with the map.
+export const APPROACH = { from: 133, to: 320, half: 20, road: 6 } // m along / either side of the axis / road half-width
+
 export function keepApproaches(old, heights, w, meta) {
   const t = (meta.bridge_axis_deg * Math.PI) / 180, ae = Math.sin(t), an = Math.cos(t)
   const [minE, , , maxN] = meta.bbox_osgb, [oE, oN] = meta.origin_osgb
-  const res = (meta.bbox_osgb[2] - minE) / w
-  const road = new Float32Array(2 * APPROACH.to).fill(Infinity) // per signed metre along: north ramp, then south
-  const slot = new Int32Array(old.length).fill(-1), across = new Float32Array(old.length)
-  for (let k = 0; k < old.length; k++) {
+  const res = (meta.bbox_osgb[2] - minE) / w, bs = 2 * res // bin length along: every bin holds carriageway pixels
+  const at = (k) => {
     const dE = minE + ((k % w) + 0.5) * res - oE, dN = maxN - (Math.floor(k / w) + 0.5) * res - oN
-    const a = dE * ae + dN * an, along = Math.abs(a)
-    across[k] = Math.abs(dE * an - dN * ae)
-    if (along < APPROACH.from || along >= APPROACH.to || across[k] >= APPROACH.half) continue
-    slot[k] = Math.floor(along) + (a < 0 ? APPROACH.to : 0)
-    if (across[k] < CENTRE) road[slot[k]] = Math.min(road[slot[k]], heights[k])
+    const along = dE * ae + dN * an, across = Math.abs(dE * an - dN * ae)
+    const a = Math.abs(along)
+    return a >= APPROACH.from && a < APPROACH.to && across < APPROACH.half ? { bin: Math.floor((along + APPROACH.to) / bs), across } : null
   }
+  const road = new Float32Array(Math.ceil((2 * APPROACH.to) / bs)).fill(Infinity) // lowest DSM on the carriageway, per bin
   for (let k = 0; k < old.length; k++) {
-    if (slot[k] < 0) continue
-    const top = Number.isFinite(road[slot[k]]) ? road[slot[k]] : heights[k]
-    old[k] = Math.max(old[k], Math.min(heights[k], top))
+    const c = at(k)
+    if (c && c.across < APPROACH.road) road[c.bin] = Math.min(road[c.bin], heights[k])
+  }
+  // the ramps only descend away from the bridge: where the straight axis runs under a building past the road's
+  // bend, its roof is not the road, so no bin may stand above the one nearer the bridge
+  const mid = Math.floor(APPROACH.to / bs)
+  for (let b = mid + 1; b < road.length; b++) road[b] = Math.min(road[b], road[b - 1])
+  for (let b = mid - 1; b >= 0; b--) road[b] = Math.min(road[b], road[b + 1])
+  for (let k = 0; k < old.length; k++) {
+    const c = at(k)
+    if (c) old[k] = Math.max(old[k], Math.min(heights[k], road[c.bin]))
   }
   return old
 }

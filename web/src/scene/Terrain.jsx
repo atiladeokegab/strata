@@ -1,4 +1,4 @@
-import { Suspense, use, useEffect, useLayoutEffect, useMemo, useState } from 'react'
+import { Suspense, use, useEffect, useMemo, useState } from 'react'
 import { useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../store'
@@ -322,35 +322,49 @@ function meshOf(t, budget, seam) {
   }).catch(() => rtin(...args))
 }
 
+// Cuts a tile's mesh into CHUNKS² pieces, each with its own vertices and bounds, so frustum culling drops what the
+// camera can't see; normals come from the whole mesh first, so the cuts don't shade. Triangles inside `hole` go.
+const CHUNKS = 8
+function chunked({ meta, mesh }, hole) {
+  const g = new THREE.BufferGeometry()
+  g.setAttribute('position', new THREE.BufferAttribute(mesh.pos, 3))
+  g.setIndex(new THREE.BufferAttribute(mesh.index, 1))
+  g.computeVertexNormals()
+  const pos = mesh.pos, nor = g.attributes.normal.array, idx = mesh.index
+  const [x0, z0, x1, z1] = rect(meta, meta.bbox_osgb), r = hole && rect(meta, hole)
+  const lists = Array.from({ length: CHUNKS * CHUNKS }, () => [])
+  for (let q = 0; q < idx.length; q += 3) {
+    const a = idx[q], b = idx[q + 1], c = idx[q + 2]
+    if (r && inside(pos, a, r) && inside(pos, b, r) && inside(pos, c, r)) continue // the seam is full detail, so the overlap is one grid step
+    const i = Math.min(CHUNKS - 1, Math.floor((((pos[a * 3] + pos[b * 3] + pos[c * 3]) / 3 - x0) / (x1 - x0)) * CHUNKS))
+    const j = Math.min(CHUNKS - 1, Math.floor((((pos[a * 3 + 2] + pos[b * 3 + 2] + pos[c * 3 + 2]) / 3 - z0) / (z1 - z0)) * CHUNKS))
+    lists[j * CHUNKS + i].push(a, b, c)
+  }
+  const remap = new Int32Array(mesh.low.length).fill(-1)
+  return lists.filter((l) => l.length).map((l) => {
+    const verts = []
+    const index = Uint32Array.from(l, (v) => (remap[v] < 0 ? (remap[v] = verts.push(v) - 1) : remap[v]))
+    const n = verts.length, P = new Float32Array(n * 3), N = new Float32Array(n * 3), U = new Float32Array(n * 2), L = new Float32Array(n)
+    verts.forEach((v, k) => {
+      remap[v] = -1 // ready for the next chunk
+      for (let d = 0; d < 3; d++) { P[k * 3 + d] = pos[v * 3 + d]; N[k * 3 + d] = nor[v * 3 + d] }
+      U[k * 2] = mesh.uv[v * 2]; U[k * 2 + 1] = mesh.uv[v * 2 + 1]
+      L[k] = mesh.low[v]
+    })
+    const c = new THREE.BufferGeometry()
+    c.setAttribute('position', new THREE.BufferAttribute(P, 3))
+    c.setAttribute('normal', new THREE.BufferAttribute(N, 3))
+    c.setAttribute('uv', new THREE.BufferAttribute(U, 2))
+    c.setAttribute('aOld', new THREE.BufferAttribute(L, 1))
+    c.setIndex(new THREE.BufferAttribute(index, 1))
+    c.computeBoundingSphere()
+    return c
+  })
+}
+
 function TerrainMesh({ t, hole, name = 'terrain' }) {
   const gl = useThree((s) => s.gl)
-  const geometry = useMemo(() => {
-    const { pos, uv, low, index, maxError } = t.mesh
-    const g = new THREE.BufferGeometry()
-    g.setAttribute('position', new THREE.BufferAttribute(pos, 3))
-    g.setAttribute('uv', new THREE.BufferAttribute(uv, 2))
-    g.setAttribute('aOld', new THREE.BufferAttribute(low, 1))
-    g.setIndex(new THREE.BufferAttribute(index, 1))
-    g.computeVertexNormals()
-    g.computeBoundingSphere()
-    g.userData.maxError = maxError
-    return g
-  }, [t])
-  // once the near tile is up, drop the outer triangles it covers (only the index changes, so no rebuild hitch)
-  useLayoutEffect(() => {
-    const full = geometry.index
-    if (!hole) return
-    const pos = geometry.attributes.position.array, idx = full.array, r = rect(t.meta, hole)
-    const keep = new Uint32Array(idx.length)
-    let n = 0
-    for (let q = 0; q < idx.length; q += 3) {
-      if (inside(pos, idx[q], r) && inside(pos, idx[q + 1], r) && inside(pos, idx[q + 2], r)) continue // the seam is full detail, so the overlap is one grid step
-      keep.set(idx.subarray(q, q + 3), n)
-      n += 3
-    }
-    geometry.setIndex(new THREE.BufferAttribute(keep.subarray(0, n), 1))
-    return () => geometry.setIndex(full)
-  }, [geometry, hole, t])
+  const chunks = useMemo(() => chunked(t, hole), [t, hole])
   const old = useStore((s) => s.year < 1950) // before 1950 the ground is the OS 1893-96 London Town Plan (NLS)
   const maps = useMemo(() => t.maps.map((tex) => {
     // both up front, so the year scrub swaps without a blank frame
@@ -358,16 +372,21 @@ function TerrainMesh({ t, hole, name = 'terrain' }) {
     tex.anisotropy = gl.capabilities.getMaxAnisotropy()
     return tex
   }), [gl, t])
+  // one material for every chunk; where the outer tile overlaps the near one, the near one wins the depth test
+  const material = useMemo(() => Object.assign(new THREE.MeshStandardMaterial({ roughness: 0.92, metalness: 0, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }),
+    { onBeforeCompile: facades, customProgramCacheKey: () => 'terrain-facades' }), [])
+  material.map = maps[old ? 1 : 0]
+  material.polygonOffset = !!hole
   const bare = useStore((s) => s.year < GOOGLE_FROM)
-  const map = maps[old ? 1 : 0]
   useEffect(() => { ERA.value = old ? 1 : 0 }, [old])
   useEffect(() => { BARE.value = bare ? 1 : 0 }, [bare])
-  useEffect(() => () => geometry.dispose(), [geometry])
+  useEffect(() => () => chunks.forEach((c) => c.dispose()), [chunks])
+  useEffect(() => () => material.dispose(), [material])
+  // no castShadow: bare earth casts next to nothing, and the shadow pass would redraw all of it
   return (
-    <mesh name={name} geometry={geometry} raycast={noRaycast} castShadow={!bare} receiveShadow>{/* the shadow pass draws the raw DSM */}
-      {/* where the outer tile overlaps the near one, the near one wins the depth test */}
-      <meshStandardMaterial map={map} roughness={0.92} metalness={0} polygonOffset={!!hole} polygonOffsetFactor={1} polygonOffsetUnits={1} onBeforeCompile={facades} customProgramCacheKey={() => 'terrain-facades'} />
-    </mesh>
+    <group name={name}>
+      {chunks.map((c, k) => <mesh key={k} geometry={c} material={material} raycast={noRaycast} receiveShadow />)}
+    </group>
   )
 }
 

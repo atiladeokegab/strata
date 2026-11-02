@@ -390,6 +390,61 @@ function TerrainMesh({ t, hole, name = 'terrain' }) {
   )
 }
 
+// Beyond the tile: flat ground at the tile edge's median height, in the edge's mean colour, thinning into the sky
+// with distance (the fog colour is lighter than the sky at the horizon, so fogging it drew a bright rim).
+// Without it, low views with tiles off end in a cliff against the sky ~750 m out.
+const SKIRT = 20000 // m
+function fadeOut(shader) {
+  shader.vertexShader = shader.vertexShader
+    .replace('#include <common>', '#include <common>\nvarying float vSkirt;')
+    .replace('#include <fog_vertex>', '#include <fog_vertex>\nvSkirt = -mvPosition.z;')
+  shader.fragmentShader = shader.fragmentShader
+    .replace('#include <common>', '#include <common>\nvarying float vSkirt;')
+    .replace('#include <dithering_fragment>', '#include <dithering_fragment>\ngl_FragColor.a *= 1.0 - smoothstep(1500.0, 9000.0, vSkirt);')
+}
+function edgeColour(tex) {
+  try {
+    const c = document.createElement('canvas'), n = 8
+    c.width = c.height = n
+    const g = c.getContext('2d', { willReadFrequently: true })
+    g.drawImage(tex.image, 0, 0, n, n)
+    const d = g.getImageData(0, 0, n, n).data, sum = [0, 0, 0]
+    let m = 0
+    for (let i = 0; i < n * n; i++) {
+      const x = i % n, y = (i / n) | 0
+      if (x > 0 && y > 0 && x < n - 1 && y < n - 1) continue
+      for (let k = 0; k < 3; k++) sum[k] += d[i * 4 + k]
+      m++
+    }
+    return new THREE.Color().setRGB(sum[0] / m / 255, sum[1] / m / 255, sum[2] / m / 255, THREE.SRGBColorSpace)
+  } catch { return new THREE.Color(0x6f7568) } // a London grey-green when the image cannot be read back
+}
+function Skirt({ t }) {
+  const old = useStore((s) => s.year < 1950)
+  const geometry = useMemo(() => {
+    const { meta, old: O, w, h } = t, edge = []
+    for (let j = 0; j < w; j++) edge.push(O[j], O[(h - 1) * w + j])
+    for (let i = 0; i < h; i++) edge.push(O[i * w], O[i * w + w - 1])
+    edge.sort((a, b) => a - b)
+    const y = edge[edge.length >> 1] - meta.origin_h, [x0, z0, x1, z1] = rect(meta, meta.bbox_osgb), R = SKIRT
+    const pos = [x0, z0, x1, z0, x1, z1, x0, z1, -R, -R, R, -R, R, R, -R, R].flatMap((v, k, a) => (k % 2 ? [] : [v, y, a[k + 1]]))
+    const index = []
+    for (let i = 0; i < 4; i++) { const P = 4 + i, Q = 4 + ((i + 1) % 4), p = i, q = (i + 1) % 4; index.push(P, q, Q, P, p, q) } // faces up
+    const g = new THREE.BufferGeometry()
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3))
+    g.setAttribute('normal', new THREE.Float32BufferAttribute(Array(24).fill(0).map((_, k) => (k % 3 === 1 ? 1 : 0)), 3))
+    g.setIndex(index)
+    return g
+  }, [t])
+  const colours = useMemo(() => t.maps.map(edgeColour), [t])
+  useEffect(() => () => geometry.dispose(), [geometry])
+  return (
+    <mesh name="terrain-skirt" geometry={geometry} raycast={noRaycast} frustumCulled={false}>
+      <meshStandardMaterial color={colours[old ? 1 : 0]} roughness={1} metalness={0} transparent depthWrite={false} onBeforeCompile={fadeOut} customProgramCacheKey={() => 'terrain-skirt'} />
+    </mesh>
+  )
+}
+
 // Height ramp for the LiDAR look: deep blue at the river, through cyan and green, to warm white on the towers.
 const RAMP = ['#0b1d4d', '#1565c0', '#00bcd4', '#43e97b', '#f9d423', '#ff6b35', '#fff4e6'].map((c) => new THREE.Color(c))
 
@@ -434,6 +489,7 @@ function Tiles({ lidar, step }) {
   return (
     <>
       <TerrainMesh t={full ?? low} hole={near?.meta.bbox_osgb} />
+      <Skirt t={full ?? low} />
       {near && <TerrainMesh t={near} name="terrain-near" />}
     </>
   )

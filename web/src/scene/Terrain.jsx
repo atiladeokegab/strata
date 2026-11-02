@@ -217,6 +217,17 @@ const ROAD_TINT = `
         * (1.0 - smoothstep(${f1(APPROACH.half - 1.25)}, ${f1(APPROACH.half + 1.25)}, tAcross));
       vec3 tCol = mix(uRoad, vec3(${STONE.toArray().map((c) => c.toFixed(3)).join(', ')}), smoothstep(${f1(KERB_X - 0.75)}, ${f1(KERB_X + 0.75)}, tAcross));
       diffuseColor.rgb = mix(diffuseColor.rgb, tCol, tRoad * uEra);`
+// The DTM keeps the approach viaducts (build.py keep_approaches), so under the bridge's own ramps and abutments the
+// ground lay in the plane of their stone and z-fought it: there it drops a real 0.5 m (the bridge frame: rotation only).
+const UNDER_BRIDGE = `float tUnder = (1.0 - smoothstep(9.5, 10.5, abs(vRoadW.x))) * (1.0 - smoothstep(180.0, 186.0, abs(vRoadW.z)));
+transformed.y -= 0.5 * tUnder;
+vRoadW.y -= 0.5 * tUnder;`
+// The 1890s OS sheet's lettering reads on the ground the end views look along, so near both ends the map shows only
+// its blurred colours (the mip the walls already sample): streets and blocks, no words. Far off it stays sharp.
+const NO_LETTERING = `
+      float tEnds = smoothstep(100.0, 130.0, abs(vRoadW.z)) * (1.0 - smoothstep(420.0, 480.0, abs(vRoadW.z)))
+        * (1.0 - smoothstep(150.0, 200.0, abs(vRoadW.x)));
+      diffuseColor.rgb = mix(diffuseColor.rgb, blur, tEnds * uEra);`
 const ERA_GAIN = '1.0'
 const ERA_GRADE = `
   vec3 eraGrade(vec3 c) {
@@ -234,7 +245,10 @@ function facades(shader) {
   shader.vertexShader = shader.vertexShader
     .replace('#include <common>', '#include <common>\nvarying float vUp;\nvarying vec3 vRoadW;\nuniform float uBare;\nattribute float aOld;')
     .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\nif (uBare > 0.5 && position.y - aOld > 0.3) objectNormal = vec3(0.0, 1.0, 0.0);\nvUp = objectNormal.y;')
-    .replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed.y = mix(transformed.y, aOld, uBare);\nvRoadW = (modelMatrix * vec4(transformed, 1.0)).xyz;')
+    .replace('#include <begin_vertex>', `#include <begin_vertex>
+transformed.y = mix(transformed.y, aOld, uBare);
+vRoadW = (modelMatrix * vec4(transformed, 1.0)).xyz;
+${UNDER_BRIDGE}`)
   shader.fragmentShader = shader.fragmentShader
     .replace('#include <common>', `#include <common>\nvarying float vUp;\nvarying vec3 vRoadW;\nuniform float uEra;\nuniform vec3 uRoad;${ERA_GRADE}`)
     .replace(
@@ -242,7 +256,7 @@ function facades(shader) {
       `#include <map_fragment>
       diffuseColor.rgb = eraGrade(diffuseColor.rgb);
       float wall = 1.0 - smoothstep(0.35, 0.7, vUp);
-      vec3 blur = eraGrade(texture2D(map, vMapUv, 5.0).rgb);
+      vec3 blur = eraGrade(texture2D(map, vMapUv, 5.0).rgb);${NO_LETTERING}
       vec3 facade = mix(blur, vec3(0.42, 0.39, 0.34), 0.3) * 0.8;
       diffuseColor.rgb = mix(diffuseColor.rgb, facade, wall);${ROAD_TINT}`,
     )

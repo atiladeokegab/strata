@@ -161,7 +161,7 @@ function Half({ side, rt, st, towerTop, era, maxAngle, disc }) {
       )}
       {st.stage >= 0 && st.stage < 5 && (
         <Part id={`works-${side}`} rt={rt}>
-          <ConstructionSite st={st} towerTop={towerTop} />
+          <ConstructionSite st={st} towerTop={towerTop} side={side} />
         </Part>
       )}
       {shown('span', st.stage) && (

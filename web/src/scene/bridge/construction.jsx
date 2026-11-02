@@ -165,19 +165,20 @@ function Cradles() {
   )
 }
 
-// What is going on at this shore end this year, over the middle of the ramp.
-function ApproachLabel({ st }) {
+// What is going on at this shore end this year, over the middle of the ramp. Named by end: looking along the
+// bridge, the far end's label projects just above the near one and read as a duplicate.
+function ApproachLabel({ st, side }) {
   const { label } = approachWorks(st)
   if (!label) return null
   return (
     <Html position={[0, 8, L.spanEnd - 10 - RAMP / 2]} center zIndexRange={[10, 0]} style={{ pointerEvents: 'none' }}>
-      <div style={TAG}>{label}</div>
+      <div style={TAG}>{side === 'north' ? 'North' : 'South'} end: {label[0].toLowerCase() + label.slice(1)}</div>
     </Html>
   )
 }
 const TAG = { padding: '2px 8px', borderRadius: 4, background: 'rgba(12,16,22,0.72)', color: '#f3efe6', font: '500 12px/1.2 system-ui, sans-serif', whiteSpace: 'nowrap' }
 
-export function ConstructionSite({ st, towerTop }) {
+export function ConstructionSite({ st, towerTop, side }) {
   // follow TowerBridge's clip planes (frame rising in stage 1, cladding in stage 4); the frame
   // geometry itself stops at L.bodyTop
   const rise = (to) => L.pierTop + (to - L.pierTop) * st.progress
@@ -190,7 +191,7 @@ export function ConstructionSite({ st, towerTop }) {
       {st.stage === 2 && <Centring />}
       {st.stage === 3 && <Cradles />}
       {st.stage === 4 && <Scaffold top={workTop} />}
-      <ApproachLabel st={st} />
+      <ApproachLabel st={st} side={side} />
     </>
   )
 }

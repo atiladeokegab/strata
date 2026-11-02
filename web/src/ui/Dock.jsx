@@ -2,6 +2,12 @@
 import { useStore, FIRST_YEAR, THIS_YEAR } from '../store'
 import { STAGES } from '../scene/bridge/stages.js'
 import { TimelineMarks } from './TimelineMarks'
+import { HISTORIC_BEFORE, GOOGLE_FROM } from '../scene/google/state'
+
+// where the city around the bridge comes from, era by era (Buildings.jsx, GoogleTiles.jsx)
+const cityFrom = (y) => y < HISTORIC_BEFORE
+  ? `City to ${HISTORIC_BEFORE - 1}: OS London Town Plan 1893-96 (NLS), heights inferred`
+  : y < GOOGLE_FROM ? `City ${HISTORIC_BEFORE}-${GOOGLE_FROM - 1}: OpenStreetMap, dated where known` : `City from ${GOOGLE_FROM}: Google 3D tiles, OpenStreetMap without them`
 
 const VIEWS = [['orbit', 'Orbit'], ['top', 'Top'], ['walk', 'Walk']]
 
@@ -36,6 +42,7 @@ export function Dock() {
     <div className="dock glass">
       <label className="timeline">
         <span className="row"><span className="year num">{year === THIS_YEAR ? 'Today' : year}</span><span className="event">{now || 'Before construction'}</span></span>
+        <span className="city-source">{cityFrom(year)}</span>
         <input type="range" min={FIRST_YEAR} max={THIS_YEAR} step={1} value={year} onChange={(e) => setYear(Number(e.target.value))} aria-label="Year" />
         <TimelineMarks />
       </label>

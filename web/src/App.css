@@ -141,6 +141,7 @@ a.chip.source:hover { border-color: var(--line-strong); background: var(--fill-h
 .timeline { position: relative; flex: 1; min-width: 180px; }
 .timeline .year { color: var(--ink); font-size: var(--t3); font-weight: 500; }
 .timeline .event { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.timeline .city-source { display: block; text-align: right; font-size: var(--t1); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bascule { width: 150px; flex: none; }
 .bascule .num { color: var(--ink); }
 input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 28px; background: none; margin: 0; }

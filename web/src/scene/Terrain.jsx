@@ -222,12 +222,6 @@ const ROAD_TINT = `
 const UNDER_BRIDGE = `float tUnder = (1.0 - smoothstep(9.5, 10.5, abs(vRoadW.x))) * (1.0 - smoothstep(180.0, 186.0, abs(vRoadW.z)));
 transformed.y -= 0.5 * tUnder;
 vRoadW.y -= 0.5 * tUnder;`
-// The 1890s OS sheet's lettering reads on the ground the end views look along, so near both ends the map shows only
-// its blurred colours (the mip the walls already sample): streets and blocks, no words. Far off it stays sharp.
-const NO_LETTERING = `
-      float tEnds = smoothstep(100.0, 130.0, abs(vRoadW.z)) * (1.0 - smoothstep(420.0, 480.0, abs(vRoadW.z)))
-        * (1.0 - smoothstep(150.0, 200.0, abs(vRoadW.x)));
-      diffuseColor.rgb = mix(diffuseColor.rgb, blur, tEnds * uEra);`
 const ERA_GAIN = '1.0'
 const ERA_GRADE = `
   vec3 eraGrade(vec3 c) {
@@ -256,7 +250,7 @@ ${UNDER_BRIDGE}`)
       `#include <map_fragment>
       diffuseColor.rgb = eraGrade(diffuseColor.rgb);
       float wall = 1.0 - smoothstep(0.35, 0.7, vUp);
-      vec3 blur = eraGrade(texture2D(map, vMapUv, 5.0).rgb);${NO_LETTERING}
+      vec3 blur = eraGrade(texture2D(map, vMapUv, 5.0).rgb);
       vec3 facade = mix(blur, vec3(0.42, 0.39, 0.34), 0.3) * 0.8;
       diffuseColor.rgb = mix(diffuseColor.rgb, facade, wall);${ROAD_TINT}`,
     )

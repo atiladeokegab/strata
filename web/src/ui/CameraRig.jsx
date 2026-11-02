@@ -19,7 +19,8 @@ const UP = new Vector3(0, 1, 0)
 function framed(f, camera) {
   const shift = useStore.getState().frameShift
   if (!shift) return f
-  if (shift[2] > 1) f.to = f.toTarget.clone().lerp(f.to, shift[2]) // a short clear band: back off along the view so the subject fits it
+  // a short clear band: back off along the view so the subject fits it (not in top view: past 900 m its part callouts hide)
+  if (shift[2] > 1 && useStore.getState().view !== 'top') f.to = f.toTarget.clone().lerp(f.to, shift[2])
   const fwd = f.toTarget.clone().sub(f.to), d = fwd.length()
   const right = fwd.clone().cross(UP).normalize(), up = right.clone().cross(fwd).normalize()
   const k = (2 * d * Math.tan(MathUtils.degToRad(camera.fov) / 2)) / innerHeight // metres per pixel at the target (the app's canvas fills the window)

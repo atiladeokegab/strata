@@ -24,6 +24,7 @@ const v = new THREE.Vector3()
 // Tags that hold their place (scale, north, leaf angles, chip, caption) register here; callouts
 // treat their on-screen boxes as obstacles, so no label lands on one at any zoom.
 const FIXED = new Set()
+const SHELL = '.controls, .credit, .dock, .panel, .guide-card' // the app's own boxes: callouts keep off them too
 const fix = (el) => {
   if (!el) return
   FIXED.add(el)
@@ -49,7 +50,7 @@ function Callouts({ stage, select }) {
     })
     const c = gl.domElement.getBoundingClientRect()
     const fixed = []
-    for (const el of FIXED) {
+    for (const el of [...FIXED, ...document.querySelectorAll(SHELL)]) {
       const r = el.getBoundingClientRect() // last frame's box; a frame behind is fine
       if (r.width) fixed.push({ x: r.left - c.left, y: r.top - c.top, w: r.width, h: r.height })
     }
@@ -77,6 +78,7 @@ function Callouts({ stage, select }) {
             </svg>
             <button
               type="button"
+              className="callout"
               ref={(r) => r && ((els.current[it.id] ??= {}).btn = r)}
               onClick={() => select(it.id)}
               style={{ ...LABEL, position: 'absolute', left: 0, top: 0, width: it.w, pointerEvents: 'auto' }}

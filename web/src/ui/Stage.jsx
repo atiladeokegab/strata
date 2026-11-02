@@ -29,7 +29,7 @@ function partOf(object, ids) {
 // Scene labels (drei <Html> buttons in .stage) are kept readable: nearest first, each one hides while it overlaps
 // the on-screen controls or a nearer label, or while its anchor is behind or inside a raised leaf; a label cut
 // by the screen edge or the desktop side panel is slid back beside it (never cut). Embeds keep only the few nearest.
-const CLEAR_OF = '.controls, .credit, .dock, .embed-open, .panel'
+const CLEAR_OF = '.controls, .credit, .dock, .embed-open, .panel, .callout' // .callout: the top view's part labels outrank place names
 const overlaps = (a, b, m = 6) => a.left < b.right + m && a.right > b.left - m && a.top < b.bottom + m && a.bottom > b.top - m
 const LEAF = /^bascule-(north|south)$/
 const EDGE = 8 // px kept clear of the screen edge
@@ -69,7 +69,7 @@ export function labelAnchors(scene, camera, canvas) {
 
 // one pass over the labels; returns the names shown. ?capture=1 exposes it as window.__strataLabels for the label test
 export function guardLabels(scene, camera, canvas, max = Infinity) {
-  const keep = [...document.querySelectorAll(CLEAR_OF)].map((el) => el.getBoundingClientRect())
+  const keep = [...document.querySelectorAll(CLEAR_OF)].map((el) => el.getBoundingClientRect()).filter((r) => r.width) // hidden callouts measure 0
   const anchors = labelAnchors(scene, camera, canvas)
   const W = innerWidth, H = innerHeight
   const p = document.querySelector('.panel')?.getBoundingClientRect() // desktop: a column down the left; phone: a bottom sheet

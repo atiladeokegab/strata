@@ -621,6 +621,18 @@ console.log('geom materials untextured, all kinded ok')
     const { type, props = {} } = el
     if (typeof type === 'function') {
       if (SKIP.has(type.name)) return
+      if (type.name === 'Meshes') { // joined kits: one test mesh per source geometry, tagged with its source (claddingKit)
+        const g = new T.Group()
+        g.userData.part = parts.at(-1)
+        parent.add(g)
+        const els = type(props), kit = Object.values(props.build()).filter((gs) => gs.length) // Meshes draws one element per non-empty key, in order
+        els.forEach((el, i) => kit[i].forEach((geo) => {
+          const o = new T.Mesh(geo, new T.MeshBasicMaterial({ side: T.DoubleSide }))
+          Object.assign(o.userData, { from: [...from.slice(-2), geo.userData.from ?? 'Meshes'].join('>'), part: parts.at(-1), road: el.props.material?.userData?.kind === 'road' })
+          g.add(o)
+        }))
+        return
+      }
       from.push(type.name), type.name === 'Part' && parts.push(props.id)
       build(type(props), parent)
       from.pop(), type.name === 'Part' && parts.pop()

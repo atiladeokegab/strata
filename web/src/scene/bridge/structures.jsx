@@ -205,7 +205,9 @@ export function claddingKit(topY) {
   }
   // the walkway doors on the river faces
   for (const sx of [-1, 1]) glass.push(box(2.6, 3.8, 0.3, sx * L.walkX, L.walkY + 2.1, z0 + hz + 0.06))
-  return { stone: [arch, ...stone], granite, slate, gold, glass }
+  const kit = { stone: [arch, ...stone], granite, slate, gold, glass }
+  for (const gs of Object.values(kit)) for (const g of gs) g.userData.from = 'TowerCladding' // check.mjs: the arch guard's turret skip survives the join
+  return kit
 }
 
 // ---- bascule leaf (rotates about the pivot) ----

@@ -101,17 +101,17 @@ def landmarks(meta, ground):
 
 
 def chimney(b):
-    """A house's stack: 3 x 1.2 m on the middle of one short side of its roof rectangle, 1.5 m in, standing 1.2 m clear
-    of the hip's ridge (Buildings.jsx's rise, pitch 0.7 capped at 3.5 m). Dimensions illustrative."""
+    """A house's stack: 3.4 x 1.4 m on the middle of one short side of its roof rectangle, standing 2 m clear of the
+    hip's ridge (Buildings.jsx's rise, pitch 0.7 capped at 3.5 m) so it reads from the river. Dimensions illustrative."""
     c = np.array(b["p"]).reshape(4, 2)
     if np.linalg.norm(c[1] - c[0]) > np.linalg.norm(c[2] - c[1]):
         c = np.roll(c, -1, axis=0)  # now c0-c1 is a short side
     mid, along = (c[0] + c[1]) / 2, (c[3] - c[0]) / np.linalg.norm(c[3] - c[0])
     across = (c[1] - c[0]) / np.linalg.norm(c[1] - c[0])
     centre = mid + along * 2.1
-    pts = [centre + i * across * 1.5 + j * along * 0.6 for i, j in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+    pts = [centre + i * across * 1.7 + j * along * 0.7 for i, j in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
     rise = min(np.linalg.norm(c[1] - c[0]) / 2 * 0.7, 3.5)
-    out = {"b": round(b["t"] - 1, 1), "t": round(b["t"] + rise + 1.2, 1), "k": "b", "o": [round(float(v), 1) for q in pts for v in q]}
+    out = {"b": round(b["t"] - 1, 1), "t": round(b["t"] + rise + 2.0, 1), "k": "b", "o": [round(float(v), 1) for q in pts for v in q]}
     return out | {k: b[k] for k in ("s", "e") if k in b}
 
 
@@ -154,6 +154,12 @@ def main():
     paper = np.kron(ndi.uniform_filter(ndi.maximum_filter(np.percentile(cells, 92, axis=-1), 11), 5), np.ones((8, 8)))
     blue = ndi.binary_dilation((rgb[..., 2] - rgb[..., 0]) > 12, iterations=4)  # hand-tinted water and docks
     land = up(ground) > water - 1.0  # the DTM carves the river bed to water_h - 2 (terrain/build.py); low Bermondsey is ~2 m OD
+    # Terrain.jsx sinks the river's shelves to the bed (bareEarth.js sinkShelves: under water + 1.5 m, joined to the river
+    # under the deck, within 60 m): nothing stands there, or it floats over the water
+    wet, _ = ndi.label(ground < water)
+    river = wet == wet[int(maxN - oN), int(oE - minE)]
+    assert river.sum() > 100_000, "no river under the deck"
+    land &= up(ndi.binary_dilation(river, iterations=60, mask=ground < water + 1.5).astype(np.float32)) < 0.5
     shaded = (paper - blur > 10) & ~blue & land  # the plan's building shading is ~10-15 levels under its paper
     # a sheet margin west of the Tower prints darker than its neighbour and reads as a 40 m wide wall: drop it
     E = (np.arange(W) + 0.5) * PX + minE
@@ -243,7 +249,7 @@ def main():
         # the new approach roads were lined with shops and houses once past the wharf row
         on_approach = poly.centroid.distance(approach) < 30 and to_water[rr, cc].mean() > 25
         if near_water[rr, cc].mean() > 0.5 and not on_approach:
-            height, kind = rng.uniform(14, 21), "w"  # warehouse, 4-6 storeys
+            height, kind = rng.uniform(13, 19), "w"  # warehouse, 4-5 storeys
         elif block_area > 2500 and rng.random() < 0.1:  # terraces join into big blocks, so only a few lots are works
             height, kind = rng.uniform(13, 17), "w"
         else:

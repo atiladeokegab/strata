@@ -34,8 +34,9 @@ function useBuildingsShown() {
 // A facade texture tiled in metres (ExtrudeGeometry's side-wall uvs are world units).
 function facade(draw, panel, floor) {
   const c = document.createElement('canvas')
-  c.width = c.height = 64
+  c.width = c.height = 128 // drawn on a 64 grid at 2x: crisp on a wall beside the camera
   const g = c.getContext('2d')
+  g.scale(2, 2)
   draw(g)
   const t = new THREE.CanvasTexture(c)
   t.wrapS = t.wrapT = THREE.RepeatWrapping
@@ -52,7 +53,7 @@ const FACADES = {
   b: () => facade((g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#3b3d40'; g.fillRect(22, 20, 20, 28); g.fillStyle = '#efe6d6'; g.fillRect(19, 15, 26, 5) }, 3.2, 3.2),
   // Victorian riverside warehouse: stock brick, three small windows, then a column of timber loading doors, one per
   // floor on a stone sill, stacked up the front every 12 m
-  w: () => facade((g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#2f2b28'; for (const x of [4, 15, 26]) g.fillRect(x, 20, 6, 24); g.fillStyle = '#3a2f26'; g.fillRect(41, 0, 14, 58); g.fillStyle = '#e8dcc4'; g.fillRect(38, 58, 20, 5) }, 12, 3.4),
+  w: () => facade((g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#2f2b28'; for (const x of [4, 15, 26]) g.fillRect(x, 20, 6, 24); g.fillStyle = '#4a3c30'; g.fillRect(41, 0, 14, 58); g.fillStyle = '#e8dcc4'; g.fillRect(38, 58, 20, 5) }, 12, 3.8),
   // curtain wall: floor slabs and mullions over glass
   g: () => facade((g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#4f5b63'; g.fillRect(0, 54, 64, 10); g.fillStyle = '#c9d2d8'; g.fillRect(0, 0, 3, 64) }, 1.6, 3.8),
   // Kentish ragstone (the Tower of London): rough courses and, one bay in four, a narrow slit; a wall, not a terrace
@@ -63,7 +64,7 @@ const LOOK = {
   s: { color: '#d9d1bf', roughness: 0.86 },
   b: { color: '#b39270', roughness: 0.92 },
   g: { color: '#8ea2b0', roughness: 0.14, metalness: 0.55, envMapIntensity: 1.4 },
-  w: { color: '#86765f', roughness: 0.95 }, // sooted London stock brick: dull grey-yellow, not orange, not green in shade
+  w: { color: '#7a6a5c', roughness: 0.95 }, // sooted London stock brick: dark grey-brown, not sand, not olive in shade
   k: { color: '#8c8476', roughness: 0.97 }, // Kentish ragstone, grey-brown
   roof: { color: '#6b6862', roughness: 0.95 },
   slate: { color: '#4d5258', roughness: 0.8 }, // Welsh slate

@@ -59,10 +59,28 @@ def osgb_mosaic(px=1.0):
     return out, (x1 - x0 + 1) * (y1 - y0 + 1)
 
 
+def corridor(h, w, near=150.0, feather=50.0):
+    """1 within `near` m of the bridge axis (out to the bbox ends), 0 past near + feather: the ground the end views see."""
+    meta = json.loads((OUT / "meta.json").read_text())
+    oE, oN = meta["origin_osgb"][:2]
+    t = math.radians(meta["bridge_axis_deg"])
+    x = (np.arange(w) + 0.5) + BBOX[0] - oE
+    z = oN - (BBOX[3] - (np.arange(h) + 0.5))
+    X, Z = np.meshgrid(x, z)
+    u = np.abs(X * math.cos(t) + Z * math.sin(t))  # across the axis (bareEarth.js frame)
+    return np.clip(1 - (u - near) / feather, 0, 1)[..., None]
+
+
 def main():
     out, n = osgb_mosaic()
+    im = Image.fromarray(out)
     # ink lines are ~1 px; a 3 px min filter thickens them so they survive the mipmaps seen from orbit
-    Image.fromarray(out).filter(ImageFilter.MinFilter(3)).save(OUT / "color-1890s.jpg", quality=85)
+    inked = np.asarray(im.filter(ImageFilter.MinFilter(3)), float)
+    # near the bridge the camera sits low, so the sheet's lettering read as print on the ground and the ramps:
+    # a 5 px grey closing (max then min) wipes ink thinner than 5 m, keeping the water and block tints
+    clean = np.asarray(im.filter(ImageFilter.MaxFilter(5)).filter(ImageFilter.MinFilter(5)), float)
+    m = corridor(*out.shape[:2])
+    Image.fromarray((clean * m + inked * (1 - m)).round().astype(np.uint8)).save(OUT / "color-1890s.jpg", quality=85)
     print(f"{n} tiles -> {OUT / 'color-1890s.jpg'}")
 
 

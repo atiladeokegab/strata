@@ -1,4 +1,5 @@
 // Self-check: `node web/src/scene/bareEarth.check.mjs`
+import './google/frame.check.mjs' // check-web runs this file; the GAP envelope check rides along
 import assert from 'node:assert/strict'
 
 // city footprints on the bridge's own ground (scene frame = grid turned by the axis; 0 deg keeps them equal)

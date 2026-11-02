@@ -2,15 +2,14 @@ import { Suspense, useEffect, useMemo } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { Water as WaterSurface } from 'three/examples/jsm/objects/Water.js'
-import { useStore } from '../store'
-import { useGoogleShown, useTerrainMeta } from './Terrain.jsx'
+import { useTerrainMeta } from './Terrain.jsx'
 import { SUN_COLOR, SUN_DIR } from './look/sun.js'
 import { LITE } from './look/tier'
 
 // The mirror reflects the bridge, its traffic and craft, the sky and a coarse ground (Terrain.jsx 'terrain-mirror',
 // hidden from every other pass). Skipped: both full terrain tiles and the city, whose warped bank reflections nobody
-// misses (they were ~40% of a desktop frame). Not descended into: the bridge. Each flipped object is flipped back after.
-const MIRROR_SKIP = new Set(['terrain', 'terrain-near', 'osm-buildings', 'landmarks'])
+// misses (they were ~40% of a desktop frame), and Google's tiles (bridge and sky only when they show). Not descended into: the bridge. Each flipped object is flipped back after.
+const MIRROR_SKIP = new Set(['terrain', 'terrain-near', 'osm-buildings', 'landmarks', 'TilesRenderer.TilesGroup'])
 function flipForMirror(o, out) {
   for (const c of o.children) {
     if (MIRROR_SKIP.has(c.name)) { if (c.visible) { c.visible = false; out.push(c) } }
@@ -79,10 +78,10 @@ function Surface({ sun }) {
 
 const SUN = SUN_DIR.toArray() // the Look's sun, so the glints sit under the real light
 
-/** The Thames at the LiDAR water level, with slow animated reflections. `sun` should match the scene's key light. */
+/** The Thames at the LiDAR water level, with slow animated reflections. `sun` should match the scene's key light.
+ * Also over Google's tiles: their river (y about -13.5, google/frame.js) sits 2.3 m below ours, so ours wins by depth,
+ * and their banks, above the water line, still hide it. */
 export default function Water({ sun = SUN }) {
-  const lidar = useStore((s) => s.lidar)
-  if (useGoogleShown(lidar)) return null // Google's own Thames is showing
   return <Suspense fallback={null}><Surface sun={sun} /></Suspense>
 }
 

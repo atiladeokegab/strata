@@ -551,11 +551,11 @@ console.log('geom materials untextured, all kinded ok')
   const out = join(tmpdir(), `bridge-corridor-${process.pid}.mjs`)
   const resolveDir = fileURLToPath(new URL('.', import.meta.url))
   // three is bundled too, so the scene and the components share one copy
-  await bundle({ stdin: { contents: `export { TowerBridge } from './TowerBridge.jsx'; export { BODIES, BODY, bodyGeo, GLASS } from './traffic.jsx'; export { centringGeo } from './construction.jsx'; export { useStore } from '../../store.js'; export { Fragment } from 'react/jsx-runtime'; export { setLite } from '../look/tier.js'; export * as T from 'three'`, resolveDir, loader: 'js' }, bundle: true, format: 'esm', platform: 'node', jsx: 'automatic', plugins: [stubs], outfile: out, logLevel: 'error' })
+  await bundle({ stdin: { contents: `export { TowerBridge } from './TowerBridge.jsx'; export { L } from './structures.jsx'; export { BODIES, BODY, bodyGeo, GLASS } from './traffic.jsx'; export { centringGeo } from './construction.jsx'; export { useStore } from '../../store.js'; export { Fragment } from 'react/jsx-runtime'; export { setLite } from '../look/tier.js'; export * as T from 'three'`, resolveDir, loader: 'js' }, bundle: true, format: 'esm', platform: 'node', jsx: 'automatic', plugins: [stubs], outfile: out, logLevel: 'error' })
   const noop = new Proxy(() => noop, { get: () => noop }) // canvas textures draw into a no-op 2D context
   globalThis.document ??= { createElement: () => ({ getContext: () => noop }) }
   globalThis.location ??= { search: '' } // store.js reads ?embed= at import
-  const { TowerBridge, BODIES, BODY, bodyGeo, GLASS, useStore, Fragment, T, setLite, centringGeo } = await import(out)
+  const { TowerBridge, L, BODIES, BODY, bodyGeo, GLASS, useStore, Fragment, T, setLite, centringGeo } = await import(out)
   // no-float: in-river construction timber reaches below the drawn river (WATER_Y), not just high water
   const cg = centringGeo(); cg.computeBoundingBox()
   assert.ok(cg.boundingBox.min.y < WATER_Y, `centring trestle feet at ${cg.boundingBox.min.y.toFixed(2)} float over the river at ${WATER_Y.toFixed(2)}`)
@@ -950,6 +950,26 @@ console.log('geom materials untextured, all kinded ok')
     const who = (o) => `${o.userData.part} ${o.userData.from}`
     console.log(`raised leaf: top ${top.toFixed(2)} m, walkway underside ${under.toFixed(2)} m (${(under - top).toFixed(2)} m apart overall); under the walkways ${worst.gap.toFixed(2)} m clear`)
     assert.ok(worst.gap >= 1, `raised leaf ${worst.gap.toFixed(2)} m under the walkway at (${worst.at?.toArray().map((n) => n.toFixed(1))}): ${worst.a && who(worst.a)} vs ${worst.b && who(worst.b)}`)
+
+    // ...and stays out of its own tower: no leaf vertex more than NICK behind the inner face (or the
+    // string courses' proud face) where that face is stone, i.e. above the road arch's soffit.
+    // Barry 1894 puts the trunnion ~0.7 m off the face, so the deck edge's small nick stays; rails may not.
+    const NICK = 0.5, face = -L.pierZ - L.towerHalfZ
+    const soffit = (x) => (x > L.archHalf ? L.pierTop : ((t) => (1 - t) ** 2 * 8 + 2 * t * (1 - t) * 11.8 + t * t * 13.4)(Math.sqrt(1 - x / L.archHalf)))
+    let deep = { d: -Infinity }
+    for (const o of leaf) {
+      const pos = o.geometry.attributes.position
+      for (let i = 0; i < pos.count; i++) {
+        v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld)
+        const x = Math.abs(v.x), z = Math.abs(v.z)
+        if (x > L.towerHalfX || v.y < soffit(x)) continue
+        const course = [14, 28, L.bodyTop].some((c) => Math.abs(v.y - c) < 0.35) && x < L.towerHalfX + 0.5
+        const d = z - (course ? face - 0.5 : face)
+        if (d > deep.d) deep = { d, at: v.clone(), o }
+      }
+    }
+    console.log(`raised leaf: at most ${deep.d.toFixed(2)} m behind the tower face (${deep.o && who(deep.o)})`)
+    assert.ok(deep.d <= NICK, `raised leaf ${deep.d.toFixed(2)} m into its tower at (${deep.at?.toArray().map((n) => n.toFixed(1))}): ${deep.o && who(deep.o)}`)
   }
 }
 // Road surface by era: waits for Look's maps, then swaps in place (no new material, no draw call).

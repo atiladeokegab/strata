@@ -16,7 +16,7 @@ export const L = {
   bed: -17, // riverbed / pier foundations
   pierTop: -1,
   pierZ: -45.5, // pier and tower centre; inner face at z=-30.5 leaves the 61 m opening
-  pivotZ: -35,
+  pivotZ: -35, // sourced: Barry, Tower Bridge lecture 1894 (tb-engine), printed p.37 / PDF p.47: pivot 12 ft 9 in back from the pier face (-30.48), ~0.7 m clear of the tower face. Don't move it out
   pivotY: -1.5,
   towerHalfX: 13,
   towerHalfZ: 10,
@@ -223,7 +223,7 @@ export function PivotFrame({ sim, children }) {
   )
 }
 
-// Leaf girders, deck, rails and racks as unmerged geometry lists per material; leafKit() (basculeDetail.jsx)
+// Leaf girders, deck and racks as unmerged geometry lists per material; leafKit() (basculeDetail.jsx)
 // folds them into BasculeDetails' per-material meshes.
 export function leafParts() {
   {
@@ -237,17 +237,13 @@ export function leafParts() {
     )
     const deck = box(18, 0.45, len, 0, -L.pivotY - 0.225, len / 2)
     girders.push(box(0.35, 1.3, len, -9, -L.pivotY - 0.7, len / 2), box(0.35, 1.3, len, 9, -L.pivotY - 0.7, len / 2))
-    const rails = []
-    for (const x of [-8.8, 8.8]) {
-      rails.push(beam([x, -L.pivotY + 1.1, 0.3], [x, -L.pivotY + 1.1, len - 0.2], 0.07, 5))
-      for (let z = 0.3; z < len; z += 2.5) rails.push(beam([x, -L.pivotY, z], [x, -L.pivotY + 1.1, z], 0.05, 4))
-    }
+    // no rails on the leaf: raised to 86 deg they stand 1.5 m into the tower stone (pivot ~0.7 m off the face, Barry 1894)
     // quadrant racks the pinions drive; centred on the pivot axis, spanning the lift arc
     const racks = [-5, 5].map((x) =>
       new THREE.TorusGeometry(L.rackR, 0.35, 6, 32, (95 * Math.PI) / 180).rotateZ(-Math.PI / 2).rotateY(Math.PI / 2).translate(x, 0, 0),
     )
     const spokes = [-5, 5].flatMap((x) => [beam([x, 0, 0], [x, -L.rackR, 0], 0.25), beam([x, 0, 0], [x, 0, -L.rackR], 0.25)])
-    return { steel: girders, road: [deck], white: rails, iron: [...racks, ...spokes] }
+    return { steel: girders, road: [deck], white: [], iron: [...racks, ...spokes] }
   }
 }
 

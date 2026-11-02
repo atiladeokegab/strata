@@ -352,8 +352,9 @@ const PUFF = new THREE.IcosahedronGeometry(1, 1) // shared by every puff
 export function Ship({ rt, year, maxAngle }) {
   const vessel = vesselForYear(year)
   const Mesh = MESH[vessel.kind]
-  const mats = useMemo(
-    () => ({
+  const mats = useMemo(() => {
+    const foamMap = foamTexture()
+    return {
       hull: timber('#0f0906'),
       band: std('#e8e1cf'),
       deck: timber('#381d0f'),
@@ -370,11 +371,11 @@ export function Ship({ rt, year, maxAngle }) {
       navy: std('#1b2a4a', { roughness: 0.35, metalness: 0.3 }),
       green: std('#3f5a3a', { roughness: 0.8 }),
       glass: std('#1a2430', { roughness: 0.1, metalness: 0.7 }),
-      foam: new THREE.MeshBasicMaterial({ map: foamTexture(), transparent: true, depthWrite: false, opacity: 0 }),
+      foam: new THREE.MeshBasicMaterial({ map: foamMap, transparent: true, depthWrite: false, opacity: 0 }),
+      bowFoam: new THREE.MeshBasicMaterial({ map: foamMap, transparent: true, depthWrite: false, opacity: 0 }), // brighter than the stern wake
       smoke: Array.from({ length: PUFFS }, () => new THREE.MeshBasicMaterial({ color: '#4a4744', transparent: true, depthWrite: false })),
-    }),
-    [],
-  )
+    }
+  }, [])
   const move = useRef()
   const disc = useHomeDisc()
   const bob = useRef()
@@ -397,7 +398,8 @@ export function Ship({ rt, year, maxAngle }) {
     bob.current.rotation.z = Math.sin(t * 0.4 + 1) * 0.012 // pitch
     flag.current.rotation.y = Math.sin(t * 3.1) * 0.25
     const k = s.v / CRUISE
-    wake.current.children.forEach((m) => (m.material.opacity = 0.1 + 0.4 * k))
+    mats.foam.opacity = 0.1 + 0.4 * k
+    mats.bowFoam.opacity = 0.2 + 0.6 * k // bow waves read from afar; the texture keeps them densest at the stem
     wake.current.scale.x = 0.4 + 0.6 * k
     // funnel smoke: puffs rise, swell and fade, streaming aft with the ship's way
     smoke.current?.children.forEach((p, i) => {
@@ -434,8 +436,8 @@ export function Ship({ rt, year, maxAngle }) {
           <planeGeometry args={[70, 10]} />
         </mesh>
         {[-1, 1].map((z) => (
-          <mesh key={z} rotation={[-Math.PI / 2, 0, -z * 0.32]} position={[Math.max(vessel.bow, -29) + 15, 0, z * 5]} material={mats.foam}>
-            <planeGeometry args={[32, 3]} />
+          <mesh key={z} rotation={[-Math.PI / 2, 0, -z * 0.32]} position={[Math.max(vessel.bow, -29) + 15, 0, z * 5]} material={mats.bowFoam}>
+            <planeGeometry args={[32, 4]} />
           </mesh>
         ))}
       </group>

@@ -49,7 +49,7 @@ const DEFAULT = { year: THIS_YEAR, exploded: false, lidar: false, view: 'orbit',
 export const STEPS = [
   { id: 'orbit', title: 'Look around', cam: [170, 75, 190],
     text: 'Tower Bridge, rebuilt on real LiDAR ground. Drag to orbit, pinch or scroll to zoom.' },
-  { id: 'time', title: 'Scrub through time', spot: '.dock .timeline', cam: [300, 40, 40], // down the river from the east: no roofs between the camera and the piers
+  { id: 'time', title: 'Scrub through time', spot: '.dock .timeline', cam: [265, 40, 34], // down the river from the east: no roofs between the camera and the piers
     text: 'The year slider rebuilds the bridge and the area around it.',
     stops: [
       yearStop(1886, 'Construction starts on the river piers.'),
@@ -94,10 +94,11 @@ export const STEPS = [
 export function frameShift(W = innerWidth, H = innerHeight, doc = document) {
   const rect = (q) => doc.querySelector(q)?.getBoundingClientRect()
   const n = narrow() // phones: the controls run across the top and the dock along the bottom; desktop: the panel on the left, the toggles on the right
-  const dock = n ? rect('.dock') : null, card = rect('.guide-card')
-  const high = n && card && card.top < H / 2 // phones: a step about the dock puts its card at the top, over the controls
+  const card = rect('.guide-card')
+  const high = card && card.top < (n ? H / 2 : 120) // a step about the dock puts its card at the top (desktop: top right), over the controls
+  const dock = n || high ? rect('.dock') : null
   const top = Math.min(high ? H : card?.top ?? H - (n ? 330 : 360), dock?.height ? dock.top : H, n ? rect('.panel')?.top ?? H : H) // phones: the open sheet bounds it too
-  const l = n ? 0 : rect('.panel')?.right ?? 0, r = n ? W : rect('.toggles')?.left ?? W
+  const l = n ? 0 : rect('.panel')?.right ?? 0, r = n ? W : Math.min(rect('.toggles')?.left ?? W, high ? card.left : W)
   const t = n ? Math.max(rect('.controls')?.bottom ?? 0, high ? card.bottom : 0) : 0
   const bottom = Math.max(top, t + H * 0.2)
   return [Math.round((l + r - W) / 2), Math.round((t + bottom) / 2 - H / 2), Math.round(100 * Math.min(1.8, Math.max(1, (0.55 * H) / (bottom - t)))) / 100]
@@ -128,7 +129,8 @@ export function applyStep(step) {
 
 const SEEN = 'strata.guide.seen'
 export const guideSeen = () => { try { return localStorage.getItem(SEEN) === '1' } catch { return false } }
-const markSeen = () => { try { localStorage.setItem(SEEN, '1') } catch { /* private mode: it just shows again */ } }
+// the guide stands in for the first-visit How to use card, so a visitor who has had the guide (or skipped it) gets neither again
+const markSeen = () => { try { localStorage.setItem(SEEN, '1'); localStorage.setItem('strata.help.seen', '1') } catch { /* private mode: it just shows again */ } }
 const NEVER = /[?&](embed|capture|film|tour)=1\b/ // film takes, embeds and the 60 s story URL never get the guide
 
 let pending = false // one start at a time (Home's button and the first-visit offer can both ask)

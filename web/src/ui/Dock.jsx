@@ -1,4 +1,5 @@
 // Map controls (top right: view, exploded, LiDAR and the photo tools) and the slim time bar (bottom: timeline, bascules).
+import { useEffect, useState } from 'react'
 import { useStore, FIRST_YEAR, THIS_YEAR } from '../store'
 import { STAGES } from '../scene/bridge/stages.js'
 import { TimelineMarks } from './TimelineMarks'
@@ -30,6 +31,18 @@ export function Controls({ children }) {
   )
 }
 
+// The leaves' actual angle: the slider is the operator's lever, and the hydraulics take seconds to follow it
+function LeafAngle() {
+  const [deg, setDeg] = useState(0)
+  useEffect(() => {
+    let t, alive = true
+    // same chunk the bridge slot already loads (as the panel's hydraulics readout does), so the bridge stays out of the first paint
+    import('../scene/bridge/TowerBridge.jsx').then(({ bridgeHydraulics: sim }) => { if (alive) t = setInterval(() => setDeg(Math.round((sim.angle * 180) / Math.PI)), 100) })
+    return () => { alive = false; clearInterval(t) }
+  }, [])
+  return <span className="num">{deg}°</span>
+}
+
 export function Dock() {
   const { year, setYear, bascule, setBascule, place } = useStore()
   const events = (place?.events || []).filter((e) => e.year <= year).sort((a, b) => a.year - b.year)
@@ -37,7 +50,6 @@ export function Dock() {
   const stage = STAGES.filter((s) => s.from <= year).at(-1)
   const ev = events.at(-1)
   const now = ev && (!stage || ev.year > stage.from) ? ev.title : stage?.label
-  const maxAngle = place?.parts.find((p) => p.dims?.max_angle)?.dims.max_angle.value ?? 86
   return (
     <div className="dock glass">
       <label className="timeline">
@@ -47,7 +59,7 @@ export function Dock() {
         <TimelineMarks />
       </label>
       <label className="bascule">
-        <span className="row"><span>Bascules</span><span className="num">{Math.round(bascule * maxAngle)}°</span></span>
+        <span className="row"><span>Bascules</span><LeafAngle /></span>
         <input type="range" min={0} max={1} step={0.01} value={bascule} onChange={(e) => setBascule(Number(e.target.value))} aria-label="Bascule opening" />
       </label>
     </div>

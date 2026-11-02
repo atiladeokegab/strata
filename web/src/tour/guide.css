@@ -1,4 +1,4 @@
-/* The guided tour card and spotlight (Guide.jsx). Desktop: centred over the stage, above the time bar.
+/* The guided tour card and spotlight (Guide.jsx). Desktop: centred over the stage, above the time bar, or top right for a step about the dock.
    Phones: at the bottom over the dock, above it when the step points into it, or just above the sheet when the sheet is open. */
 .guide-card { position: absolute; z-index: 7; left: calc(50% + var(--panel-w) / 2 + var(--gap) / 2); bottom: calc(var(--gap) + 120px); /* clear of the dock and the ring around it (the dock is about 105px tall) */
   transform: translateX(-50%); width: min(440px, calc(100% - 32px)); padding: var(--s5) var(--s5) var(--s4); border-radius: var(--r-lg);
@@ -31,6 +31,8 @@
   transition: left .35s cubic-bezier(.2, .8, .2, 1), top .35s cubic-bezier(.2, .8, .2, 1), width .35s, height .35s, opacity .3s;
   animation: guide-pulse 2.4s ease-in-out infinite; }
 
+/* a step about the dock (the timeline, the bascules): the card goes top right, over the controls, so the bridge has the stage's full height */
+@media (min-width: 901px) { .guide-card:not(.guide-low) { left: auto; right: var(--gap); top: var(--gap); bottom: auto; transform: none; animation-name: guide-in-m; } }
 @keyframes guide-in { from { opacity: 0; transform: translate(-50%, 12px); } }
 @keyframes guide-fade { from { opacity: 0; transform: translateY(4px); } }
 @keyframes guide-pulse { 50% { box-shadow: 0 0 0 2px var(--ink), 0 0 0 10px rgba(255, 255, 255, .35), 0 8px 30px rgba(0, 0, 0, .18); } }
@@ -41,6 +43,7 @@
   .guide-card:not(.guide-low) { top: calc(8px + env(safe-area-inset-top, 0px)); bottom: auto; } /* a step about the dock: the card goes over the controls, clearing the stage above the dock */
   .app.sheet-open .guide-card { top: calc(8px + env(safe-area-inset-top, 0px)); bottom: auto; } /* a step in the sheet: the card goes over the controls, the bridge keeps the band above the sheet */
   .app.sheet-open:has(.guide-card) { --sheet: 52svh; }
+  .app:not(.sheet-open):has(.guide-card:not(.guide-low)) { --sheet: 0px; } /* a step about the dock: the collapsed sheet steps aside, the dock drops to the bottom and the bridge gets its height */
   .guide-card h2 { font-size: var(--t3); margin-bottom: var(--s1); }
   .guide-skip { top: var(--s4); right: var(--s4); }
   .guide-note { min-height: 0; }

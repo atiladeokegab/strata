@@ -56,6 +56,8 @@ test('the camera aims at the stage the card and panels leave clear', () => {
   const at = (rects) => ({ querySelector: (q) => rects[q] && { getBoundingClientRect: () => rects[q] } })
   globalThis.matchMedia = () => ({ matches: false }) // desktop: panel on the left, toggles on the right, card at the bottom
   assert.deepEqual(frameShift(1280, 800, at({ '.panel': { right: 396 }, '.toggles': { left: 1032 }, '.guide-card': { top: 468 } })), [74, -166, 1])
+  // desktop, a step about the dock: the card top right, the stage between the panel and the card, down to the dock
+  assert.deepEqual(frameShift(1280, 633, at({ '.panel': { right: 396 }, '.toggles': { left: 1032 }, '.dock': { top: 513, height: 104 }, '.guide-card': { top: 16, bottom: 300, left: 824 } })), [-30, -60, 1])
   globalThis.matchMedia = () => ({ matches: true }) // phone: full width, above the card
   assert.deepEqual(frameShift(390, 844, at({ '.panel': { right: 390 }, '.controls': { bottom: 200 }, '.guide-card': { top: 500 } })), [0, -72, 1.55])
   assert.deepEqual(frameShift(390, 844, at({ '.controls': { bottom: 200 }, '.dock': { top: 540, height: 120 }, '.guide-card': { top: 640 } })), [0, -52, 1.37])

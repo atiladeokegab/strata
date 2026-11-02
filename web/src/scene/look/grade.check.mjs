@@ -10,8 +10,11 @@ assert.match(src, /x=max\(x,0\.0\)\*/, 'PeriodSaturation must clamp its output a
 
 // PeriodSaturation (Grade.jsx SAT_GLSL), today's grade: sat > 0, soot 0
 const sat = (c, s, clamp) => {
-  const l = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
-  return c.map((v) => { const x = l + (v - l) * (1 + s); return clamp ? Math.max(x, 0) : x })
+  const l = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2], avg = (c[0] + c[1] + c[2]) / 3
+  return c.map((v) => {
+    const x = s < 0 ? l + (v - l) * (1 + s) : Math.min(v + (avg - v) * (1 - 1 / (1.001 - s)), 1)
+    return clamp ? Math.max(x, 0) : x
+  })
 }
 // three's sRGBTransferOETF, run before BrightnessContrast (inputColorSpace sRGB): mix() evaluates both branches
 const oetf = (v) => { const t = v <= 0.0031308 ? 1 : 0; return (Math.pow(v, 0.41666) * 1.055 - 0.055) * (1 - t) + v * 12.92 * t }

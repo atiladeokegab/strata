@@ -18,7 +18,8 @@ const AO = 1.6
 const SAT_GLSL = `uniform float sat;uniform float soot;
 void mainImage(const in vec4 c,const in vec2 uv,out vec4 o){
   float l=dot(c.rgb,vec3(0.2126,0.7152,0.0722));float hi=smoothstep(0.4,0.8,sqrt(max(l,0.0)));
-  vec3 x=mix(vec3(l),c.rgb,1.0+sat*(sat<0.0?1.0-0.5*hi:1.0));
+  // sat > 0 (from 1986 on) is postprocessing's HueSaturation formula exactly, so today's frame is unchanged
+  vec3 x=sat<0.0?mix(vec3(l),c.rgb,1.0+sat*(1.0-0.5*hi)):min(c.rgb+(vec3((c.r+c.g+c.b)/3.0)-c.rgb)*(1.0-1.0/(1.001-sat)),1.0);
   x=max(x,0.0)*mix(vec3(1.0),vec3(0.72,0.68,0.62),soot*hi);
   o=vec4(x+soot*0.025*(1.0-smoothstep(0.0,0.4,sqrt(max(l,0.0)))),c.a);}`
 const SEPIA_GLSL = `uniform float amount;

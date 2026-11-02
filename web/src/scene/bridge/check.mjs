@@ -721,7 +721,7 @@ console.log('geom materials untextured, all kinded ok')
     }))
     const floating = comps.filter((c, i) => {
       const size = c.b.getSize(new T.Vector3())
-      if (c.b.max.y < -8 || Math.max(size.x, size.y, size.z) < 0.1 || c.where.startsWith('engine-room')) return false
+      if (c.b.max.y < -8 || Math.max(size.x, size.y, size.z) < 0.1) return false
       const g = c.b.clone().expandByScalar(0.03), hit = ([j, t]) => j !== i && g.intersectsTriangle(t)
       return !big.some(hit) && !cells(g).some((k) => grid.get(k)?.some(hit))
     })

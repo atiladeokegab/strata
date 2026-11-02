@@ -18,15 +18,34 @@ export function bridgePart(o) {
   return null
 }
 
+// the mesh's world bounding-sphere radius in metres, cached (bridge parts do not rescale)
+function worldRadius(o) {
+  if (o.userData.worldR !== undefined) return o.userData.worldR
+  if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere()
+  return (o.userData.worldR = _s.copy(o.geometry.boundingSphere).applyMatrix4(o.matrixWorld).radius)
+}
+
 // true for a bridge mesh worth a shadow and a reflection; cached on the mesh (its part and size do not change)
 export function bigSilhouette(o) {
   if (o.userData.bigSilhouette !== undefined) return o.userData.bigSilhouette
   const part = bridgePart(o)
-  let big = false
-  if (part && !SMALL_PARTS.test(part) && o.geometry) {
-    if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere()
-    _s.copy(o.geometry.boundingSphere).applyMatrix4(o.matrixWorld)
-    big = _s.radius >= MIN_R
+  return (o.userData.bigSilhouette = !!(part && !SMALL_PARTS.test(part) && o.geometry && worldRadius(o) >= MIN_R))
+}
+
+// LITE: a bridge mesh under MIN_R hides from the cameras beyond FAR_HIDE m and shows again inside FAR_SHOW m,
+// so nothing flickers at the boundary. At 400 m on a 390 px phone such a part is 1-2 px. It leaves layer 0
+// rather than going invisible, so it never fights the bridge's own visibility switches.
+const FAR_HIDE = 400
+const FAR_SHOW = 370
+export const smallBridgeMesh = (o) => !!(o.isMesh && o.geometry && bridgePart(o) && worldRadius(o) < MIN_R)
+export function farHide(camera, meshes) {
+  for (const o of meshes) {
+    const src = o.isInstancedMesh ? o : o.geometry // an instanced mesh's sphere spans its instances
+    if (!src.boundingSphere) src.computeBoundingSphere()
+    _s.copy(src.boundingSphere).applyMatrix4(o.matrixWorld)
+    const d = camera.position.distanceTo(_s.center) - _s.radius
+    const hidden = !o.layers.isEnabled(0)
+    if (!hidden && d > FAR_HIDE) o.layers.disable(0)
+    else if (hidden && d < FAR_SHOW) o.layers.enable(0)
   }
-  return (o.userData.bigSilhouette = big)
 }

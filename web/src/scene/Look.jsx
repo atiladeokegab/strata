@@ -13,7 +13,7 @@ import { loadPhotos, pbr, warmMaterialTextures } from './look/textures'
 import { LITE } from './look/tier'
 import { useStore } from '../store'
 import { worldUVs } from './look/uvs'
-import { bigSilhouette } from './look/silhouette'
+import { bigSilhouette, farHide, smallBridgeMesh } from './look/silhouette'
 
 const Grade = lazy(() => import('./look/Grade.jsx'))
 const ENV_INTENSITY = 0.6
@@ -244,7 +244,9 @@ function SceneUpgrades() {
   const { scene, gl } = useThree()
   const next = useRef(0)
   const stamp = useRef(1)
-  useFrame(({ clock }) => {
+  const small = useRef([]) // LITE: the bridge's small meshes, refreshed with the once-a-second pass
+  useFrame(({ clock, camera }) => {
+    if (LITE) farHide(camera, small.current)
     if (!gl.shadowMap.enabled) {
       gl.shadowMap.enabled = true
       gl.shadowMap.type = THREE.PCFSoftShadowMap
@@ -255,8 +257,10 @@ function SceneUpgrades() {
     // once a second, not every N frames: on a slow device a new terrain tile would cast for N frames
     if (clock.elapsedTime < next.current) return
     next.current = clock.elapsedTime + 1
+    const found = []
     scene.traverse((o) => {
       if (!o.isMesh) return
+      if (LITE && smallBridgeMesh(o)) found.push(o)
       // owners set castShadow in their props, and a prop change (terrain's bare toggle) sets it again
       if (o.castShadow && !o.userData.noShadow && !bigSilhouette(o)) o.castShadow = false
       if (o.userData.lookShadow === stamp.current) return
@@ -268,6 +272,7 @@ function SceneUpgrades() {
       o.castShadow = bigSilhouette(o) && !mats.some((m) => m?.transparent) // terrain, OSM, tiles, small bridge parts: receive only
       mats.forEach((m) => m && (m.needsUpdate = true)) // shadow flags change the compiled shader
     })
+    small.current = found
   })
   return null
 }

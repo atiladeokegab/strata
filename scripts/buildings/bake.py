@@ -4,7 +4,7 @@
 # ///
 """Bake OpenStreetMap building footprints around Tower Bridge into web/public/buildings/tower-bridge.json.
 
-uv run scripts/buildings/bake.py <overpass.json> <terrain dir with meta.json + height.png> [out.json]
+uv run scripts/buildings/bake.py <overpass.json> <terrain dir with meta.json, height.png, bare.png> [out.json]
 
 Overpass query used (any Overpass mirror; the main one is often at capacity):
   [out:json][timeout:120];
@@ -16,8 +16,9 @@ The inner box (~1.5 km) takes every building; the outer box adds only tagged-hei
 
 Frame: the terrain's grid frame (x = E - origin E, y = metres OD - origin_h, z = origin N - N), the same one
 build-terrain uses; the scene turns it by frame.axis_deg so the real bridge lies on z.
-Heights: the Environment Agency LiDAR DSM where the terrain tile covers the footprint, else OSM height,
-else building:levels x 3.3 m.
+Heights: inside the terrain tile the base is the Environment Agency LiDAR DTM (bare.png, the ground the scene draws)
+and the roof the LiDAR DSM (height.png); beyond it, or where the DSM shows no roof, OSM height, else
+building:levels x 3.3 m, on the DTM.
 """
 
 import json
@@ -39,6 +40,8 @@ oH = meta["origin_h"]
 theta = math.radians(meta["bridge_axis_deg"])
 rgb = np.asarray(Image.open(terrain / "height.png").convert("RGB")).astype(np.float64)
 dsm = meta["min_h"] + (rgb[..., 0] * 256 + rgb[..., 1]) / 65535 * (meta["max_h"] - meta["min_h"])  # row 0 north, 1 m px
+rgb = np.asarray(Image.open(terrain / "bare.png").convert("RGB")).astype(np.float64)
+dtm = meta["min_h"] + (rgb[..., 0] * 256 + rgb[..., 1]) / 65535 * (meta["max_h"] - meta["min_h"])  # the scene's ground
 to_osgb = Transformer.from_crs("EPSG:4326", "EPSG:27700", always_xy=True)
 CITY_GROUND = 12.0  # m OD, typical street level north of the river, for towers outside the LiDAR tile
 TALL = 40.0  # m: with no start_date, a building this tall is taken as post-1950
@@ -80,18 +83,19 @@ def grid(ring):
 
 
 def lidar_heights(E, N):
-    """(ground, roof) metres OD from the DSM, or None when the footprint is not inside the tile."""
+    """(ground, roof) metres OD: the lowest DTM under the footprint (the base never floats on a slope) and the DSM
+    roof, or None when the footprint is not inside the tile."""
     if E.min() < minE + 8 or E.max() > maxE - 8 or N.min() < minN + 8 or N.max() > maxN - 8:
         return None
     c0, c1 = int(E.min() - minE) - 6, int(E.max() - minE) + 7
     r0, r1 = int(maxN - N.max()) - 6, int(maxN - N.min()) + 7
-    win = dsm[r0:r1, c0:c1]
+    win, bare = dsm[r0:r1, c0:c1], dtm[r0:r1, c0:c1]
     mask = Image.new("1", (c1 - c0, r1 - r0))
     ImageDraw.Draw(mask).polygon([(e - minE - c0, maxN - n - r0) for e, n in zip(E, N)], fill=1)
     inside = np.asarray(mask, dtype=bool)
     if inside.sum() < 4 or (~inside).sum() < 4:
         return None
-    return float(np.percentile(win[~inside], 5)), float(np.percentile(win[inside], 90))
+    return float(bare[inside].min()), float(np.percentile(win[inside], 90))
 
 
 def kind(tags, height, start, osm_id):
@@ -109,6 +113,18 @@ def in_bridge_cut(x, z):
     u = x * math.cos(theta) + z * math.sin(theta)  # same turn as the scene (three.js rotation-y): along the river
     v = -x * math.sin(theta) + z * math.cos(theta)  # along the bridge
     return abs(u) < meta["bridge_cut"]["width"] / 2 and abs(v) < meta["bridge_cut"]["length"] / 2
+
+
+def dtm_ground(E, N):
+    """Lowest DTM under the part of a footprint inside the tile (one that crosses its edge), or None if wholly outside."""
+    c0, c1 = max(int(E.min() - minE), 0), min(int(E.max() - minE) + 1, dtm.shape[1])
+    r0, r1 = max(int(maxN - N.max()), 0), min(int(maxN - N.min()) + 1, dtm.shape[0])
+    if c0 >= c1 or r0 >= r1:
+        return None
+    mask = Image.new("1", (c1 - c0, r1 - r0))
+    ImageDraw.Draw(mask).polygon([(e - minE - c0, maxN - n - r0) for e, n in zip(E, N)], fill=1)
+    inside = np.asarray(mask, dtype=bool)
+    return float(dtm[r0:r1, c0:c1][inside].min()) if inside.any() else None
 
 
 buildings, skipped = [], {"bridge": 0, "no height": 0, "bad ring": 0}
@@ -138,7 +154,7 @@ for el in json.loads(raw.read_text())["elements"]:
         if lidar and lidar[1] - lidar[0] >= 2.5:
             ground, height = lidar[0], lidar[1] - lidar[0] + 0.3  # roof 0.3 m clear of the terrain's own LiDAR roof: no z-fight
         elif tagged:
-            ground, height = (lidar[0] if lidar else CITY_GROUND), tagged
+            ground, height = (lidar[0] if lidar else dtm_ground(E, N) or CITY_GROUND), tagged
         else:
             skipped["no height"] += 1
             continue
@@ -163,7 +179,7 @@ out.parent.mkdir(parents=True, exist_ok=True)
 out.write_text(json.dumps({
     "credit": "© OpenStreetMap contributors",
     "licence": "Open Database License (ODbL) 1.0, https://www.openstreetmap.org/copyright",
-    "heights": "Environment Agency LIDAR Composite DSM 1 m (OGL v3) inside the terrain tile; OSM height or levels beyond it",
+    "heights": "Environment Agency LIDAR Composite DTM 1 m base and DSM 1 m roof (OGL v3) inside the terrain tile; OSM height or levels beyond it",
     "frame": {"origin_osgb": [oE, oN], "origin_h": oH, "axis_deg": meta["bridge_axis_deg"], "bbox_osgb": meta["bbox_osgb"]},
     "start_rule": "s = OSM start_date year; with none, 1950 for buildings over 40 m (taken as modern); null = always shown",
     "buildings": buildings,

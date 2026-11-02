@@ -49,11 +49,9 @@ ROOFED = 650  # m from the bridge centre: pitched roofs where the camera usually
 
 
 def bare_earth(meta):
-    """Same opening as web/src/scene/bareEarth.js (60 m window, 1.5 m kept), metres OD, 1 m grid."""
-    rgb = np.asarray(Image.open(TERRAIN / "height.png").convert("RGB")).astype(np.float64)
-    dsm = meta["min_h"] + (rgb[..., 0] * 256 + rgb[..., 1]) / 65535 * (meta["max_h"] - meta["min_h"])
-    opened = ndi.grey_opening(dsm, size=(61, 61), mode="nearest")
-    return np.minimum(dsm, opened + 1.5)
+    """The ground the scene draws in every era: bare.png, the EA LiDAR DTM (scripts/terrain/build.py), metres OD, 1 m grid."""
+    rgb = np.asarray(Image.open(TERRAIN / "bare.png").convert("RGB")).astype(np.float64)
+    return meta["min_h"] + (rgb[..., 0] * 256 + rgb[..., 1]) / 65535 * (meta["max_h"] - meta["min_h"])
 
 
 def main():
@@ -74,7 +72,7 @@ def main():
     cells = blur.reshape(H // 8, 8, W // 8, 8).transpose(0, 2, 1, 3).reshape(H // 8, W // 8, 64)
     paper = np.kron(ndi.uniform_filter(ndi.maximum_filter(np.percentile(cells, 92, axis=-1), 11), 5), np.ones((8, 8)))
     blue = ndi.binary_dilation((rgb[..., 2] - rgb[..., 0]) > 12, iterations=4)  # hand-tinted water and docks
-    land = up(ground) > water + 1.0
+    land = up(ground) > water - 1.0  # the DTM carves the river bed to water_h - 2 (terrain/build.py); low Bermondsey is ~2 m OD
     shaded = (paper - blur > 10) & ~blue & land  # the plan's building shading is ~10-15 levels under its paper
     # a sheet margin west of the Tower prints darker than its neighbour and reads as a 40 m wide wall: drop it
     E = (np.arange(W) + 0.5) * PX + minE

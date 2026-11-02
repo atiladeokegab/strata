@@ -103,11 +103,11 @@ assert.ok(fake.stages[5].from === 1895 && fake.stages[4].to === 1894 && stageFor
 // an out-of-order sourced stage year is refused, so stageForYear stays monotonic
 assert.equal(resolveYears([{ year: 1900, title: 'river foundations begin', sources: src }]).stages[0].status, 'inferred')
 // the real data: every threshold it dates is sourced and agrees with the year it gives
-// Home disc: traffic hides beyond the plinth radius; keep homeDisc.js in step with Home.jsx's PLINTH_R.
+// Home disc: traffic hides beyond the plinth radius; keep homeDisc.js in step with HomeStage.jsx's PLINTH_R.
 {
   const r = (f, re) => Number(readFileSync(new URL(f, import.meta.url), 'utf8').match(re)?.[1])
-  const home = r('../../ui/home/Home.jsx', /PLINTH_R = (\d+)/), ours = r('./homeDisc.js', /HOME_DISC_R = (\d+)/)
-  assert.ok(home > 0 && home === ours, `homeDisc.js HOME_DISC_R ${ours} != Home.jsx PLINTH_R ${home}`)
+  const home = r('../../ui/home/HomeStage.jsx', /PLINTH_R = (\d+)/), ours = r('./homeDisc.js', /HOME_DISC_R = (\d+)/)
+  assert.ok(home > 0 && home === ours, `homeDisc.js HOME_DISC_R ${ours} != HomeStage.jsx PLINTH_R ${home}`)
   assert.ok(END_U + 20 > home, 'street runs past the disc, so the clip is needed')
   console.log(`home disc ok (r ${home} m, street to ${END_U} m)`)
 }
@@ -709,7 +709,7 @@ console.log('geom materials untextured, all kinded ok')
   }
   console.log('road corridor ok (clear at 0.5/1.7/3 m, road underfoot every 2 m, 1886-2026)')
 
-  // Home plinth (ui/home/Home.jsx): with the canvas in .home-stage, no structure reaches past HOME_DISC_R
+  // Home plinth (ui/home/HomeStage.jsx): with the canvas in .home-stage, no structure reaches past HOME_DISC_R
   // (1 m grace for the abutment towers' outer stone, which stands on the plinth's rim).
   {
     const { HOME_DISC_R } = await import('./homeDisc.js')

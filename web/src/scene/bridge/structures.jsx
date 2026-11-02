@@ -153,7 +153,11 @@ export function claddingKit(topY) {
   // octagonal corner turrets with spired caps
   for (const [sx, sz] of corners) {
     const x = sx * 12, z = z0 + sz * 9
-    stone.push(new THREE.CylinderGeometry(3.2, 3.4, 46, 8).translate(x, 21.5, z))
+    // below the granite band at 14 m the shaft's road-arch face is pulled back to the arch jamb (its octagon
+    // edge stood 0.8 m into the road passage); above it the shaft is buried in the tower body on that side
+    const shaft = new THREE.CylinderGeometry(3.333, 3.4, 15.5, 8), p = shaft.attributes.position
+    for (let i = 0; i < p.count; i++) if (-sx * p.getX(i) > 2.45) p.setX(i, -sx * 2.45)
+    stone.push(shaft.translate(x, 6.25, z), new THREE.CylinderGeometry(3.2, 3.333, 30.5, 8).translate(x, 29.25, z))
     granite.push(new THREE.CylinderGeometry(3.6, 3.6, 0.8, 8).translate(x, 44.4, z))
     // open arcaded stage above the parapet, then a tall lucarned spire with a gilded finial
     stone.push(new THREE.CylinderGeometry(2.9, 2.9, 2.4, 8).translate(x, 45.9, z))

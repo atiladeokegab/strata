@@ -9,8 +9,8 @@ separate houses, and extruded. Buildings dated to 1894 or earlier (OSM start_dat
 London precinct) are cut out:
 Buildings.jsx already draws those from OSM, so nothing overlaps. A plot under an OSM building dated 1895-1949 stands
 until that year, when Buildings.jsx shows the new one. Nothing is traced inside the Tower of London or its moat.
-"landmarks": buildings OSM has only as multipolygons, which bake.py skips (the PLA building, 1922); Buildings.jsx draws
-them with the OSM ones.
+"landmarks": buildings OSM has only as multipolygons, which bake.py skips (the PLA building, 1922, with its cornices and
+the tower's stepped top); Buildings.jsx draws them with the OSM ones. Nothing past FAR (550 m): the fog's edge.
 Heights (status inferred): there are no surveyed 1890s heights, so each block gets a period height by use:
 riverside and dock warehouses (within 70 m of the water, bar the 1894 approach roads past the wharf row) 14-21 m, one lot in ten of a large inland block (breweries,
 works) 13-17 m, terraced houses and shops 9-14 m (3-4 storeys). Ground: the bare-earth surface Terrain.jsx draws before 1950, so walls meet it.
@@ -55,6 +55,7 @@ BUILT_BY = 1894
 EAST_BASIN = (534060, 180470)  # a point inside St Katharine's east dock (OSGB)
 BLITZ, MODERN = 1940, 1950
 MOAT = 25.0  # m round the Tower's outer towers: the moat (drained in 1843, so grass in the period) and its banks
+FAR = 550  # m from the bridge centre: no lots past it, where the ground fades into fog and they float
 ROOFED = 650  # m from the bridge centre: pitched roofs where the camera usually is
 # Tower Bridge Road (south) and Tower Bridge Approach (north), cut through the old streets for the bridge and opened
 # with it in 1894: OSM carriageway centrelines (OSGB, ODbL) and a 20 m street. A traced plot mostly on it stands until then.
@@ -105,8 +106,19 @@ def landmarks(meta, ground):
     rr, cc = np.nonzero(inside & (dsm > peak - 3))
     tower = [(minE + cc.min(), maxN - rr.max() - 1), (minE + cc.max() + 1, maxN - rr.max() - 1), (minE + cc.max() + 1, maxN - rr.min()), (minE + cc.min(), maxN - rr.min())]
     keep = {"k": "s", "s": PLA_FROM, "n": "Port of London Authority"}
+    scene = lambda ring: Polygon([(e - oE, oN - n) for e, n in ring])
+    pts = lambda poly: [round(v, 1) for p in list(poly.exterior.coords)[:-1] for v in p]
+    crown = peak - oH - 6  # the tower's stepped top: a cornice, then a set-back stage (illustrative proportions)
+
+    def cornice(poly, y):  # a 1 m band projecting 1 m, Buildings.jsx draws "-cornice" ids in the plain stone kit
+        return {"b": round(y - 1, 1), "t": round(y, 1), "o": pts(poly.buffer(1.0, join_style="mitre")),
+                "h": [pts(poly.buffer(-0.5, join_style="mitre"))]}
+    body, shaft = scene(PLA_OUTER), scene(tower)
     return [{"id": "r1020011", "b": round(base, 1), "t": round(top, 1), "o": flat(PLA_OUTER), "h": [flat(PLA_INNER)], **keep},
-            {"id": "r1020011-tower", "b": round(top - 1, 1), "t": round(peak - oH, 1), "o": flat(tower), **keep}]
+            {"id": "r1020011-cornice", **cornice(body, top - 1.5), **keep},
+            {"id": "r1020011-tower", "b": round(top - 1, 1), "t": round(crown, 1), "o": flat(tower), **keep},
+            {"id": "r1020011-tower-cornice", **cornice(shaft, crown + 0.5), **keep},
+            {"id": "r1020011-crown", "b": round(crown, 1), "t": round(peak - oH, 1), "o": pts(shaft.buffer(-0.22 * min(shaft.bounds[2] - shaft.bounds[0], shaft.bounds[3] - shaft.bounds[1]), join_style="mitre")), **keep}]
 
 
 def chimney(b):
@@ -264,7 +276,7 @@ def main():
         r0, c0 = sl[0].start - 1, sl[1].start - 1
         pts = [(X[0] + (c + c0) * PX, Z[0] + (r + r0) * PX) for r, c in ring]
         poly = Polygon(pts).buffer(0).simplify(0.7, preserve_topology=True)
-        if poly.geom_type != "Polygon" or poly.area < 25 or precinct.contains(poly.centroid):
+        if poly.geom_type != "Polygon" or poly.area < 25 or precinct.contains(poly.centroid) or poly.centroid.distance(ORIGIN) > FAR:
             continue
         rr, cc = np.nonzero(mask)
         rr, cc = rr + sl[0].start, cc + sl[1].start

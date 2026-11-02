@@ -53,7 +53,7 @@ const FACADES = {
   b: () => facade((g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#3b3d40'; g.fillRect(22, 20, 20, 28); g.fillStyle = '#efe6d6'; g.fillRect(19, 15, 26, 5) }, 3.2, 3.2),
   // Victorian riverside warehouse: stock brick, three small windows, then a column of timber loading doors, one per
   // floor on a stone sill, stacked up the front every 12 m
-  w: () => facade((g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#2f2b28'; for (const x of [4, 15, 26]) g.fillRect(x, 20, 6, 24); g.fillStyle = '#4a3c30'; g.fillRect(41, 0, 14, 58); g.fillStyle = '#e8dcc4'; g.fillRect(38, 58, 20, 5) }, 12, 3.8),
+  w: () => facade((g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#2f2b28'; for (const x of [4, 15, 26]) g.fillRect(x, 20, 6, 24); g.fillStyle = '#6e5848'; g.fillRect(41, 0, 14, 58); g.fillStyle = '#e8dcc4'; g.fillRect(38, 58, 20, 5) }, 12, 3.8),
   // curtain wall: floor slabs and mullions over glass
   g: () => facade((g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#4f5b63'; g.fillRect(0, 54, 64, 10); g.fillStyle = '#c9d2d8'; g.fillRect(0, 0, 3, 64) }, 1.6, 3.8),
   // Kentish ragstone (the Tower of London): rough courses and, one bay in four, a narrow slit; a wall, not a terrace
@@ -159,17 +159,20 @@ function build(data) {
     const tower = date?.src === 'wiki-tower-of-london' // ragstone under lead, not the drape: the 1890s map made white boxes
     // shortcut: a riverside warehouse is known by its OSM name (Butlers Wharf Buildings, Java Wharf); unnamed ones stay generic
     const wharf = bd.k !== 'g' && /wharf|warehouse|brewhouse/i.test(bd.n ?? '') && !/car park/i.test(bd.n)
-    const pla = bd.id.startsWith(PLA) // sooted Portland stone reads as the plain coursed kit, not the office-window grid
-    const wall = tower || pla ? 'k' : wharf ? 'w' : bd.k, lead = tower || pla || wharf || bd.id === MINT // own roofs, not the photo
+    const pla = bd.id.startsWith(PLA) // sooted Portland stone with sash rows; its cornices in the plain coursed kit
+    const wall = tower || (pla && bd.id.includes('cornice')) ? 'k' : pla ? 's' : wharf ? 'w' : bd.k, lead = tower || pla || wharf || bd.id === MINT // own roofs, not the photo
+    if (wall === 'w') vary(geo, parseInt(bd.id.slice(1), 10) || 0)
+    if (pla && wall === 's') stretch(geo, 0.6, 0.72, 0) // tall Beaux-Arts windows, wider bays than the kit's terrace sashes
     const s = dated ?? bd.s
     // shortcut: a real OSM start_date of exactly 1950 reads as bake.py's guess; none is known here
     const guess = dated == null && (s == null || s === TALL_GUESS)
-    const start = !guess && s < HISTORIC_BEFORE ? s // the period city ends the plots under one built 1895-1949 (period_city.py)
+    // the period city ends the plots under one built 1895-1949 (period_city.py); past its edge (FAR) nothing stands before 1950
+    const start = !guess && s < HISTORIC_BEFORE ? (beyond(bd, FAR) && !pla ? HISTORIC_BEFORE : s)
       : guess && (bd.k === 'g' || (s === TALL_GUESS && bd.t - bd.b > 40)) ? GOOGLE_FROM
         : Math.max(s ?? HISTORIC_BEFORE, HISTORIC_BEFORE)
     const out = sets[start < HISTORIC_BEFORE ? 'o' : 'm']
     for (const grp of geo.groups) {
-      if (grp.materialIndex !== 0) push(out[wall] || out.b, geo, grp, start, bd.b, null, 1e4, out === sets.m ? modernTint(bd, wall) : WHITE)
+      if (grp.materialIndex !== 0) push(out[wall] || out.b, geo, grp, start, bd.b, null, 1e4, out === sets.m ? modernTint(bd, wall) : pla ? SOOT : WHITE)
       else if (bd.l && !lead) push(out.drape, geo, grp, start, bd.b, tileUv)
       else push(out.roof, geo, grp, start, bd.b)
     }
@@ -187,6 +190,7 @@ function build(data) {
     if (onBridgeGround(bd.o, axis) || (LITE && beyond(bd, NEAR.period))) return
     const out = sets.p
     const geo = extrude(bd)
+    if (bd.k === 'w') vary(geo, i)
     const tint = TINTS[bd.k === 'w' ? 'w' : 'b'][(i * 7919) % 5] // a stable mix of brick and stucco, house by house
     const from = bd.s ?? PERIOD_FROM, to = bd.e ?? HISTORIC_BEFORE
     for (const grp of geo.groups) {
@@ -205,6 +209,7 @@ function build(data) {
 
 // lite: the city within these radii of the bridge (m), plus the skyline; 1890 ~45k triangles instead of ~150k
 const NEAR = { osm: 700, period: 500 }, SKYLINE = 60
+const FAR = 550 // m: the period city's edge (period_city.py FAR), where the ground fades into fog
 const beyond = (bd, r) => { let x = 0, z = 0; const n = bd.o.length / 2; for (let i = 0; i < n; i++) { x += bd.o[2 * i]; z += bd.o[2 * i + 1] } return Math.hypot(x / n, z / n) > r }
 const ERA_SHOWN = { o: () => true, p: (y) => y < HISTORIC_BEFORE, m: (y) => y >= HISTORIC_BEFORE }
 
@@ -223,6 +228,7 @@ const modernTint = (bd, wall) => {
   const t = MODERN_TINTS[wall], n = parseInt(bd.id.slice(1), 10) || 0
   return !t ? WHITE : wall === 's' && bd.t - bd.b > 20 ? t[2 + (n % 2)] : t[n % t.length]
 }
+const SOOT = [0.84, 0.82, 0.78] // Portland stone after fifty years of coal smoke
 const SLATE = [[1, 1, 1], [0.86, 0.88, 0.92], [1.12, 1.06, 1.0]]
 const WHITE = [1, 1, 1]
 const PERIOD_FROM = 1066 // before the timeline starts: the period city stands from the first year shown
@@ -257,6 +263,17 @@ function hipRoof(p, y, pitch) {
   g.setAttribute('uv', new THREE.Float32BufferAttribute(tris.flatMap((v) => [v.x, v.z]), 2))
   g.computeVertexNormals() // non-indexed: flat per face
   return g
+}
+
+// A warehouse's own bay width, storey height and window scale on the shared kit (uv stretch, so no new draw calls):
+// a row of them stops reading as one grid. Side-wall v runs 1 - height, so scale about 1 to keep the ground line.
+function vary(geo, n) {
+  const r = (k) => ((n * k) % 997) / 997
+  stretch(geo, 0.75 + 0.55 * r(7919), 0.82 + 0.4 * r(104729), 12 * r(15485863))
+}
+function stretch(geo, su, sv, ou) {
+  const uv = geo.attributes.uv
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * su + ou, 1 + (uv.getY(i) - 1) * sv)
 }
 
 const newBucket = () => ({ pos: [], nor: [], uv: [], col: [], start: [], end: [], base: [] })

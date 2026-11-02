@@ -1,4 +1,4 @@
-// <ReadyProbe /> lives inside the Canvas: it tracks the real loads (place data, LiDAR terrain, the bridge, textures
+// <ReadyProbe /> lives inside the Canvas: it tracks the real loads (place data, LiDAR terrain, the bridge, the river, textures
 // through three's loading manager, Google's 3D city) and sets sceneSettled once all are in and the scene has drawn
 // half a second of frames. It feeds the DOM card in ui/SceneLoading.jsx through useLoad.
 import { useEffect, useRef } from 'react'
@@ -29,6 +29,8 @@ const SETTLE = 0.5 // s of frames with everything in before the card lifts
 // embed waits 2.5 s: its card must lift inside 5 s, and a 403 lands only after the bridge is built (root request, then a
 // retry), so it hit the 8 s cap; tiles that arrive later fade in under the hero shot (TilesFadePlugin)
 const CITY_WAIT = EMBED ? 2500 : 8000
+const RIVER_WAIT = 4000 // ms: the river (scene/Water.jsx 'thames', the mirror on desktop) or the card lifts without it
+const waterSlot = !!import.meta.glob('../scene/Water.jsx')['../scene/Water.jsx'] // no file: the stand-in is the river
 
 // Never re-renders: loads start inside other components' renders (pbr() and friends), and a probe that
 // re-rendered on them restarted the suspended scene slots for ever. So it polls plain values each frame.
@@ -37,6 +39,7 @@ export function ReadyProbe() {
   const held = useRef(0)
   const last = useRef('')
   const bridge = useRef(false)
+  const river = useRef(false)
   const start = useRef(0)
   useEffect(() => { terrainChunk?.().then((m) => m.loadTerrain()).finally(() => { terrainIn = true }) }, [])
   useFrame((_, dt) => {
@@ -46,11 +49,12 @@ export function ReadyProbe() {
     const wanted = TILES && !!google && st.year >= google.GOOGLE_FROM && !st.lidar
     start.current ||= performance.now()
     const city = !wanted || google.useGoogle.getState().status !== 'loading' || performance.now() - start.current > CITY_WAIT
+    river.current ||= !waterSlot || !!scene.getObjectByName('thames') || performance.now() - start.current > RIVER_WAIT
     const place = !!st.place, active = tex.pending > 0, total = tex.pending + tex.done
     const steps = [
       ['History', place], ['LiDAR ground', terrainIn], // textures before the bridge: it waits on them, and their count moves
       [total ? `Textures ${tex.done} of ${total}` : 'Textures', !active && bridge.current, total ? tex.done / total : 0],
-      ['Bridge', bridge.current], ['3D city', city],
+      ['Bridge', bridge.current], ['River', river.current], ['3D city', city],
     ]
     const key = JSON.stringify(steps)
     if (key !== last.current) { // the DOM card's store only; nothing in the Canvas listens to it

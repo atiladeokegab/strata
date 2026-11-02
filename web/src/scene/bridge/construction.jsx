@@ -6,6 +6,7 @@ import { useFrame } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import { beam, box, merge, M } from './geom.js'
 import { L, RAMP } from './structures.jsx'
+import { WATER_Y } from './vessels.js'
 import { approachWorks } from './stages.js'
 import { pbr } from '../look/textures.js'
 
@@ -28,7 +29,7 @@ function hull(len, w, x, z, rotY = 0) {
   // flat-bottomed lighter: hull, raised coamings, a hold
   return merge([box(w, 2.2, len, 0, 0.1, 0), box(w * 0.7, 0.6, len * 0.6, 0, 1.5, 0)])
     .rotateY(rotY)
-    .translate(x, L.hw + 0.6, z)
+    .translate(x, WATER_Y + 0.6, z) // on the drawn river, not high water
 }
 
 // stage 0: timber staging round the cofferdam, a steam piling rig, moored barges

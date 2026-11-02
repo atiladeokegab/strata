@@ -10,6 +10,7 @@ import { beam, box, merge, M } from './geom.js'
 import { LITE } from '../look/tier.js'
 import { Part } from './Part.jsx'
 import { L } from './structures.jsx'
+import { WATER_Y } from './vessels.js'
 import { OPEN_TIME_S } from './hydraulics.js'
 
 let MATS
@@ -320,7 +321,7 @@ const dashTexture = () => {
 
 const WATER = '#5fd4ff', OIL = '#ffae3a' // steam-era water mains; oil from 1976 (electro-hydraulic)
 // The river main lifted to just above the water, shown as a ghost while the north pier is x-rayed or exploded.
-const GHOST = [[0, L.hw + 0.5, 30], [0, L.hw + 0.5, -30]]
+const GHOST = [[0, WATER_Y + 0.5, 30], [0, WATER_Y + 0.5, -30]] // the drawn river, not high water
 
 function Flow({ rt, steam }) {
   const sim = rt.sim

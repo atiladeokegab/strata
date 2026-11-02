@@ -30,6 +30,7 @@ import { LiftControls } from './liftControls.jsx'
 import { useHomeDisc } from './homeDisc.js'
 import { Interior } from './interior.jsx'
 import { LITE } from '../look/tier.js'
+import { useNear } from './useNear.js'
 
 // The live sim state, for any panel that wants to show pressure or stored volume. Read-only.
 export const bridgeHydraulics = createHydraulics()
@@ -45,12 +46,13 @@ function Half({ side, rt, st, towerTop, era, maxAngle, disc }) {
   const id = (base) => `${base}-${side}`
   const towerId = n ? 'north-tower' : 'south-tower'
   const sim = rt.sim
-  // LITE: the stair and lift interiors only draw when you can see them (frame still open, exploded, or x-rayed by a selection)
-  const selected = useStore((s) => s.selected)
-  const exploded = useStore((s) => s.exploded)
-  const inside = !LITE || !shown('cladding', st.stage) || exploded || containersOf(selected).includes(towerId)
+  // the stair and lift interiors draw only when you can see them: frame still open, camera within 60 m of the
+  // tower (desktop), walk mode, exploded, or x-rayed by a selection
+  const half = useRef()
+  const near = useNear(half, [0, 20, S.L.pierZ], [towerId, id('stairs'), id('lift')], LITE ? 0 : 60)
+  const inside = !shown('cladding', st.stage) || near
   return (
-    <group rotation={[0, n ? 0 : Math.PI, 0]}>
+    <group ref={half} rotation={[0, n ? 0 : Math.PI, 0]}>
       {shown('cofferdam', st.stage) && (
         <Part id={id('cofferdam')} rt={rt}>
           <S.Cofferdam />

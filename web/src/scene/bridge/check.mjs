@@ -537,7 +537,7 @@ console.log('geom materials untextured, all kinded ok')
   const STUB = {
     react: `const H={useMemo:(f)=>f(),useRef:(v=null)=>({current:v}),useState:(v)=>[typeof v==='function'?v():v,()=>{}],useEffect(){},useLayoutEffect(){},useDebugValue(){},useCallback:(f)=>f,useSyncExternalStore:(s,get)=>get(),useContext:()=>({}),createContext:()=>({}),memo:(c)=>c,use:()=>({}),Suspense:()=>null};export const {useMemo,useRef,useState,useEffect,useLayoutEffect,useDebugValue,useCallback,useSyncExternalStore,useContext,createContext,memo,use,Suspense}=H;export default H`,
     'react/jsx-runtime': `export const Fragment=Symbol('F'),jsx=(type,props)=>({type,props}),jsxs=jsx`,
-    '@react-three/fiber': `export const useFrame=()=>{},useThree=(sel=(s)=>s)=>sel({gl:globalThis.__gl??{},camera:{},size:{width:1,height:1},scene:{}})`,
+    '@react-three/fiber': `export const useFrame=()=>{},useThree=(sel=(s)=>s)=>sel({gl:globalThis.__gl??{},camera:globalThis.__cam??{},size:{width:1,height:1},scene:{}})`,
     '@react-three/drei': `export const Html=()=>null,Text=()=>null`,
     textures: `export const pbr=()=>({})`,
     tier: `export let LITE=false;export const setLite=(v)=>(LITE=v)`, // ?lite=1, switchable per render
@@ -868,8 +868,21 @@ console.log('geom materials untextured, all kinded ok')
       assert.ok(n <= B.maxTriangles, `${tier} ${y}: bridge has ${Math.round(n)} triangles, over the ${B.maxTriangles} budget (budget.json).${hint}`)
     })
     // desktop static joins (towers, abutments with ramps, bascule leaves, walkways): 216 -> ~187 calls in 2026 (+1 soffit plate per leaf, +1 outside mains)
-    if (tier === 'full') assert.ok(totals[0][0] <= 188, `full 2026: ${totals[0][0]} calls, over the 188 the desktop joins allow; join new static meshes per material`)
+    if (tier === 'full') assert.ok(totals[0][0] <= 185, `full 2026: ${totals[0][0]} calls, over 185 (183 measured with useNear + 2); join new static meshes per material`)
     console.log(`render budget ${tier} ok (${years.map((y, i) => `${y}: ${totals[i][0]}/${B.maxDrawCalls} calls, ${Math.round(totals[i][1])}/${B.maxTriangles} tris`).join('; ')})`)
+  }
+  // far camera (desktop): the stair and lift interiors (useNear) start hidden when the camera is past 60 m
+  {
+    const { nearNow } = await import('./useNear.js')
+    assert.ok(nearNow(54, false, 60, 5) && !nearNow(56, false, 60, 5) && nearNow(64, true, 60, 5) && !nearNow(66, true, 60, 5), 'useNear: on inside 55 m, off past 65 m')
+    assert.ok(!nearNow(1, true, 0, 5), 'useNear: r = 0 never near')
+    globalThis.__cam = { position: new T.Vector3(0, 30, 400) }
+    const far = {}
+    tally({ type: TowerBridge, props: {} }, null, far)
+    delete globalThis.__cam
+    const gated = ['stairs-north', 'stairs-south', 'lift-north', 'lift-south']
+    for (const id of gated) assert.ok(!far[id]?.[0], `far camera: ${id} still draws ${far[id]?.[0]} calls`)
+    console.log(`render budget full, far camera 2026: ${sum(0, far)} calls, ${Math.round(sum(1, far))} tris (interiors hidden: ${gated.join(', ')})`)
   }
   // 1890 (centring under the leaves, derricks on the frames): phones render the build years too, so the
   // construction works (works-*) may not draw more calls than budget.json's baseline1890 records

@@ -8,7 +8,7 @@ Shaded land is traced into blocks, split along a 22 m grid turned to the bridge 
 separate houses, and extruded. Buildings dated to 1894 or earlier (OSM start_date, or modern_dates.py: the Tower of
 London precinct) are cut out:
 Buildings.jsx already draws those from OSM, so nothing overlaps. A plot under an OSM building dated 1895-1949 stands
-until that year, when Buildings.jsx shows the new one.
+until that year, when Buildings.jsx shows the new one. Nothing is traced inside the Tower of London or its moat.
 Heights (status inferred): there are no surveyed 1890s heights, so each block gets a period height by use:
 riverside and dock warehouses (within 70 m of the water) 15-22 m, one lot in ten of a large inland block (breweries,
 works) 13-17 m, terraced houses and shops 9-14 m (3-4 storeys). Ground: the bare-earth surface Terrain.jsx draws before 1950, so walls meet it.
@@ -46,6 +46,7 @@ ORIGIN = Point(0, 0)  # the bridge centre, in the scene frame
 BUILT_BY = 1894
 EAST_BASIN = (534060, 180470)  # a point inside St Katharine's east dock (OSGB)
 BLITZ, MODERN = 1940, 1950
+MOAT = 25.0  # m round the Tower's outer towers: the moat (drained in 1843, so grass in the period) and its banks
 ROOFED = 650  # m from the bridge centre: pitched roofs where the camera usually is
 # Tower Bridge Road (south) and Tower Bridge Approach (north), cut through the old streets for the bridge and opened
 # with it in 1894: OSM carriageway centrelines (OSGB, ODbL) and a 20 m street. A traced plot mostly on it stands until then.
@@ -109,8 +110,12 @@ def main():
     keep = Image.new("1", (W, H), 0)
     d = ImageDraw.Draw(keep)
     later = []  # OSM buildings dated 1895-1949 (Adelaide House, 1925): Buildings.jsx shows them from that year
+    castle = []  # the Tower of London's buildings and towers (modern_dates.py)
     for b in osm["buildings"]:
-        s = dates.get(b["id"].split("-")[0], {}).get("s", b.get("s"))
+        date = dates.get(b["id"].split("-")[0], {})
+        s = date.get("s", b.get("s"))
+        if date.get("src") == "wiki-tower-of-london":
+            castle.append(Polygon(list(zip(b["o"][0::2], b["o"][1::2]))).buffer(0))
         if s is not None and BUILT_BY < s < MODERN:
             later.append((Polygon(list(zip(b["o"][0::2], b["o"][1::2]))).buffer(0), s))
         if s is not None and s <= BUILT_BY:
@@ -124,6 +129,8 @@ def main():
     assert 4000 < east.sum() * PX * PX < 40000, "east dock not found on the plan"
     blitzed = ndi.distance_transform_edt(~east) * PX < 40
 
+    # inside the walls and the moat the plan's shading is the Tower itself, drawn from OSM: no houses on the green
+    precinct = unary_union(castle).convex_hull.buffer(MOAT)
     near_water = ndi.distance_transform_edt(~(blue | ~land)) * PX < 70
     plots = (np.floor(u / PLOT).astype(np.int64) * 1000 + np.floor(v / PLOT).astype(np.int64))
     blocks, nb = ndi.label(shaded)
@@ -150,7 +157,7 @@ def main():
         r0, c0 = sl[0].start - 1, sl[1].start - 1
         pts = [(X[0] + (c + c0) * PX, Z[0] + (r + r0) * PX) for r, c in ring]
         poly = Polygon(pts).buffer(0).simplify(0.7, preserve_topology=True)
-        if poly.geom_type != "Polygon" or poly.area < 25:
+        if poly.geom_type != "Polygon" or poly.area < 25 or precinct.contains(poly.centroid):
             continue
         rr, cc = np.nonzero(mask)
         rr, cc = rr + sl[0].start, cc + sl[1].start

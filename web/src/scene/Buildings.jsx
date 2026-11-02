@@ -54,6 +54,8 @@ const FACADES = {
   w: () => facade((g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#2f2b28'; g.fillRect(8, 22, 14, 20); g.fillStyle = '#4a3020'; g.fillRect(40, 12, 18, 40); g.fillStyle = '#e4d8c4'; g.fillRect(0, 58, 64, 3) }, 5.0, 3.4),
   // curtain wall: floor slabs and mullions over glass
   g: () => facade((g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#4f5b63'; g.fillRect(0, 54, 64, 10); g.fillStyle = '#c9d2d8'; g.fillRect(0, 0, 3, 64) }, 1.6, 3.8),
+  // Kentish ragstone (the Tower of London): rough courses, a narrow window or slit now and then
+  k: () => facade((g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#e2ddd3'; for (let y = 6; y < 64; y += 14) g.fillRect(0, y, 64, 2); g.fillStyle = '#34322f'; g.fillRect(29, 20, 7, 24) }, 4.5, 4.5),
 }
 
 const LOOK = {
@@ -61,6 +63,7 @@ const LOOK = {
   b: { color: '#b39270', roughness: 0.92 },
   g: { color: '#8ea2b0', roughness: 0.14, metalness: 0.55, envMapIntensity: 1.4 },
   w: { color: '#7f7464', roughness: 0.95 }, // sooted London stock brick: dull grey-yellow, not orange
+  k: { color: '#a39886', roughness: 0.97 }, // Kentish ragstone, grey-buff
   roof: { color: '#6b6862', roughness: 0.95 },
   slate: { color: '#4d5258', roughness: 0.8 }, // Welsh slate
   r: { color: '#8b6f58', roughness: 1 }, // Blitz rubble: brick dust and charred timber, 1940-1950
@@ -69,6 +72,24 @@ const LOOK = {
 const TERRAIN = '/terrain/tower-bridge/'
 const HISTORIC_BEFORE = 1950 // the timeline's historic years, as in google/state.js
 const TALL_GUESS = 1950 // bake.py's start for an undated building over 40 m
+const WHITE_TOWER = 'w369135772' // OSM way, as in modern_dates.py
+
+// The White Tower's four corner turrets over its footprint's bounds, each with a lead cupola; the north-east one is
+// round (wiki-tower-of-london). Sizes are illustrative: about 7 m across, 7 m above the parapet, a 5 m cupola.
+function turrets(bd) {
+  const xs = bd.o.filter((_, i) => i % 2 === 0), zs = bd.o.filter((_, i) => i % 2 === 1)
+  const [x0, x1, z0, z1] = [Math.min(...xs), Math.max(...xs), Math.min(...zs), Math.max(...zs)]
+  const walls = [], caps = []
+  for (const [x, z] of [[x0, z0], [x1, z0], [x1, z1], [x0, z1]]) {
+    const cx = x + (x === x0 ? 3.5 : -3.5), cz = z + (z === z0 ? 3.5 : -3.5)
+    const round = x === x1 && z === z0 // grid z runs south: z0 is the north side
+    const w = round ? new THREE.CylinderGeometry(4, 4, 11, 12, 1, true) : new THREE.BoxGeometry(7, 11, 7)
+    walls.push(w.toNonIndexed().translate(cx, bd.t + 1.5, cz))
+    caps.push(new THREE.ConeGeometry(round ? 4.4 : 5, 5, 8).toNonIndexed().translate(cx, bd.t + 9.5, cz))
+    w.dispose()
+  }
+  return { walls, caps }
+}
 
 // Era cut and contact shadow, injected into a stock material (and its shadow depth twin).
 function eraPatch(uniforms, shade) {
@@ -90,7 +111,7 @@ function eraPatch(uniforms, shade) {
 // One mesh per look: footprints -> extruded walls + roofs, packed into four big geometries.
 function build(data) {
   // one set of looks per era, so a year draws only its own: o = standing by 1894 (always), p = the 1890s city (to 1950), m = modern
-  const looks = () => ({ s: newBucket(), b: newBucket(), g: newBucket(), w: newBucket(), r: newBucket(), roof: newBucket(), slate: newBucket(), drape: newBucket() })
+  const looks = () => ({ s: newBucket(), b: newBucket(), g: newBucket(), w: newBucket(), k: newBucket(), r: newBucket(), roof: newBucket(), slate: newBucket(), drape: newBucket() })
   const sets = { o: looks(), p: looks(), m: looks() }
   // the terrain's uv mapping (Terrain.jsx grid): u east across the tile, v = 1 at its north edge
   const [minE, minN, maxE, maxN] = data.frame.bbox_osgb
@@ -102,7 +123,8 @@ function build(data) {
     if (LITE && beyond(bd, NEAR.osm) && bd.t - bd.b < SKYLINE) continue
     const geo = extrude(bd)
     // before 1950 only buildings with a real date show; the period city (below) carries the rest
-    const dated = data.dates[bd.id.split('-')[0]]?.s
+    const date = data.dates[bd.id.split('-')[0]], dated = date?.s
+    const tower = date?.src === 'wiki-tower-of-london' // ragstone under lead, not the drape: the 1890s map made white boxes
     const s = dated ?? bd.s
     // shortcut: a real OSM start_date of exactly 1950 reads as bake.py's guess; none is known here
     const guess = dated == null && (s == null || s === TALL_GUESS)
@@ -111,11 +133,17 @@ function build(data) {
         : Math.max(s ?? HISTORIC_BEFORE, HISTORIC_BEFORE)
     const out = sets[start < HISTORIC_BEFORE ? 'o' : 'm']
     for (const grp of geo.groups) {
-      if (grp.materialIndex !== 0) push(out[bd.k] || out.b, geo, grp, start, bd.b)
-      else if (bd.l) push(out.drape, geo, grp, start, bd.b, tileUv)
+      if (grp.materialIndex !== 0) push(out[tower ? 'k' : bd.k] || out.b, geo, grp, start, bd.b)
+      else if (bd.l && !tower) push(out.drape, geo, grp, start, bd.b, tileUv)
       else push(out.roof, geo, grp, start, bd.b)
     }
     geo.dispose()
+    if (bd.id === WHITE_TOWER) {
+      const { walls, caps } = turrets(bd)
+      for (const [list, b] of [[walls, out.k], [caps, out.roof]]) {
+        for (const g of list) { push(b, g, { start: 0, count: g.attributes.position.count }, start, bd.b); g.dispose() }
+      }
+    }
   }
   // the 1890s riverside: from before the bridge until 1950, brick walls under slate; the Blitz ends some in 1940
   // and leaves rubble ("r") and roofless wall stubs on their plots (period_city.py)

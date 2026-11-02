@@ -14,15 +14,29 @@ export const ORIGIN = {
 // ReorientationPlugin puts the origin at (0,0,0) with x west, z north; turning 180 deg about y gives x east, z south.
 export const FRAME_ROTATION_Y = Math.PI + THREE.MathUtils.degToRad(ORIGIN.bearing)
 
-// Google's own bridge is cut out so ours stands in the gap: a narrow box along the deck and side spans, and a wider
-// one over the piers and towers. Only above the floor, so the tiles' Thames (at about y = -13.5) stays.
-export const GAP = { floor: -12, deck: [12, 186], piers: [30, 62] } // [half width x, half length z], m; deck reaches past the shore abutments (Google's stand at 136-143)
+// Google's own bridge is cut out so ours stands in the gap: one box per element of the whole bridge envelope, each
+// from GAP.floor to the sky (so chains and tower tops go too). Only above the floor, so the tiles' Thames (y about
+// -13.5) stays. Boxes are [x0, x1, z0, z1] in our frame; `both` mirrors one onto the north end (z -> -z).
+// Our parts: piers |x| 28.8, z 30.5-60.5; towers |x| 13; chains x = +-10.5 up to the tower tops; shore abutment towers
+// |x| 10-16, |z| 138.5-148.5 (Google's stand at 136-143); approach ramps to |z| 183.5; engine house x 20-44, z 146-166,
+// accumulator at x 18.9, z 143.8 (south bank, east). Margins cover the tiles' ~2 m georeference error and blobby meshes.
+export const GAP = {
+  floor: -12,
+  boxes: [
+    { box: [-12, 12, -1, 186], both: true }, // deck, bascules and both approach ramps
+    { box: [-20, 20, -1, 136], both: true }, // side spans and their chains, over the river
+    { box: [-34, 34, -1, 66], both: true }, // piers and towers, walkways
+    { box: [-18.5, 18.5, 126, 152], both: true }, // shore abutment towers and chain anchorages
+    { box: [14, 49.5, 126, 171.5] }, // engine house, accumulator tower and chimney (south bank)
+  ],
+}
+export const inGap = (x, y, z) => y > GAP.floor && GAP.boxes.some(({ box: [x0, x1, z0, z1], both }) =>
+  x > x0 && x < x1 && ((z > z0 && z < z1) || (both && -z > z0 && -z < z1)))
 
+const f = (v) => v.toFixed(1)
 const DISCARD = `
-  if (vStrataWorld.y > ${GAP.floor.toFixed(1)} && (
-    (abs(vStrataWorld.x) < ${GAP.deck[0].toFixed(1)} && abs(vStrataWorld.z) < ${GAP.deck[1].toFixed(1)}) ||
-    (abs(vStrataWorld.x) < ${GAP.piers[0].toFixed(1)} && abs(vStrataWorld.z) < ${GAP.piers[1].toFixed(1)}) ||
-    (vStrataWorld.x > 14.0 && vStrataWorld.x < 49.5 && vStrataWorld.z > 138.5 && vStrataWorld.z < 171.5))) discard; // our engine house + accumulator (south bank)`
+  if (vStrataWorld.y > ${f(GAP.floor)} && (${GAP.boxes.map(({ box: [x0, x1, z0, z1], both }) =>
+    `(vStrataWorld.x > ${f(x0)} && vStrataWorld.x < ${f(x1)} && ${both ? 'abs(vStrataWorld.z)' : 'vStrataWorld.z'} > ${f(z0)} && ${both ? 'abs(vStrataWorld.z)' : 'vStrataWorld.z'} < ${f(z1)})`).join(' ||\n    ')})) discard;`
 
 // Adds the gap discard to a tile material (world-space test, so it holds however the tileset is placed).
 export function cutGap(material) {

@@ -2,6 +2,7 @@
 :root {
   /* surfaces: off-white page, frosted white glass panels */
   --bg: #f5f5f7;
+  --sky: #c9d3d8; /* the scene's first-frame sky (Stage DefaultLook); the page under the canvas matches it */
   --surface: rgba(255, 255, 255, .78);
   --surface-solid: #ffffff;
   --fill: rgba(0, 0, 0, .04);
@@ -36,7 +37,7 @@
   font-synthesis: none; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; color-scheme: light;
 }
 * { box-sizing: border-box; }
-html, body, #root { margin: 0; height: 100%; overflow: hidden; background: var(--bg); }
+html, body, #root { margin: 0; height: 100%; overflow: hidden; background: var(--sky); }
 button, input { font: inherit; color: inherit; }
 button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 button:disabled { cursor: default; opacity: .45; }

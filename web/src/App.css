@@ -237,7 +237,7 @@ input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 
 /* drags over the scene never select label text (the labels' inline all:unset needs !important) */
 .stage, .stage button { -webkit-user-select: none !important; user-select: none !important; }
 /* loading card over the canvas until the first settled frame; painted under the panel, dock and controls (DOM order) */
-.scene-loading { position: absolute; inset: 0; display: grid; background: var(--bg); animation: scene-in .2s ease-out; }
+.scene-loading { position: absolute; inset: 0; display: grid; background: var(--sky); animation: scene-in .2s ease-out; }
 .scene-loading-card { position: absolute; left: calc(50% + var(--panel-w) / 2 + var(--gap) / 2); top: 50%; transform: translate(-50%, -50%);
   width: min(360px, calc(100% - 32px)); padding: var(--s5); display: grid; gap: var(--s2); }
 .scene-loading p { margin: 0; }

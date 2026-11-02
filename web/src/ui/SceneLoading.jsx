@@ -1,6 +1,6 @@
-// The loading card over the canvas after Enter, until the first lit, settled frame (store.sceneReady).
+// The loading card over the canvas after Enter, until the scene has settled (store.sceneSettled).
 // <ReadyProbe /> lives inside the Canvas: it tracks the real loads (place data, LiDAR terrain, the bridge,
-// textures through three's loading manager, Google's 3D city) and sets sceneReady once all are in and the
+// textures through three's loading manager, Google's 3D city) and sets sceneSettled once all are in and the
 // scene has drawn half a second of frames. <SceneLoading /> is the DOM card; the panel, dock and controls
 // stay usable above it. It waits 250 ms before showing, so a fast load never flashes it.
 import { useEffect, useRef, useState } from 'react'
@@ -34,7 +34,7 @@ export function ReadyProbe() {
   useEffect(() => { terrainChunk?.().then((m) => m.loadTerrain()).finally(() => { terrainIn = true }) }, [])
   useFrame((_, dt) => {
     const st = useStore.getState()
-    if (st.sceneReady) return
+    if (st.sceneSettled) return
     bridge.current ||= !!scene.getObjectByName('tower-bridge')
     const wanted = TILES && !!google && st.year >= google.HISTORIC_BEFORE && !st.lidar
     const city = !wanted || google.useGoogle.getState().status !== 'loading'
@@ -50,13 +50,13 @@ export function ReadyProbe() {
       useLoad.setState({ steps, frac: steps.reduce((a, [, done, part]) => a + (done ? 1 : part ?? 0), 0) / (steps.length + 1) })
     }
     held.current = steps.every(([, done]) => done) ? held.current + dt : 0
-    if (held.current >= SETTLE) st.setSceneReady(true)
+    if (held.current >= SETTLE) st.setSceneSettled(true)
   })
   return null
 }
 
 export function SceneLoading() {
-  const ready = useStore((s) => s.sceneReady)
+  const ready = useStore((s) => s.sceneSettled)
   const { steps, frac } = useLoad()
   const [show, setShow] = useState(false)
   const [late, setLate] = useState(false)
@@ -78,7 +78,7 @@ export function SceneLoading() {
         <ol className="steps">
           {steps.map(([name, done]) => { const n = name.replace(/ \d+ of \d+$/, ''); return <li key={n} className={done ? 'done' : ''}>{n}</li> })}
         </ol>
-        {late && <button type="button" onClick={() => useStore.getState().setSceneReady(true)}>Show it as it is</button>}
+        {late && <button type="button" onClick={() => useStore.getState().setSceneSettled(true)}>Show it as it is</button>}
       </div>
     </div>
   )

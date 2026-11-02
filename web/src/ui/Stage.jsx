@@ -13,11 +13,12 @@ export const WORLD_TURN = (20.95 * Math.PI) / 180 // meta.json bridge_axis_deg
 const Terrain = makeSlot('Terrain', ['../scene/Terrain.jsx'], GroundStandIn)
 const Water = makeSlot('Water', ['../scene/Water.jsx'], WaterStandIn)
 const TowerBridge = makeSlot('TowerBridge', ['../scene/bridge/TowerBridge.jsx', '../scene/bridge/index.jsx'], BridgeStandIn)
-const Look = makeSlot('Look', ['../scene/Look.jsx'], DefaultLook)
+const Look = makeSlot('Look', ['../scene/Look.jsx'], DefaultLook, true)
 const Tour = makeSlot('Tour', ['../scene/Tour.jsx'])
 const GoogleTiles = makeSlot('GoogleTiles', ['../scene/GoogleTiles.jsx'])
 const Buildings = makeSlot('Buildings', ['../scene/Buildings.jsx'])
 const Landmarks = makeSlot('Landmarks', ['../scene/Landmarks.jsx'])
+const SKY = '#c9d3d8' // index.css --sky
 const SUN = [-320, 260, 420] // late-afternoon light from the south-west
 
 function partOf(object, ids) {
@@ -115,6 +116,7 @@ export function Stage() {
       shadows
       dpr={[1, 2]}
       camera={{ position: [170, 75, 190], fov: 45, near: 0.3, far: 6000 }}
+      onCreated={({ gl }) => gl.setClearColor(SKY)} // before Look paints its sky
       onPointerMissed={(e) => e.type === 'click' && select(null)}
     >
       <Look />
@@ -146,8 +148,8 @@ export function Stage() {
 function DefaultLook() {
   return (
     <>
-      <color attach="background" args={['#c9d3d8']} />
-      <fog attach="fog" args={['#c9d3d8', 900, 3200]} />
+      <color attach="background" args={[SKY]} />
+      <fog attach="fog" args={[SKY, 900, 3200]} />
       <Sky distance={4500} sunPosition={SUN} turbidity={7} rayleigh={1.4} mieCoefficient={0.006} mieDirectionalG={0.85} />
       <hemisphereLight args={['#dfe8ef', '#4b4536', 0.75]} />
       <directionalLight

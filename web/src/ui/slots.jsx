@@ -16,14 +16,15 @@ export class Guard extends Component {
   render() { return this.state.failed ? this.props.fallback : this.props.children }
 }
 
-export function makeSlot(name, paths, Fallback = () => null) {
+// whileLoading: show Fallback while the chunk loads too (Look: the first frame is lit before its code arrives)
+export function makeSlot(name, paths, Fallback = () => null, whileLoading = false) {
   const key = paths.find((p) => mods[p])
   const Real = key && lazy(() => mods[key]().then((m) => ({ default: m[name] || m.default })))
   function Slot(props) {
     if (!Real) return <Fallback {...props} />
     return (
       <Guard name={name} fallback={<Fallback {...props} />}>
-        <Suspense fallback={null}><Real {...props} /></Suspense>
+        <Suspense fallback={whileLoading ? <Fallback {...props} /> : null}><Real {...props} /></Suspense>
       </Guard>
     )
   }

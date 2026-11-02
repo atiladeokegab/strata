@@ -32,8 +32,10 @@ export const useStore = create((set) => ({
   setExploded: (exploded) => set({ exploded }),
   lidar: false, // show the terrain as the raw LiDAR point cloud
   setLidar: (lidar) => set({ lidar }),
-  sceneReady: false, // first lit, settled frame drawn (ui/SceneLoading.jsx ReadyProbe); the loading card lifts then
+  sceneReady: false, // first lit frame with the bridge in it (scene/Look.jsx FirstFrame); photo textures start then
   setSceneReady: (sceneReady) => set({ sceneReady }),
+  sceneSettled: false, // terrain, textures, bridge and Google's first view all in (ui/SceneLoading.jsx); the loading card lifts
+  setSceneSettled: (sceneSettled) => set({ sceneSettled }),
   bascule: 0, // 0 closed .. 1 fully open
   setBascule: (bascule) => set({ bascule: Math.min(1, Math.max(0, bascule)) }),
 }))

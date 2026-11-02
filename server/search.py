@@ -52,35 +52,38 @@ def _signature(docs):
     return tuple(_text(document) for document in docs)
 
 
-async def _embed(texts):
-    async with AsyncOpenAI(timeout=8, max_retries=0) as client:
-        response = await client.embeddings.create(model=EMBEDDING_MODEL, input=texts)
+async def _embed(texts, client=None):
+    if client is None:
+        async with AsyncOpenAI(timeout=8, max_retries=0) as client:
+            response = await client.embeddings.create(model=EMBEDDING_MODEL, input=texts, timeout=8)
+    else:
+        response = await client.embeddings.create(model=EMBEDDING_MODEL, input=texts, timeout=8)
     return [item.embedding for item in sorted(response.data, key=lambda item: item.index)]
 
 
-async def warm_search(place):
+async def warm_search(place, client=None):
     """Embed this place's documents once at startup; failure leaves keyword search ready."""
     docs = [document for document, _ in documents(place)]
     signature = _signature(docs)
     key = place["id"]
-    if not os.getenv("OPENAI_API_KEY") or (_cache.get(key) or (None,))[0] == signature:
+    if (client is None and not os.getenv("OPENAI_API_KEY")) or (_cache.get(key) or (None,))[0] == signature:
         return
     try:
-        vectors = await _embed([_text(document) for document in docs])
+        vectors = await _embed([_text(document) for document in docs], client)
         if len(vectors) == len(docs):
             _cache[key] = signature, docs, vectors
     except (OpenAIError, TimeoutError, OSError):
         _cache.pop(key, None)
 
 
-async def semantic_search(place, question, limit=20):
+async def semantic_search(place, question, limit=20, client=None):
     docs = [document for document, _ in documents(place)]
     signature = _signature(docs)
     cached = _cache.get(place["id"])
-    if not os.getenv("OPENAI_API_KEY") or not cached or cached[0] != signature or not question.strip():
+    if (client is None and not os.getenv("OPENAI_API_KEY")) or not cached or cached[0] != signature or not question.strip():
         return search(place, question, limit)
     try:
-        query = (await _embed([question]))[0]
+        query = (await _embed([question], client))[0]
         query_norm = math.sqrt(sum(value * value for value in query))
         if not query_norm:
             return search(place, question, limit)

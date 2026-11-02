@@ -60,6 +60,61 @@ export function rampFloor({ meta, heights, w, h }) {
       if (heights[g] > top) heights[g] += (top - heights[g]) * k
     }
   }
+  return hideViaducts({ meta, heights, w, h })
+}
+
+// Past each ramp's end the DTM's approach viaducts (build.py keep_approaches) go too, so 1886 has no road on arches
+// ahead of the bridge: in the corridor (`half` m either side, to `to` m along) the ground is the DTM opened (a min then a
+// max over `open` m), which keeps the city's broad ground and drops any ridge narrower than 2 x `open`; and from the
+// ramp's floor the ground falls `slope` m a metre to it, so the half-built ramp of 1890-93 ends on a bank, not a drop.
+export const VIADUCTS = { to: 360, fade: 20, half: 50, blendX: 10, open: 13, slope: 0.3 }
+
+function hideViaducts({ meta, heights, w, h }) {
+  const t = (meta.bridge_axis_deg * Math.PI) / 180, c = Math.cos(t), s = Math.sin(t)
+  const [minE, , maxE, maxN] = meta.bbox_osgb, [oE, oN] = meta.origin_osgb, res = (maxE - minE) / w, R = RAMP_FLOOR, V = VIADUCTS
+  const r = Math.max(1, Math.round(V.open / res))
+  for (const side of [-1, 1]) { // north, then south: one box each, not the river between
+    const cells = [], corners = [[-V.half, R.to], [V.half, R.to], [-V.half, V.to], [V.half, V.to]].map(([x, z]) => [x * s + z * side * c, x * c - z * side * s]) // grid (gz, gx)
+    const ci = corners.map(([gz]) => (gz - oN + maxN) / res - 0.5), cj = corners.map(([, gx]) => (gx + oE - minE) / res - 0.5)
+    let i0 = h, i1 = -1, j0 = w, j1 = -1
+    for (let i = Math.max(0, Math.floor(Math.min(...ci))); i <= Math.min(h - 1, Math.ceil(Math.max(...ci))); i++) {
+      const gz = oN - (maxN - (i + 0.5) * res)
+      for (let j = Math.max(0, Math.floor(Math.min(...cj))); j <= Math.min(w - 1, Math.ceil(Math.max(...cj))); j++) {
+        const gx = minE + (j + 0.5) * res - oE, x = gx * c + gz * s, z = (-gx * s + gz * c) * side
+        if (z < R.to || z > V.to || Math.abs(x) > V.half) continue
+        const k = smooth(R.to, R.to + R.blend, z) * (1 - smooth(V.to - V.fade, V.to, z)) * (1 - smooth(V.half - V.blendX, V.half, Math.abs(x)))
+        if (k <= 0) continue
+        cells.push(i, j, k, Math.hypot(Math.max(0, Math.abs(x) - R.half), z - R.to)) // weight, m from the ramp's end
+        i0 = Math.min(i0, i); i1 = Math.max(i1, i); j0 = Math.min(j0, j); j1 = Math.max(j1, j)
+      }
+    }
+    if (i1 < 0) continue
+    // the opening over the box grown by 2r: min along rows then columns, then max the same way
+    const bi = Math.max(0, i0 - 2 * r), bj = Math.max(0, j0 - 2 * r), bh = Math.min(h - 1, i1 + 2 * r) - bi + 1, bw = Math.min(w - 1, j1 + 2 * r) - bj + 1
+    let box = new Float32Array(bw * bh)
+    for (let i = 0; i < bh; i++) box.set(heights.subarray((bi + i) * w + bj, (bi + i) * w + bj + bw), i * bw)
+    const pass = (src, max, di, dj) => {
+      const out = new Float32Array(bw * bh)
+      for (let i = 0; i < bh; i++) for (let j = 0; j < bw; j++) {
+        let v = src[i * bw + j]
+        for (let q = -r; q <= r; q++) {
+          const ii = i + q * di, jj = j + q * dj
+          if (ii < 0 || ii >= bh || jj < 0 || jj >= bw) continue
+          const u = src[ii * bw + jj]
+          if (max ? u > v : u < v) v = u
+        }
+        out[i * bw + j] = v
+      }
+      return out
+    }
+    box = pass(pass(pass(pass(box, false, 0, 1), false, 1, 0), true, 0, 1), true, 1, 0)
+    const top = meta.origin_h + (side < 0 ? STREETS.north : STREETS.south)[0] - R.below
+    for (let q = 0; q < cells.length; q += 4) {
+      const [i, j, k, d] = [cells[q], cells[q + 1], cells[q + 2], cells[q + 3]], g = i * w + j
+      const y = Math.max(box[(i - bi) * bw + j - bj], top - V.slope * d)
+      if (heights[g] > y) heights[g] += (y - heights[g]) * k
+    }
+  }
   return heights
 }
 

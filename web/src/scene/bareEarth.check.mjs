@@ -65,6 +65,19 @@ import assert from 'node:assert/strict'
   near(at(0, 100), 0, 'under the bridge: as surveyed')
   const low = rampFloor({ meta, heights: new Float32Array(n * n).fill(0), w: n, h: n })
   assert.equal(low[(160 + 400) * n + 400], 0, 'ground already below the foot stays')
+  // the viaduct past the ramp's end goes: ground 8 m down, a ridge 10 m wide at deck level along the axis
+  const { VIADUCTS } = await import('./bareEarth.js')
+  const ridge = new Float32Array(n * n).fill(2)
+  for (let i = 0; i < n; i++) for (let j = 395; j <= 405; j++) ridge[i * n + j] = 10
+  rampFloor({ meta, heights: ridge, w: n, h: n })
+  const on = (x, z) => ridge[(z + 400) * n + (x + 400)] - meta.origin_h
+  near(on(0, -300), -8, 'the north viaduct is gone')
+  near(on(0, 300), -8, 'and the south')
+  const end = STREETS.north[0] - RAMP_FLOOR.below
+  near(on(0, -194), Math.max(-8, end - VIADUCTS.slope * (194 - RAMP_FLOOR.to)), 'a bank falls from the ramp end')
+  near(on(0, -160), end, 'the ramp floor stays')
+  near(on(0, -390), 0, 'past `to` the DTM stays')
+  near(on(30, -300), -8, 'the ground beside stays')
   console.log('ramp floor ok')
 }
 

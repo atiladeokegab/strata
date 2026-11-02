@@ -32,7 +32,8 @@
   animation: guide-pulse 2.4s ease-in-out infinite; }
 
 /* a step about the dock (the timeline, the bascules): the card goes top right, over the controls, so the bridge has the stage's full height */
-@media (min-width: 901px) { .guide-card:not(.guide-low) { left: auto; right: var(--gap); top: var(--gap); bottom: auto; transform: none; animation-name: guide-in-m; } }
+@media (min-width: 901px) { .guide-card:not(.guide-low) { left: auto; right: var(--gap); top: var(--gap); bottom: auto; transform: none; animation-name: guide-in-m; }
+  .app:has(.guide-card:not(.guide-low)) .credit { max-width: calc(100% - var(--panel-w) - 440px - var(--gap) * 4); } } /* the credit (a licence term) and its Sources button stay clear of the top-right card */
 @keyframes guide-in { from { opacity: 0; transform: translate(-50%, 12px); } }
 @keyframes guide-fade { from { opacity: 0; transform: translateY(4px); } }
 @keyframes guide-pulse { 50% { box-shadow: 0 0 0 2px var(--ink), 0 0 0 10px rgba(255, 255, 255, .35), 0 8px 30px rgba(0, 0, 0, .18); } }

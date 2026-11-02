@@ -120,11 +120,11 @@ export function startGuide({ auto = false } = {}) {
     useGuide.setState({ active: true, i: 0, steps })
     applyStep(steps[0])
   }
-  // wait on the scene, not a timer: the bridge drawn (a slow phone lights it 4-5 s after Enter), or no WebGL at all;
+  // wait on the scene, not a timer: sceneSettled (the loading card has lifted; a slow phone takes 4-5 s), or no WebGL at all;
   // then give the lazy photo tools up to 2 s more so their optional steps are counted
   let lit = 0
   const wait = () => {
-    const ready = s().place && (s().sceneReady || document.querySelector('.no-webgl'))
+    const ready = s().place && (s().sceneSettled || document.querySelector('.no-webgl'))
     if (ready) lit ||= performance.now()
     if (ready && (document.querySelector('.id-open') || performance.now() - lit > 2000)) go()
     else setTimeout(wait, 150)

@@ -120,7 +120,7 @@ function build(data) {
   const [oE, oN] = data.frame.origin_osgb
   const tileUv = (x, z) => [(x + oE - minE) / (maxE - minE), 1 - (z - oN + maxN) / (maxN - minN)]
   const axis = data.frame.axis_deg
-  for (const bd of data.buildings) {
+  for (const bd of [...data.buildings, ...(data.period?.landmarks ?? [])]) { // + multipolygons bake.py skips (period_city.py)
     if (onBridgeGround(bd.o, axis)) continue // the bridge draws its own towers, abutments, approaches and engine house
     if (LITE && beyond(bd, NEAR.osm) && bd.t - bd.b < SKYLINE) continue
     const geo = extrude(bd)

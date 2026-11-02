@@ -9,6 +9,8 @@ separate houses, and extruded. Buildings dated to 1894 or earlier (OSM start_dat
 London precinct) are cut out:
 Buildings.jsx already draws those from OSM, so nothing overlaps. A plot under an OSM building dated 1895-1949 stands
 until that year, when Buildings.jsx shows the new one. Nothing is traced inside the Tower of London or its moat.
+"landmarks": buildings OSM has only as multipolygons, which bake.py skips (the PLA building, 1922); Buildings.jsx draws
+them with the OSM ones.
 Heights (status inferred): there are no surveyed 1890s heights, so each block gets a period height by use:
 riverside and dock warehouses (within 70 m of the water) 15-22 m, one lot in ten of a large inland block (breweries,
 works) 13-17 m, terraced houses and shops 9-14 m (3-4 storeys). Ground: the bare-earth surface Terrain.jsx draws before 1950, so walls meet it.
@@ -55,10 +57,45 @@ ROAD_1894 = [[(533616, 180118), (533565, 179985), (533515, 179854), (533423, 179
 ROAD_HALF = 10.0
 
 
-def bare_earth(meta):
-    """The ground the scene draws in every era: bare.png, the EA LiDAR DTM (scripts/terrain/build.py), metres OD, 1 m grid."""
-    rgb = np.asarray(Image.open(TERRAIN / "bare.png").convert("RGB")).astype(np.float64)
+def bare_earth(meta, name="bare.png"):
+    """The ground the scene draws in every era: bare.png, the EA LiDAR DTM (scripts/terrain/build.py), metres OD, 1 m grid.
+    height.png is the DSM (roofs) on the same grid."""
+    rgb = np.asarray(Image.open(TERRAIN / name).convert("RGB")).astype(np.float64)
     return meta["min_h"] + (rgb[..., 0] * 256 + rgb[..., 1]) / 65535 * (meta["max_h"] - meta["min_h"])
+
+
+# The Port of London Authority building, 10 Trinity Square, the interwar landmark seen from the bridge. OSM has it as a
+# multipolygon (relation 1020011, ODbL), which bake.py skips; outline and courtyard copied here in OSGB, 2026-11-02.
+# Built 1912-1922 (OSM year_of_construction), so it stands from 1922.
+PLA_FROM = 1922
+PLA_OUTER = [(533487.5, 180839.9), (533476.0, 180838.7), (533476.3, 180837.3), (533423.8, 180829.6), (533423.5, 180832.1),
+             (533412.6, 180830.6), (533413.8, 180820.1), (533416.0, 180820.3), (533422.5, 180766.2), (533420.6, 180766.0),
+             (533421.8, 180756.2), (533427.0, 180756.8), (533432.3, 180757.3), (533432.2, 180758.8), (533459.6, 180761.5),
+             (533459.8, 180759.8), (533471.4, 180761.1), (533471.1, 180763.4), (533471.9, 180764.0), (533472.8, 180762.9),
+             (533492.1, 180787.4), (533491.1, 180788.5), (533491.2, 180789.2), (533493.5, 180789.7), (533492.2, 180801.4),
+             (533490.4, 180801.4), (533487.3, 180828.1), (533488.9, 180828.5)]
+PLA_INNER = [(533435.9, 180776.6), (533431.8, 180812.7), (533434.0, 180815.8), (533470.5, 180819.9), (533472.8, 180818.4),
+             (533474.8, 180801.2), (533469.9, 180795.1), (533452.6, 180808.4), (533442.3, 180806.9), (533443.4, 180796.9),
+             (533459.6, 180783.9), (533458.5, 180782.4), (533460.0, 180781.0), (533457.2, 180777.5), (533438.5, 180775.0)]
+
+
+def landmarks(meta, ground):
+    """The PLA building for Buildings.jsx, in the scene frame: the block to the DSM's 80th percentile over its footprint,
+    and its tower, the cells within 3 m of the highest return, as a box to that height."""
+    (oE, oN), oH = meta["origin_osgb"], meta["origin_h"]
+    minE, _, _, maxN = meta["bbox_osgb"]
+    dsm = bare_earth(meta, "height.png")
+    m = Image.new("1", (dsm.shape[1], dsm.shape[0]))
+    ImageDraw.Draw(m).polygon([(e - minE, maxN - n) for e, n in PLA_OUTER], fill=1)
+    ImageDraw.Draw(m).polygon([(e - minE, maxN - n) for e, n in PLA_INNER], fill=0)
+    inside = np.asarray(m)
+    flat = lambda ring: [round(v, 1) for e, n in ring for v in (e - oE, oN - n)]
+    base, top, peak = float(ground[inside].min()) - oH - 0.6, float(np.percentile(dsm[inside], 80)) - oH, float(dsm[inside].max())
+    rr, cc = np.nonzero(inside & (dsm > peak - 3))
+    tower = [(minE + cc.min(), maxN - rr.max() - 1), (minE + cc.max() + 1, maxN - rr.max() - 1), (minE + cc.max() + 1, maxN - rr.min()), (minE + cc.min(), maxN - rr.min())]
+    keep = {"k": "s", "s": PLA_FROM, "n": "Port of London Authority"}
+    return [{"id": "r1020011", "b": round(base, 1), "t": round(top, 1), "o": flat(PLA_OUTER), "h": [flat(PLA_INNER)], **keep},
+            {"id": "r1020011-tower", "b": round(top - 1, 1), "t": round(peak - oH, 1), "o": flat(tower), **keep}]
 
 
 def main():
@@ -111,6 +148,8 @@ def main():
     d = ImageDraw.Draw(keep)
     later = []  # OSM buildings dated 1895-1949 (Adelaide House, 1925): Buildings.jsx shows them from that year
     castle = []  # the Tower of London's buildings and towers (modern_dates.py)
+    marks = landmarks(meta, ground)
+    later.append((Polygon(list(zip(marks[0]["o"][0::2], marks[0]["o"][1::2]))).buffer(0), PLA_FROM))
     for b in osm["buildings"]:
         date = dates.get(b["id"].split("-")[0], {})
         s = date.get("s", b.get("s"))
@@ -202,7 +241,7 @@ def main():
     frame = {"origin_osgb": meta["origin_osgb"], "origin_h": oH, "axis_deg": meta["bridge_axis_deg"], "bbox_osgb": meta["bbox_osgb"]}
     source = ("Footprints traced from the OS London Town Plan 1:1056, 1893-96, reproduced with the permission of the "
               "National Library of Scotland (CC-BY); heights inferred by use, see scripts/history/period_city.py")
-    OUT.write_text(json.dumps({"frame": frame, "source": source, "buildings": out}, separators=(",", ":")))
+    OUT.write_text(json.dumps({"frame": frame, "source": source, "buildings": out, "landmarks": marks}, separators=(",", ":")))
     print(f"{len(out)} period buildings -> {OUT} ({OUT.stat().st_size // 1024} KB)")
 
 

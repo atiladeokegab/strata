@@ -111,10 +111,12 @@ function SkyBackground() {
   return null
 }
 
-// One directional sun whose orthographic shadow box is fitted to what the camera is looking at: tight and
-// crisp when walking at 20 m, wide when hovering at 1.5 km. Snapped to shadow texels so it does not shimmer.
-const _dir = new THREE.Vector3()
+// One directional sun. Only the bridge (and its traffic) casts, so the orthographic shadow box is fitted to
+// the bridge's bounds, whatever the camera does: 4096 over ~300 m is ~7 cm texels. Snapped to texels.
 const _focus = new THREE.Vector3()
+const _box = new THREE.Box3()
+const _ball = new THREE.Sphere()
+const inBridge = (o) => { for (; o; o = o.parent) if (o.name === 'tower-bridge') return true; return false }
 const _right = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), SUN_DIR).normalize()
 const _up = new THREE.Vector3().crossVectors(SUN_DIR, _right).normalize()
 const SHADOW_EVERY = LITE ? 3 : 2
@@ -132,22 +134,27 @@ function Sun({ mapSize }) {
   const frame = useRef(0)
   const gl = useThree((s) => s.gl)
   useEffect(() => () => { gl.shadowMap.autoUpdate = true }, [gl]) // if Look goes, the stand-in light updates its own map
-  useFrame(({ camera }) => {
-    // The shadow pass redraws every caster (the LiDAR DSM is millions of triangles), so it runs every
-    // SHADOW_EVERY frames; the light moves only on those frames, so receivers never read a stale map.
+  const scene = useThree((s) => s.scene)
+  const bridge = useRef(null)
+  useFrame(() => {
+    // The shadow pass runs every SHADOW_EVERY frames (bascules and traffic move); the light moves only on
+    // those frames, so receivers never read a stale map.
     gl.shadowMap.autoUpdate = false
     light.current.color.copy(air.sun)
     light.current.intensity = air.sunI
     if (frame.current++ % SHADOW_EVERY) return
+    // bounds every ~2 s: bascules lift; a new bridge (era change) is picked up here too
+    if (!bridge.current?.parent || frame.current % 120 < SHADOW_EVERY) {
+      bridge.current = scene.getObjectByName('tower-bridge') ?? null
+      if (!bridge.current) return
+      _box.setFromObject(bridge.current).getBoundingSphere(_ball)
+    }
     gl.shadowMap.needsUpdate = true
     const l = light.current
-    camera.getWorldDirection(_dir)
-    const h = Math.max(camera.position.y, 2)
-    const t = _dir.y < -0.02 ? Math.min(h / -_dir.y, 2000) : Math.min(h * 4, 2000)
-    _focus.copy(camera.position).addScaledVector(_dir, t)
-    const dist = camera.position.distanceTo(_focus)
-    // half-width of the shadow box, in sqrt(2) steps so it only resizes occasionally
-    const half = Math.pow(Math.SQRT2, Math.ceil(Math.log(THREE.MathUtils.clamp(dist * 0.9, 30, 1800)) / Math.log(Math.SQRT2)))
+    _focus.copy(_ball.center)
+    // half-width of the shadow box, in sqrt(2) steps so it only resizes occasionally; capped in case a
+    // parked instance stretches the bounds
+    const half = Math.pow(Math.SQRT2, Math.ceil(Math.log(THREE.MathUtils.clamp(_ball.radius, 30, 400)) / Math.log(Math.SQRT2)))
     const texel = (2 * half) / mapSize
     const r = Math.round(_focus.dot(_right) / texel) * texel
     const u = Math.round(_focus.dot(_up) / texel) * texel
@@ -229,30 +236,36 @@ function texture(mesh) {
   if (uv) worldUVs(mesh)
 }
 
-// Meshes load late (terrain, bridge), so every second opt new meshes into shadows and textures.
-// A mesh can opt out with userData.noShadow; transparent ones (water, glass) only receive.
+// Meshes load late (terrain, bridge), so once a second opt new meshes into shadows and textures.
+// Only the bridge casts (the shadow pass stays small); a mesh can opt out with userData.noShadow, and
+// transparent ones (water, glass) only receive.
 // R3F resets gl.shadowMap.enabled to the Canvas `shadows` prop on every Canvas re-render, so re-assert it here.
 function SceneUpgrades() {
   const { scene, gl } = useThree()
-  const n = useRef(0)
+  const next = useRef(0)
   const stamp = useRef(1)
-  useFrame(() => {
+  useFrame(({ clock }) => {
     if (!gl.shadowMap.enabled) {
       gl.shadowMap.enabled = true
       gl.shadowMap.type = THREE.PCFSoftShadowMap
       gl.shadowMap.needsUpdate = true
       stamp.current++
-      n.current = 0
+      next.current = 0
     }
-    if (n.current++ % 60) return
+    // once a second, not every N frames: on a slow device a new terrain tile would cast for N frames
+    if (clock.elapsedTime < next.current) return
+    next.current = clock.elapsedTime + 1
     scene.traverse((o) => {
-      if (!o.isMesh || o.userData.lookShadow === stamp.current) return
+      if (!o.isMesh) return
+      // owners set castShadow in their props, and a prop change (terrain's bare toggle) sets it again
+      if (o.castShadow && !o.userData.noShadow && !inBridge(o)) o.castShadow = false
+      if (o.userData.lookShadow === stamp.current) return
       o.userData.lookShadow = stamp.current
       texture(o)
       if (o.userData.noShadow) return
       const mats = Array.isArray(o.material) ? o.material : [o.material]
       o.receiveShadow = true
-      o.castShadow = !mats.some((m) => m?.transparent)
+      o.castShadow = inBridge(o) && !mats.some((m) => m?.transparent) // terrain, OSM, tiles: receive only
       mats.forEach((m) => m && (m.needsUpdate = true)) // shadow flags change the compiled shader
     })
   })
@@ -274,9 +287,11 @@ function canPost(gl) {
 }
 
 export function Look() {
-  const { scene, gl, setDpr } = useThree()
+  const { scene, gl, setDpr, get } = useThree()
   const [low, setLow] = useState(false)
   const post = useMemo(() => canPost(gl), [gl])
+  // shot and profiling scripts (?capture=1): the renderer and the r3f state, for per-pass draw counts
+  useEffect(() => { if (new URLSearchParams(location.search).has('capture')) window.__strataGL = { gl, get } }, [gl, get])
 
   useLayoutEffect(() => {
     const fog = scene.fog

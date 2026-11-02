@@ -36,7 +36,7 @@ export function ReadyProbe() {
     const st = useStore.getState()
     if (st.sceneSettled) return
     bridge.current ||= !!scene.getObjectByName('tower-bridge')
-    const wanted = TILES && !!google && st.year >= google.HISTORIC_BEFORE && !st.lidar
+    const wanted = TILES && !!google && st.year >= google.GOOGLE_FROM && !st.lidar
     const city = !wanted || google.useGoogle.getState().status !== 'loading'
     const place = !!st.place, active = tex.pending > 0, total = tex.pending + tex.done
     const steps = [

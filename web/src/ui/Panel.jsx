@@ -176,7 +176,7 @@ function Docent() {
   const part = place?.parts.find((p) => p.id === selected)
   const [log, setLog] = useState([])
   const [q, setQ] = useState('')
-  const [busy, setBusy] = useState(false)
+  const busy = useStore((s) => s.docentBusy), setBusy = useStore((s) => s.setDocentBusy) // in the store so the guided tour never re-asks mid-answer
   const [talk, setTalk] = useState(false)
   const end = useRef(null)
   useEffect(() => { if (log.length) end.current?.scrollIntoView({ block: 'nearest' }) }, [log, busy]) // not on mount: the place card stays in view

@@ -36,6 +36,8 @@ export const useStore = create((set) => ({
   setSceneReady: (sceneReady) => set({ sceneReady }),
   sceneSettled: false, // terrain, textures, bridge and Google's first view all in (ui/SceneLoading.jsx); the loading card lifts
   setSceneSettled: (sceneSettled) => set({ sceneSettled }),
+  docentBusy: false, // an answer is loading (ui/Panel.jsx); the guided tour waits on it
+  setDocentBusy: (docentBusy) => set({ docentBusy }),
   bascule: 0, // 0 closed .. 1 fully open
   setBascule: (bascule) => set({ bascule: Math.min(1, Math.max(0, bascule)) }),
 }))

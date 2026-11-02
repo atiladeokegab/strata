@@ -136,11 +136,11 @@ a.chip.source:hover { border-color: var(--line-strong); background: var(--fill-h
 
 /* time bar, bottom */
 .dock { position: absolute; left: calc(var(--panel-w) + var(--gap) * 2); right: var(--gap); bottom: var(--gap); max-width: 760px; margin-left: auto; display: flex; align-items: center; gap: var(--s5); padding: var(--s3) var(--pad) var(--s3); }
-.dock label { display: grid; gap: var(--s1); }
+.dock label { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s1); } /* minmax: long event text ellipsises instead of widening the dock */
 .dock .row { display: flex; justify-content: space-between; gap: var(--s3); font-size: var(--t2); color: var(--muted); }
 .timeline { position: relative; flex: 1; min-width: 180px; }
 .timeline .year { color: var(--ink); font-size: var(--t3); font-weight: 500; }
-.timeline .event { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.timeline .event { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .timeline .city-source { display: block; text-align: right; font-size: var(--t1); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bascule { width: 150px; flex: none; }
 .bascule .num { color: var(--ink); }

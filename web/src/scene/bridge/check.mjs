@@ -15,7 +15,7 @@ import { steelColour } from './geom.js'
 import { createShip, stepShip, WAIT_X, HOLD_X, CRUISE } from './shipSim.js'
 import { leverAfter, leverForKey, leverLabel, KEY_STEP } from './drive.js'
 import { vesselForYear, needsLift, leafInput, CLEARANCE, WATER_Y } from './vessels.js'
-import { layout, clash, riverWet } from '../moorings.js'
+import { layout, clash, riverWet, samples } from '../moorings.js'
 import { decodeHeights, heightAt } from './terrainNode.js'
 import { createRiver, stepRiver, gap, CRAFT, CLEAR } from './riverSim.js'
 import { createTraffic, stepTraffic, onLeaves, roadY, streetProfile, RAMP_FOOT, TYPES, STOP_U, BASCULE_U, START_U, END_U, ABUT_Z, RAMP_LEN, POST_X, POST_Z, POST_W, GATE_U, nearCam, CAM_CLEAR, CAM_TOP } from './trafficSim.js'
@@ -125,6 +125,10 @@ assert.equal(resolveYears([{ year: 1900, title: 'river foundations begin', sourc
   assert.ok(Math.abs(heightAt(t, 0, 0) - (-13.17)) < 0.1, 'bare.png decodes to the river bed under the bridge')
   const real = layout(riverWet(t, heightAt))
   assert.ok(real.every((m) => Math.abs(m.c) - 2.8 > 40), 'moored hulls clear of the fairway')
+  // engineroom's 1920/1940 stills: no lighter over the foreshore lip, none touching its neighbour
+  const wet = riverWet(t, heightAt)
+  for (const m of real) assert.ok(samples(m).every(([a, c]) => wet(a, c)), `hull at a ${m.a} c ${m.c} overhangs the foreshore`)
+  for (let i = 0; i < real.length; i++) for (let j = 0; j < i; j++) assert.ok(!clash(real[i], real[j]), `moored hulls at a ${real[j].a} and ${real[i].a} touch`)
   // Tour pose riverside-low-1890 (bridge frame, so a hull sits at x = a, z = -c), 1920x1080 at fov 45
   const cam = new THREE.PerspectiveCamera(45, 16 / 9, 0.3, 6000)
   cam.position.set(60, 4, -40); cam.lookAt(140, 6, -150); cam.updateMatrixWorld()

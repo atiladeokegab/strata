@@ -3,6 +3,8 @@ import { useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../store'
 import { GOOGLE_FROM } from './google/state'
+import { APPROACH } from './bareEarth.js'
+import { eraFor } from './bridge/stages.js'
 import { LITE } from './look/tier'
 import { GroundStandIn } from '../ui/StandIns'
 
@@ -200,6 +202,15 @@ function Ground() {
 // ERA is 1 while the old map is draped. BARE is 1 before Google's tiles (GOOGLE_FROM): the ground is bare earth
 // (aOld), flat-lit. aOld now equals the position (the mesh is the DTM in every era), so BARE moves nothing.
 const ERA = { value: 0 }, BARE = { value: 0 }
+// The old map has no approach road, so the ramps would dead-end in cream paper: while it is draped, the approach
+// corridor (bareEarth.js APPROACH, in the bridge frame) takes the deck's road colour (bridge/roadway.js SURFACES).
+const ROAD = { value: new THREE.Color() }, WOOD = new THREE.Color('#7a6450'), ASPHALT = new THREE.Color('#3f3f3f')
+const f1 = (v) => v.toFixed(1)
+const ROAD_TINT = `
+      float tAlong = abs(vRoadW.z), tAcross = abs(vRoadW.x);
+      float tRoad = (smoothstep(${f1(APPROACH.from - 1.25)}, ${f1(APPROACH.from + 1.25)}, tAlong) - smoothstep(${f1(APPROACH.to - 1.25)}, ${f1(APPROACH.to + 1.25)}, tAlong))
+        * (1.0 - smoothstep(${f1(APPROACH.half - 1.25)}, ${f1(APPROACH.half + 1.25)}, tAcross));
+      diffuseColor.rgb = mix(diffuseColor.rgb, uRoad, tRoad * uEra);`
 const ERA_GAIN = '1.0'
 const ERA_GRADE = `
   vec3 eraGrade(vec3 c) {
@@ -213,12 +224,13 @@ const ERA_GRADE = `
 function facades(shader) {
   shader.uniforms.uEra = ERA
   shader.uniforms.uBare = BARE
+  shader.uniforms.uRoad = ROAD
   shader.vertexShader = shader.vertexShader
-    .replace('#include <common>', '#include <common>\nvarying float vUp;\nuniform float uBare;\nattribute float aOld;')
+    .replace('#include <common>', '#include <common>\nvarying float vUp;\nvarying vec3 vRoadW;\nuniform float uBare;\nattribute float aOld;')
     .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\nif (uBare > 0.5 && position.y - aOld > 0.3) objectNormal = vec3(0.0, 1.0, 0.0);\nvUp = objectNormal.y;')
-    .replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed.y = mix(transformed.y, aOld, uBare);')
+    .replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed.y = mix(transformed.y, aOld, uBare);\nvRoadW = (modelMatrix * vec4(transformed, 1.0)).xyz;')
   shader.fragmentShader = shader.fragmentShader
-    .replace('#include <common>', `#include <common>\nvarying float vUp;\nuniform float uEra;${ERA_GRADE}`)
+    .replace('#include <common>', `#include <common>\nvarying float vUp;\nvarying vec3 vRoadW;\nuniform float uEra;\nuniform vec3 uRoad;${ERA_GRADE}`)
     .replace(
       '#include <map_fragment>',
       `#include <map_fragment>
@@ -226,7 +238,7 @@ function facades(shader) {
       float wall = 1.0 - smoothstep(0.35, 0.7, vUp);
       vec3 blur = eraGrade(texture2D(map, vMapUv, 5.0).rgb);
       vec3 facade = mix(blur, vec3(0.42, 0.39, 0.34), 0.3) * 0.8;
-      diffuseColor.rgb = mix(diffuseColor.rgb, facade, wall);`,
+      diffuseColor.rgb = mix(diffuseColor.rgb, facade, wall);${ROAD_TINT}`,
     )
 }
 
@@ -396,7 +408,9 @@ function TerrainMesh({ t, hole, name = 'terrain', visible = true }) {
   material.map = maps[old ? 1 : 0]
   material.polygonOffset = !!hole
   const bare = useStore((s) => s.year < GOOGLE_FROM)
+  const wood = useStore((s) => eraFor(s.year).woodBlocks)
   useEffect(() => { ERA.value = old ? 1 : 0 }, [old])
+  useEffect(() => { ROAD.value.copy(wood ? WOOD : ASPHALT) }, [wood])
   useEffect(() => { BARE.value = bare ? 1 : 0 }, [bare])
   useEffect(() => () => chunks.forEach((c) => c.dispose()), [chunks])
   useEffect(() => () => material.dispose(), [material])

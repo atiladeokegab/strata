@@ -1,42 +1,27 @@
+/* The landing: copy on the paper column, the turning bridge in its own band beside it (below 860, above it). Tokens only. */
 .home { position: fixed; inset: 0; z-index: 50; overflow: hidden; background: var(--bg); color: var(--ink);
-  display: grid; grid-template-columns: minmax(320px, 0.9fr) 1.1fr; grid-template-rows: 1fr auto;
-  padding: clamp(24px, 4vw, 56px); gap: var(--s5); }
-.home-stage { position: absolute; inset: 0; }
+  display: grid; grid-template-columns: minmax(360px, 34rem) 1fr; }
+.home-stage { position: relative; grid-column: 2; grid-row: 1; min-height: 0; background: var(--sky); border-left: 1px solid var(--line); }
 .home-stage canvas { display: block; }
-.home-copy, .home-next { position: relative; z-index: 1; }
-.home-copy { grid-column: 1; align-self: center; width: 100%; max-width: 30rem; }
-.home-eyebrow, .home-next-label { margin: 0 0 var(--s3); font: 500 11px/1.2 var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-.home-title { margin: 0; font-weight: 400; }
-.home-word { display: block; font: 600 clamp(48px, 6vw, 72px)/1 var(--sans); letter-spacing: -.035em; }
-.home-sub { display: block; margin-top: var(--s4); font: 400 var(--t3)/1.55 var(--sans); color: var(--muted); max-width: 26rem; }
-.home-actions { margin-top: var(--s5); display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; }
-/* one line each: at 1280 the three squeezed into two-line labels and the link ran under the disc; now it wraps to its own row */
-.home-story, .home-enter, .home-link { white-space: nowrap; }
-.home-story, .home-enter { display: inline-flex; align-items: center; gap: var(--s2); height: 44px; padding: 0 var(--s5); border-radius: var(--pill);
-  font: 500 var(--t2)/1 var(--sans); transition: background .15s, border-color .15s; }
-.home-story { border: 0; background: var(--ink); color: var(--on-ink); }
-.home-story:hover { background: var(--ink-hover); }
-.home-story svg { width: 12px; height: 12px; fill: currentColor; }
-.home-enter { border: 1px solid var(--line-strong); background: var(--surface-solid); color: var(--ink); }
-.home-enter:hover { background: var(--fill-hover); }
-.home-link { height: 44px; padding: 0 var(--s3); border: 0; background: none; color: var(--ink); font-weight: 500; text-decoration: underline; text-underline-offset: 4px; }
-.home-enter span { color: var(--muted); }
-.home-next { grid-column: 1 / -1; grid-row: 2; }
-.home-next ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s3); }
-.home-card { cursor: default; padding: var(--s3) var(--s4); border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); box-shadow: var(--shadow); display: grid; gap: var(--s1); }
-.home-card strong { font: 500 var(--t2)/1.3 var(--sans); }
-.home-card span { font-size: var(--t1); line-height: 1.5; color: var(--muted); }
-.home-card .soon { margin-left: 6px; padding: 2px 6px; border: 1px solid var(--line-strong); border-radius: var(--pill); font: 500 11px/1 var(--sans);
-  font-style: normal; color: var(--muted); vertical-align: middle; }
+.home-copy { grid-column: 1; grid-row: 1; align-self: center; display: grid; gap: var(--s5); padding: var(--space-8) var(--space-8) var(--s5); min-width: 0; }
+.home-title { margin: 0; font: var(--type-h1-font-weight) var(--type-h1-font-size)/var(--type-h1-line-height) var(--display); letter-spacing: var(--type-h1-letter-spacing); }
+.home-sub { margin: 0; text-wrap: pretty; font: 400 var(--type-lead-font-size)/var(--type-lead-line-height) var(--sans); color: var(--muted); max-width: 30rem; }
+.home-actions { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s5); align-items: center; }
+.home-actions .primary svg { width: 12px; height: 12px; fill: currentColor; }
+.home-link { min-height: 44px; padding: 0; border: 0; background: none; color: var(--ink); font-weight: 600; text-decoration: underline; text-underline-offset: 4px; white-space: nowrap; }
+.home-link:hover { color: var(--color-accent-text); }
+/* the real numbers, each with its status as a dot and a word, read like a survey legend */
+.home-figures { margin: 0; display: grid; border-top: 1px solid var(--line); font-size: var(--t1); }
+.home-figures div { display: grid; grid-template-columns: 7.5rem 1fr; gap: var(--s3); padding: var(--s2) 0; border-bottom: 1px solid var(--line); }
+.home-figures dt { font: 600 var(--t2)/1.3 var(--sans); font-variant-numeric: tabular-nums; }
+.home-figures dd { margin: 0; color: var(--muted); line-height: 1.4; }
+.home-figures .chip { margin-right: var(--s1); vertical-align: baseline; }
+.home-next { margin: 0; font-size: var(--t1); color: var(--muted); }
 @media (max-width: 860px) {
-  .home { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; padding: var(--s5) var(--s4); overflow-y: auto; }
-  .home-copy { grid-row: 1; align-self: start; }
-  .home-next { grid-row: 3; }
-  /* phones: the coming places shrink to name pills so the bridge stays in view between the copy and them */
-  .home-next ul { display: flex; flex-wrap: wrap; gap: var(--s2); }
-  .home-card { padding: var(--s1) var(--s3); border-radius: var(--pill); }
-  .home-card > span { display: none; }
-  .home-next-label { margin-bottom: var(--s2); }
-  .home-actions { display: grid; justify-items: start; } /* one per row, so the link stays left of the bridge */
-  .home-next-label { display: inline-block; padding: var(--s1) var(--s3); border-radius: var(--pill); background: var(--surface); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); }
+  /* phones: the bridge in a clear band at the top, the line and the button under it, the numbers below */
+  .home { grid-template-columns: 1fr; grid-template-rows: 38svh auto; overflow-y: auto; }
+  .home-stage { grid-column: 1; grid-row: 1; border-left: 0; border-bottom: 1px solid var(--line); }
+  .home-copy { grid-row: 2; align-self: start; gap: var(--s4); padding: var(--s5) var(--s4) var(--space-8); }
+  .home-title { font-size: var(--type-h2-font-size); }
+  .home-sub { font-size: var(--t2); }
 }

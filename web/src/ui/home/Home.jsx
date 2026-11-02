@@ -7,10 +7,12 @@ import './home.css'
 
 const HomeStage = lazy(() => import('./HomeStage'))
 
-const NEXT = [
-  { name: 'Stonehenge', line: 'Lidar picks out the barrows, the Avenue and the Cursus around the stones, earthworks you cannot see on the ground.' },
-  { name: "Hadrian's Wall", line: 'Where the stone was robbed away, lidar still traces the Vallum ditch and the line of the wall across the fells.' },
-  { name: 'The Tower of London', line: 'Lidar shows the drained moat and the concentric curtain walls in relief around the White Tower.' },
+// the README's numbers, each with the status its source gives it (data/places/tower-bridge.json)
+const FIGURES = [
+  ['1 m LiDAR', 'measured', 'Environment Agency, 1.5 km of ground'],
+  ['1886 to 1894', 'text-attested', 'built stage by stage, 14 sourced events'],
+  ['65 m', 'text-attested', 'the towers, from the City of London'],
+  ['86°', 'inferred', 'the bascules at full lift'],
 ]
 
 export default function Home({ onEnter }) {
@@ -25,36 +27,24 @@ export default function Home({ onEnter }) {
         <Suspense fallback={null}><HomeStage /></Suspense>
       </div>
       <div className="home-copy">
-        <p className="home-eyebrow">A museum of places</p>
-        <h1 className="home-title">
-          <span className="home-word">Strata</span>
-          <span className="home-sub">History is text and flat photos. Strata lets visitors, students and teachers watch a landmark being built, from real LiDAR and sourced history.</span>
-        </h1>
+        <h1 className="home-title">Strata</h1>
+        <p className="home-sub">History is text and flat photos. Strata lets you watch Tower Bridge being built, from real LiDAR and its own sourced history.</p>
         <div className="home-actions">
           {hasGuide && (
-            <button type="button" className="home-story" onClick={() => { onEnter(); startGuide() }}>
+            <button type="button" className="primary" onClick={() => { onEnter(); startGuide() }}>
               <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" /></svg>Take the guided tour
             </button>
           )}
-          <button type="button" className={hasGuide ? 'home-enter' : 'home-story'} onClick={() => { onEnter(); startTour() }}>
-            {!hasGuide && <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" /></svg>}Play the 60 s story
-          </button>
-          <button type="button" className={hasGuide ? 'home-link' : 'home-enter'} onClick={onEnter}>
-            Enter Tower Bridge <span aria-hidden="true">→</span>
-          </button>
+          <button type="button" className="home-link" onClick={onEnter}>Enter Tower Bridge</button>
+          <button type="button" className={hasGuide ? 'home-link' : 'primary'} onClick={() => { onEnter(); startTour() }}>Play the 60 s story</button>
         </div>
-      </div>
-      <section className="home-next" aria-label="Coming next">
-        <p className="home-next-label">Coming next</p>
-        <ul>
-          {NEXT.map((p) => (
-            <li key={p.name} className="home-card">
-              <strong>{p.name} <em className="soon">Soon</em></strong>
-              <span>{p.line}</span>
-            </li>
+        <dl className="home-figures">
+          {FIGURES.map(([n, status, what]) => (
+            <div key={n}><dt>{n}</dt><dd><span className={`chip status ${status}`}>{status}</span>{what}</dd></div>
           ))}
-        </ul>
-      </section>
+        </dl>
+        <p className="home-next">Coming next: Stonehenge, Hadrian's Wall, the Tower of London.</p>
+      </div>
     </section>
   )
 }

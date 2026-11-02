@@ -1,11 +1,11 @@
 .rm-open.id-open { position: static; white-space: nowrap; } /* reimagine.css places .rm-open absolutely; inside .controls it must flow */
-.id-stage { position: relative; width: fit-content; max-width: 100%; margin: 0 auto; border-radius: var(--r); overflow: hidden; background: #000; }
+.id-stage { position: relative; width: fit-content; max-width: 100%; margin: 0 auto; border-radius: var(--r); overflow: hidden; background: var(--color-neutral-950); }
 .id-stage:not(:has(img)) { min-height: 200px; min-width: 280px; }
 .id-photo { display: block; max-width: 100%; max-height: 66vh; }
-.id-box { position: absolute; padding: 0; border: 2px solid #fff; border-radius: 4px; background: rgba(255, 255, 255, .08); cursor: pointer; }
-.id-box span { position: absolute; left: 0; top: 0; max-width: 100%; box-sizing: border-box; padding: 1px 5px; border-radius: 0 0 4px 0; background: #fff; color: var(--ink);
+.id-box { position: absolute; padding: 0; border: 2px solid var(--color-neutral-50); border-radius: var(--r); background: none; cursor: pointer; }
+.id-box span { position: absolute; left: 0; top: 0; max-width: 100%; box-sizing: border-box; padding: 1px 5px; border-radius: 0 0 var(--r) 0; background: var(--color-neutral-50); color: var(--ink);
   font-size: var(--t1); line-height: 1.15; overflow-wrap: anywhere; overflow: hidden; text-overflow: ellipsis; } /* narrow side-by-side boxes (the bascules) wrap instead of overlapping */
-.id-box:hover, .id-box:focus-visible, .id-on { background: rgba(255, 255, 255, .22); outline: none; }
+.id-box:hover, .id-box:focus-visible, .id-on { border-color: var(--color-accent); outline: none; }
 .id-on { border-color: var(--ink); }
 .id-on span { background: var(--ink); color: var(--on-ink); }
 .id-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px var(--s4); }

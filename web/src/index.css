@@ -1,33 +1,35 @@
-/* Design tokens: the only place colours, sizes, radii and shadows are defined. */
+/* The app's short names for the design tokens. Values live in tokens.css, generated from DESIGN.md; never add a literal here. */
 :root {
-  /* surfaces: off-white page, frosted white glass panels */
-  --bg: #f5f5f7;
-  --sky: #c9d3d8; /* the scene's first-frame sky (Stage DefaultLook); the page under the canvas matches it */
-  --surface: rgba(255, 255, 255, .78);
-  --surface-solid: #ffffff;
-  --fill: rgba(0, 0, 0, .04);
-  --fill-hover: rgba(0, 0, 0, .07);
-  --fill-on: rgba(0, 0, 0, .08);
-  --line: rgba(0, 0, 0, .08);
-  --line-strong: rgba(0, 0, 0, .14);
+  /* surfaces: matte paper panels, one hairline, nothing semi-transparent over the scene */
+  --bg: var(--color-bg);
+  --sky: var(--color-neutral-200); /* the page under the canvas, close to the scene's first-frame sky */
+  --surface: var(--color-surface);
+  --surface-solid: var(--color-surface);
+  --fill: var(--color-bg);
+  --fill-hover: var(--color-neutral-200);
+  --fill-on: var(--color-neutral-200);
+  --line: var(--color-border);
+  --line-strong: var(--color-neutral-300);
   /* text */
-  --ink: #0d0d0d;
-  --ink-hover: #2b2b2e;
-  --muted: #4f4f55; /* AA 4.8:1 even on glass over a black scene */
-  --on-ink: #ffffff;
-  /* one accent, for the selected or active state only: ink itself */
-  --accent: #0d0d0d;
-  --accent-dim: rgba(13, 13, 13, .2);
-  --danger: #c8372d;
-  /* type: 12 labels, 14 body, 16 emphasis, 24 / 32 headings */
-  --t1: 12px; --t2: 14px; --t3: 16px; --t4: 24px; --t5: 32px;
-  --sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --ink: var(--color-ink);
+  --ink-hover: var(--color-neutral-800);
+  --muted: var(--color-muted);
+  --on-ink: var(--color-surface);
+  /* the selected or active state is ink; the survey ochre is kept for the one action and the live year mark */
+  --accent: var(--color-ink);
+  --accent-dim: var(--color-neutral-300);
+  --danger: var(--color-danger);
+  /* type: caption 13, body 16, label 16, h3 25, h2 31 */
+  --t1: var(--type-caption-font-size); --t2: var(--type-body-font-size); --t3: var(--type-label-font-size);
+  --t4: var(--type-h3-font-size); --t5: var(--type-h2-font-size);
+  --sans: var(--type-body-font-family);
+  --display: var(--type-h1-font-family);
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  /* space (4 / 8 grid), radii, elevation */
-  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px;
-  --r: 8px; --r-lg: 12px; --pill: 999px;
-  --shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 8px 24px rgba(0, 0, 0, .06);
-  --blur: blur(20px) saturate(180%);
+  /* space (4 / 8 grid), radii; no elevation and no blur over the scene */
+  --s1: var(--space-1); --s2: var(--space-2); --s3: var(--space-3); --s4: var(--space-4); --s5: var(--space-6);
+  --r: var(--radius-control); --r-lg: var(--radius-panel); --pill: var(--radius-control);
+  --shadow: none;
+  --blur: none;
   /* layout */
   --panel-w: 380px; --gap: 16px; --pad: 20px;
   /* aliases still read by the 3D scene labels */
@@ -42,5 +44,5 @@ button, input { font: inherit; color: inherit; }
 button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 button:disabled { cursor: default; opacity: .45; }
 a { color: inherit; }
-/* ink ring with a white halo: visible on the glass and over a dark scene; !important beats inline all:unset on scene labels */
-:focus-visible { outline: 2px solid var(--ink) !important; outline-offset: 2px; box-shadow: 0 0 0 2px #fff; }
+/* ink ring with a paper halo: visible on the panels and over a dark scene; !important beats inline all:unset on scene labels */
+:focus-visible { outline: 2px solid var(--ink) !important; outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-surface); }

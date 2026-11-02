@@ -12,6 +12,7 @@ const TowerBridge = makeSlot('TowerBridge', ['../scene/bridge/TowerBridge.jsx', 
 const PLINTH_R = 155 // metres, in the bridge's own frame: it is 277 m end to end
 const SCALE = 1.4
 const PLINTH_TOP = -9 // Thames high water, so the piers sink into the plinth
+const SKY = getComputedStyle(document.documentElement).getPropertyValue('--sky').trim() || 'white' // the band's ground, from the tokens
 
 const useMedia = (q) => {
   const [m, setM] = useState(() => window.matchMedia(q).matches)
@@ -91,13 +92,12 @@ function WarmLightRig() {
   )
 }
 
-// keep the plinth clear of the copy: desktop puts it right of the buttons; the stacked phone layout widens the lens
-// and lowers the bridge into the band between the buttons and the coming-next pills
+// the bridge has its own band (home.css): centred in it; the stacked phone band widens the lens to fit the plinth
 function Frame() {
   const { camera, size } = useThree()
   useLayoutEffect(() => {
-    const phone = size.width <= 860 // home.css's stacked breakpoint
-    const x = phone ? 0 : -130, y = phone ? 140 : 10
+    const phone = window.innerWidth <= 860 // home.css's stacked breakpoint (the canvas is narrower than the window)
+    const x = 0, y = 10
     camera.fov = phone ? 2 * Math.atan(0.3 / (size.width / size.height)) * 180 / Math.PI : 30 // phone: the plinth plus a margin fits the width at any aspect
     camera.position.set(x, y + (phone ? 180 : 210), phone ? 760 : 880)
     camera.lookAt(x, y, 0)
@@ -130,8 +130,8 @@ export default function HomeStage() {
       // (3.2 s of a 5 s stall under swiftshader); left alone, the browser frees the context with the canvas
       onCreated={({ gl }) => { gl.forceContextLoss = () => {} }}
     >
-      <color attach="background" args={['#f5f5f7']} />
-      <fog attach="fog" args={['#f5f5f7', 1000, 1800]} />
+      <color attach="background" args={[SKY]} />
+      <fog attach="fog" args={[SKY, 1000, 1800]} />
       <Frame />
       <WarmLightRig />
       <LightPool />

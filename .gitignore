@@ -42,3 +42,4 @@ captures/
 **/.impeccable/live/*.png
 # impeccable-ignore-end
 .impeccable/detect-*.json
+.impeccable/design-server.log

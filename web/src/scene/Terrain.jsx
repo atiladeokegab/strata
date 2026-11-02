@@ -232,10 +232,11 @@ function loadSurfaces(meta) {
 const ROAD = { value: new THREE.Color() }, WOOD = new THREE.Color('#5a4636'), ASPHALT = new THREE.Color('#3f3f3f')
 const PAVE_X = 12 // m from the axis: the pavement's outer edge
 const STONE = new THREE.Color('#9a9184'), KERB = new THREE.Color('#b3ada3'), FAR = new THREE.Color('#5a524b'), FAR_FROM = 350, FAR_TO = 600
-// Under the old map the ground past HAZE_FROM m fades into the fog's colour by HAZE_TO, inside the tile's 750 m
-// half-width, and the skirt beyond is the fog's colour, so the city ends in haze rather than a plain. Not in the
-// photo's eras: their fog is paler than the sky and the river, so it drew a bright void at the horizon
-const HAZE_FROM = 450, HAZE_TO = 740
+// Before Google's tiles the ground past HAZE_FROM m fades into the fog's colour by HAZE_TO, inside the tile's 750 m
+// half-width, and the skirt beyond takes the same colour, so the city ends in haze rather than a plain. In the
+// photo's eras (1950-2011) it fades into a darker HAZE_PHOTO of it: their fog is paler than the sky and the river, so the
+// fog itself drew a bright void at the horizon
+const HAZE_FROM = 450, HAZE_TO = 740, HAZE_PHOTO = 0.7
 const f1 = (v) => v.toFixed(1), f2 = (v) => v.toFixed(2)
 const ROAD_TINT = `
       float tAlong = abs(vRoadW.z), tAcross = abs(vRoadW.x);
@@ -314,7 +315,7 @@ ${UNDER_BRIDGE}`)
     )
     .replace('#include <fog_fragment>', `#include <fog_fragment>
       #ifdef USE_FOG
-      gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor, smoothstep(${f1(HAZE_FROM)}, ${f1(HAZE_TO)}, length(vRoadW.xz)) * uEra);
+      gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor * mix(${f2(HAZE_PHOTO)}, 1.0, uEra), smoothstep(${f1(HAZE_FROM)}, ${f1(HAZE_TO)}, length(vRoadW.xz)) * uBare);
       #endif`)
 }
 
@@ -500,21 +501,21 @@ function TerrainMesh({ t, hole, name = 'terrain', visible = true }) {
   )
 }
 
-// Beyond the tile: flat ground at the tile edge's median height, in the edge's mean colour (the old map's: FAR, the haze
-// its edge fades into, so the city never stops at a plain of paper), thinning into the sky
+// Beyond the tile: flat ground at the tile edge's median height, in the edge's mean colour (before Google's tiles: the
+// haze the tile's edge fades into, HAZE_FROM above, so the city never stops at a plain), thinning into the sky
 // with distance (the fog colour is lighter than the sky at the horizon, so fogging it drew a bright rim).
 // Without it, low views with tiles off end in a cliff against the sky ~750 m out.
 const SKIRT = 20000 // m
 function fadeOut(shader) {
-  shader.uniforms.uEra = ERA
+  Object.assign(shader.uniforms, { uEra: ERA, uBare: BARE })
   shader.vertexShader = shader.vertexShader
     .replace('#include <common>', '#include <common>\nvarying float vSkirt;')
     .replace('#include <fog_vertex>', '#include <fog_vertex>\nvSkirt = -mvPosition.z;')
   shader.fragmentShader = shader.fragmentShader
-    .replace('#include <common>', '#include <common>\nvarying float vSkirt;\nuniform float uEra;')
+    .replace('#include <common>', '#include <common>\nvarying float vSkirt;\nuniform float uEra;\nuniform float uBare;')
     .replace('#include <dithering_fragment>', `#include <dithering_fragment>
 #ifdef USE_FOG
-gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor, uEra);
+gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor * mix(${f2(HAZE_PHOTO)}, 1.0, uEra), uBare);
 #endif
 gl_FragColor.a *= 1.0 - smoothstep(1500.0, 9000.0, vSkirt);`)
 }

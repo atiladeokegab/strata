@@ -37,7 +37,11 @@
 
   color: var(--ink); background: var(--bg); font: 400 var(--t2)/1.5 var(--sans);
   font-synthesis: none; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; color-scheme: light;
+  font-variant-numeric: tabular-nums; /* years, angles and lengths change in place: they must not jitter */
+  caret-color: var(--color-accent-text);
+  scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent;
 }
+::selection { background: var(--color-accent-200); color: var(--ink); }
 * { box-sizing: border-box; }
 html, body, #root { margin: 0; height: 100%; overflow: hidden; background: var(--sky); }
 button, input { font: inherit; color: inherit; }

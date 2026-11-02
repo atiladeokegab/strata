@@ -215,7 +215,7 @@ const ERA = { value: 0 }, BARE = { value: 0 }
 // over 60 m where it meets the city. Before 1950 the carriageway is laid in setts (or wood blocks), and in every era a
 // granite kerb 0.3 m wide lines it; both fade out with distance before they would alias. The old map's sheet also stops short of the tile's edge in a beige plain, so past
 // FAR_FROM m from the bridge it fades into FAR, the tone of distant roofs under haze. Asphalt is the deck's (bridge/roadway.js SURFACES); the wood is
-// darker than the deck's #7a6450 base, which its block texture darkens, or it melts into the stone on the flat ground.
+// the deck's #7a6450 base as its block texture renders it, so the road runs on from the deck without a line.
 // The ground's surfaces (scripts/terrain/surfaces.py: R St Katharine's basins, G the Tower's moat, B every OSM
 // footprint), on the tile's grid, sampled by world position so the outer and near tiers share it. Before the marina
 // (DOCKS_UNTIL) the basins are still water in a stone quay, and their photo's yachts go; the moat, drained in 1843-45,
@@ -229,15 +229,17 @@ function loadSurfaces(meta) {
   SURF_S.value = maxE - minE
   texture(BASE + 'surfaces.png').then((t) => { SURF.value = t }, () => {}) // missing: the ground keeps the drape
 }
-const ROAD = { value: new THREE.Color() }, WOOD = new THREE.Color('#5a4636'), ASPHALT = new THREE.Color('#3f3f3f')
+const ROAD = { value: new THREE.Color() }, WOOD = new THREE.Color('#6a5645'), ASPHALT = new THREE.Color('#3f3f3f')
 const PAVE_X = 12 // m from the axis: the pavement's outer edge
-const STONE = new THREE.Color('#9a9184'), KERB = new THREE.Color('#b3ada3'), FAR = new THREE.Color('#5a524b'), FAR_FROM = 350, FAR_TO = 600
+const STONE = new THREE.Color('#969386'), KERB = new THREE.Color('#b3ada3'), FAR = new THREE.Color('#5a524b'), FAR_FROM = 350, FAR_TO = 600
 // Before Google's tiles the ground past HAZE_FROM m fades into the fog's colour by HAZE_TO, inside the tile's 750 m
 // half-width, and the skirt beyond takes the same colour, so the city ends in haze rather than a plain. In the
 // photo's eras (1950-2011) it fades into a darker HAZE_PHOTO of it: their fog is paler than the sky and the river, so the
 // fog itself drew a bright void at the horizon
+const END_FEATHER = 12
 const HAZE_FROM = 450, HAZE_TO = 740, HAZE_PHOTO = 0.7
 const f1 = (v) => v.toFixed(1), f2 = (v) => v.toFixed(2)
+const v3 = (c) => `vec3(${c.toArray().map((v) => v.toFixed(3)).join(', ')})`
 const ROAD_TINT = `
       float tAlong = abs(vRoadW.z), tAcross = abs(vRoadW.x);
       float tRoad = (smoothstep(${f1(APPROACH.from - 1.25)}, ${f1(APPROACH.from + 1.25)}, tAlong) - smoothstep(${f1(APPROACH.to)}, ${f1(APPROACH.to + 60)}, tAlong))
@@ -260,12 +262,17 @@ const ROAD_TINT = `
       vec2 mC = floor(vRoadW.xz / 7.0), mF = fract(vRoadW.xz / 7.0); mF = mF * mF * (3.0 - 2.0 * mF);
       #define tHash(q) fract(sin(dot(q, vec2(127.1, 311.7))) * 43758.5453)
       float tMottle = mix(mix(tHash(mC), tHash(mC + vec2(1, 0)), mF.x), mix(tHash(mC + vec2(0, 1)), tHash(mC + vec2(1, 1)), mF.x), mF.y);
-      vec3 tStone = vec3(${STONE.toArray().map((c) => c.toFixed(3)).join(', ')}) * (0.88 + 0.2 * tMottle) * (1.0 - 0.3 * fJoint);
-      vec3 tCol = mix(uRoad * (1.0 - 0.35 * tJoint), tStone, smoothstep(${f2(KERB_X)} - tSoft, ${f2(KERB_X)} + tSoft, tAcross));
+      // the first END_FEATHER m past each deck end feather into the deck's own flat surfaces, so there is no line where
+      // they meet: the flags, setts and mottle fade out and the tone meets what the deck renders (measured on the 1900,
+      // 1940 and 1971 end-out stills: the south footway lights about 1.3 times the street's stone, the north road 0.68
+      // times the street's road)
+      float tEnd = 1.0 - smoothstep(${f1(STREETS.deckEnd)}, ${f1(STREETS.deckEnd + END_FEATHER)}, tAlong), tSouth = step(0.0, vRoadW.z);
+      float tM = mix(tMottle, 0.5, tEnd);
+      vec3 tStone = ${v3(STONE)} * (0.88 + 0.2 * tM) * (1.0 - 0.3 * fJoint * (1.0 - tEnd)) * (1.0 + 0.3 * tSouth * tEnd);
+      vec3 tCol = mix(uRoad * (1.0 - 0.35 * tJoint * (1.0 - tEnd)) * (1.0 - 0.32 * (1.0 - tSouth) * tEnd), tStone, smoothstep(${f2(KERB_X)} - tSoft, ${f2(KERB_X)} + tSoft, tAcross));
       tCol = mix(tCol, vec3(${KERB.toArray().map((c) => c.toFixed(3)).join(', ')}), tKerb);
       diffuseColor.rgb = mix(diffuseColor.rgb, tCol, tRoad * max(uEra, uBare));
       diffuseColor.rgb = mix(diffuseColor.rgb, vec3(${FAR.toArray().map((c) => c.toFixed(3)).join(', ')}), smoothstep(${f1(FAR_FROM)}, ${f1(FAR_TO)}, length(vRoadW.xz)) * uEra);`
-const v3 = (c) => `vec3(${c.toArray().map((v) => v.toFixed(3)).join(', ')})`
 const SURFACES = `
       // world (bridge frame) to the tile's grid (east, south from the origin), then to the mask's uv (v = 1 north)
       vec2 sG = vec2(vRoadW.x * uSurfT.x - vRoadW.z * uSurfT.y, vRoadW.x * uSurfT.y + vRoadW.z * uSurfT.x);

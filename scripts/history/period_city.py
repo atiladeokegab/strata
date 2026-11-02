@@ -20,6 +20,9 @@ occupied remained derelict until the 1960s." Buildings within 40 m of the east b
 standing on their outline (where and how high is illustrative).
 Terraces: a roofed lot near the bridge is split into strips (strips()), houses 5-7 m wide a storey up or down from each
 other, warehouses under 8-11 m roof spans. Chimneys: one brick stack through each house's hip (chimney()).
+The Home Front, 1939-45 ("s"/"e" WAR): a sandbag blast wall at the door of each building fronting an approach road
+(sandbags(); "c" tints Buildings.jsx's rubble brown to hessian) and an Emergency Water Supply tank beside each approach
+(EWS_TANKS). The kind is documented, where each stood is illustrative.
 Roofs: within ROOFED m of the bridge, a near-rectangular plot gets a hipped slate roof over its minimum rectangle
 ("p": the four corners, ridge along the long side; Buildings.jsx builds it). Slate roofs on London stock brick are
 the period's common build (status inferred; the plan shows footprints only, not roof forms).
@@ -33,7 +36,8 @@ import numpy as np
 from PIL import Image, ImageDraw
 from scipy import ndimage as ndi
 from shapely.geometry import LineString, Point, Polygon
-from shapely.ops import substring, unary_union
+from shapely.affinity import rotate, translate
+from shapely.ops import nearest_points, substring, unary_union
 from skimage import measure
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -57,6 +61,11 @@ ROOFED = 650  # m from the bridge centre: pitched roofs where the camera usually
 ROAD_1894 = [[(533616, 180118), (533565, 179985), (533515, 179854), (533423, 179515)],
              [(533733, 180417), (533743, 180458), (533760, 180619), (533768, 180689), (533774, 180705)]]
 ROAD_HALF = 10.0
+WAR = (1939, 1946)  # the Home Front: sandbagged doorways and static water tanks stand from the war's start to its end
+# Emergency Water Supply tanks, one on open ground beside each approach (u across the river, v along the bridge, m);
+# where is illustrative, the kind is the London Fire Brigade's: a steel tank about 10 m by 6 m, 2 m deep
+EWS_TANKS = [(-31, -255), (-16, 228)]
+SANDBAG = [1.5, 1.75, 1.6]  # tint on Buildings.jsx's rubble brown: hessian sandbags, tan
 
 
 def bare_earth(meta, name="bare.png"):
@@ -113,6 +122,20 @@ def chimney(b):
     rise = min(np.linalg.norm(c[1] - c[0]) / 2 * 0.7, 3.5)
     out = {"b": round(b["t"] - 1, 1), "t": round(b["t"] + rise + 2.0, 1), "k": "b", "o": [round(float(v), 1) for q in pts for v in q]}
     return out | {k: b[k] for k in ("s", "e") if k in b}
+
+
+def sandbags(house, approach, y):
+    """A blast wall of sandbags, 2.6 m wide and 1.6 m high, 0.6 m out from a house's door on the approach road."""
+    p, q = nearest_points(house.exterior, approach)
+    dx, dz = q.x - p.x, q.y - p.y
+    n = math.hypot(dx, dz) or 1.0
+    dx, dz = dx / n, dz / n
+    cx, cz = p.x + 1.05 * dx, p.y + 1.05 * dz  # 0.6 m gap + half its 0.9 m depth
+    ax, az = -dz * 1.3, dx * 1.3  # half width, along the facade
+    bx, bz = dx * 0.45, dz * 0.45  # half depth
+    pts = [(cx - ax - bx, cz - az - bz), (cx + ax - bx, cz + az - bz), (cx + ax + bx, cz + az + bz), (cx - ax + bx, cz - az + bz)]
+    return {"b": round(y - 0.4, 1), "t": round(y + 1.6, 1), "k": "r", "c": SANDBAG, "s": WAR[0], "e": WAR[1],
+            "o": [round(v, 1) for pt in pts for v in pt]}
 
 
 def strips(poly, rect, width):
@@ -220,6 +243,7 @@ def main():
     sizes = ndi.sum(np.ones_like(blocks), blocks, index=np.arange(nb + 1)) * PX * PX
     rng = np.random.default_rng(1894)
     out = []
+    fronts = []  # houses, shops and warehouses fronting an approach road in the war (sandbags())
     lots = blocks.astype(np.int64) * 10_000_000 + (plots - plots.min())
     lots[blocks == 0] = 0
     ids, inv = np.unique(lots, return_inverse=True)
@@ -293,8 +317,25 @@ def main():
                 out.append(h)
                 if kind == "b":
                     out.append(chimney(h))
+            for part in [p for p, _ in parts] or [poly]:
+                if b.get("e", MODERN) > WAR[1] and part.distance(approach) < 28:
+                    fronts.append(part)
             if not parts:
                 out.append(b)
+    gy = lambda x, z: float(ground[int(np.clip(maxN - (oN - z), 0, 1499)), int(np.clip(x + oE - minE, 0, 1499))]) - oH
+    for house in fronts:
+        door = nearest_points(house.exterior, approach)[0]
+        bags = sandbags(house, approach, gy(door.x, door.y))
+        if Polygon(list(zip(bags["o"][0::2], bags["o"][1::2]))).distance(approach) > 6:  # on the pavement, not the carriageway
+            out.append(bags)
+    for tu, tv in EWS_TANKS:
+        x, z = tu * math.cos(theta) - tv * math.sin(theta), tu * math.sin(theta) + tv * math.cos(theta)
+        tank = translate(rotate(Polygon([(-3, -5), (3, -5), (3, 5), (-3, 5)]), meta["bridge_axis_deg"]), x, z)
+        assert not tank.intersects(road), "a water tank on the road"
+        y = gy(x, z)
+        out.append({"b": round(y - 0.4, 1), "t": round(y + 2.0, 1), "k": "slate", "c": [1, 1, 1], "s": WAR[0], "e": WAR[1],
+                    "o": [round(v, 1) for pt in list(tank.exterior.coords)[:-1] for v in pt]})
+    print(f"1939-45: {sum(b.get('c') == SANDBAG for b in out)} sandbagged doors, {len(EWS_TANKS)} water tanks")
     frame = {"origin_osgb": meta["origin_osgb"], "origin_h": oH, "axis_deg": meta["bridge_axis_deg"], "bbox_osgb": meta["bbox_osgb"]}
     source = ("Footprints traced from the OS London Town Plan 1:1056, 1893-96, reproduced with the permission of the "
               "National Library of Scotland (CC-BY); heights inferred by use, see scripts/history/period_city.py")

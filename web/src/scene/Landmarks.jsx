@@ -12,6 +12,9 @@ const META = { origin_osgb: [533670.3, 180265.1] }
 const GROUND = -9 // pin foot, about street level below the deck
 const TALL = { 'the-shard': 300, 'tower-of-london': 45, 'hms-belfast': 30 } // label height over the ground, m
 const PIN = 40
+// The default camera sees the Tower straight behind the bridge's north tower, so its label sits on the
+// inner ward's west wall (Beauchamp Tower, about 90 m west of the White Tower) where it reads beside the bridge.
+const NUDGE = { 'tower-of-london': -90 } // label x offset, m
 
 export function Landmarks() {
   const parts = useStore((s) => s.place?.parts)
@@ -33,7 +36,7 @@ export function Landmarks() {
         const x = p.osgb[0] - oE, z = -(p.osgb[1] - oN)
         return (
           <group key={p.id} name={p.id} position={[x, (terrain && heightAt(terrain, x, z)) ?? GROUND, z]}>
-            <Html position={[0, h, 0]} center zIndexRange={[20, 0]}>
+            <Html position={[NUDGE[p.id] ?? 0, h, 0]} center zIndexRange={[20, 0]}>
               <button type="button" onClick={(e) => { e.stopPropagation(); select(p.id) }}
                 style={{
                   all: 'unset', cursor: 'pointer', whiteSpace: 'nowrap', font: '500 12px/1.2 Inter, system-ui, sans-serif',

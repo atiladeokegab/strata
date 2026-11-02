@@ -182,7 +182,7 @@ function build(data) {
     }
   }
   // the 1890s riverside: from before the bridge until 1950, brick walls under slate; the Blitz ends some in 1940
-  // and leaves rubble ("r") and roofless wall stubs on their plots (period_city.py)
+  // and leaves rubble ("r") and roofless wall stubs on their plots; 1939-45 adds sandbags and water tanks, tinted by "c" (period_city.py)
   data.period?.buildings.forEach((bd, i) => {
     if (onBridgeGround(bd.o, axis) || (LITE && beyond(bd, NEAR.period))) return
     const out = sets.p
@@ -190,7 +190,7 @@ function build(data) {
     const tint = TINTS[bd.k === 'w' ? 'w' : 'b'][(i * 7919) % 5] // a stable mix of brick and stucco, house by house
     const from = bd.s ?? PERIOD_FROM, to = bd.e ?? HISTORIC_BEFORE
     for (const grp of geo.groups) {
-      if (grp.materialIndex !== 0 || bd.s != null) push(out[bd.k] || out.b, geo, grp, from, bd.b, null, to, bd.k === 'r' ? WHITE : tint)
+      if (grp.materialIndex !== 0 || bd.s != null) push(out[bd.k] || out.b, geo, grp, from, bd.b, null, to, bd.c ?? (bd.k === 'r' ? WHITE : tint))
       else push(out.slate, geo, grp, from, bd.b, null, to, SLATE[i % 3])
     }
     geo.dispose()

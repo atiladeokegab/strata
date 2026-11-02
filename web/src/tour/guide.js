@@ -59,15 +59,15 @@ export const STEPS = [
     ] },
   { id: 'exploded', title: 'Take it apart', spot: '.toggles button:first-child', cam: [150, 60, 175], state: { exploded: true },
     text: 'Exploded view pulls every part away from the others, so you can see how it fits together.' },
-  { id: 'bascules', title: 'Watch it work', spot: '.dock .bascule', cam: [-160, 28, 75], // oblique, upstream: end-on the raised leaves vanish
+  { id: 'bascules', title: 'Watch it work', spot: '.dock .bascule', cam: [-200, 60, 94], // oblique, upstream: end-on the raised leaves vanish; mid-tower height, so the look-at point is mid-tower and the tops clear a short screen
     text: 'Signals to red, the bascules rise on simulated hydraulics, and a ship comes through. Drag the Bascules slider to work them yourself.',
     run: () => { stopTour(); s().setBascule(0); liftForShip({ fast: true }) } }, // nothing else may drive the camera or the lever during the lift
-  { id: 'part', title: 'Tap any part', spot: '.panel', state: { selected: 'counterweight-north', sheet: true },
+  { id: 'part', title: 'Tap any part', spot: '.panel', state: { selected: 'bascule-north', sheet: true }, // a part with sized dimensions
     text: 'The inspector shows its sizes, each with a source and a status: text-attested, measured or inferred.' },
   { id: 'docent', title: 'Ask the docent', spot: '.docent', state: { selected: 'counterweight-north', sheet: true },
     text: 'Ask anything. Answers cite their sources, and the docent says so when it cannot cite one.',
     run: () => askDocent() },
-  { id: 'search', title: 'Search', spot: '.search', state: { sheet: true },
+  { id: 'search', title: 'Search', spot: '.search input', state: { sheet: true },
     text: 'Find any part, event or source by name.',
     run: () => type('.search input', 'bascule'), leave: () => type('.search input', '') },
   { id: 'lidar', title: 'See the LiDAR', spot: '.toggles button:nth-child(2)', cam: [420, 90, 480], state: { lidar: true },

@@ -49,5 +49,8 @@
   .guide-dots button.on { width: 18px; }
   .guide-dots button.on::before { width: 12px; }
 }
+/* the part step is about the inspector, the docent step about the docent: give each the panel's room */
+.app:has(.guide-card.guide-part) .docent { display: none; }
+.app:has(.guide-card.guide-docent) .docent { max-height: 75%; }
 @keyframes guide-in-m { from { opacity: 0; transform: translateY(12px); } }
 @media (prefers-reduced-motion: reduce) { .guide-card, .guide-body, .guide-note, .guide-spot { animation: none; transition: none; } }

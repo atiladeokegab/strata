@@ -18,7 +18,10 @@ function Spotlight({ selector }) {
       if (el) {
         const show = r && r.width > 0 && r.height > 0
         el.style.opacity = show ? 1 : 0
-        if (show) Object.assign(el.style, { left: `${r.left - 6}px`, top: `${r.top - 6}px`, width: `${r.width + 12}px`, height: `${r.height + 12}px` })
+        if (show) { // inside the screen, so a full-width or sheet-tall target keeps all four edges of its ring
+          const L = Math.max(4, r.left - 6), T = Math.max(4, r.top - 6), R = Math.min(innerWidth - 4, r.right + 6), B = Math.min(innerHeight - 4, r.bottom + 6)
+          Object.assign(el.style, { left: `${L}px`, top: `${T}px`, width: `${R - L}px`, height: `${B - T}px` })
+        }
       }
       raf = requestAnimationFrame(tick) // follows the target through the sheet opening and layout shifts
     }

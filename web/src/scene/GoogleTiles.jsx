@@ -12,6 +12,8 @@ import { useStore } from '../store'
 import { useGoogle, useGoogleShown, useGoogleWanted } from './google/state'
 import { LITE } from './look/tier'
 import { FRAME_ROTATION_Y, ORIGIN, cutGap, inGap } from './google/frame'
+import { watchTiles } from './google/watch'
+import { TILE_LOADING } from './google/load'
 
 const draco = new DRACOLoader().setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/')
 const rad = THREE.MathUtils.degToRad
@@ -64,24 +66,9 @@ export function GoogleTiles() {
     if (!t) return
     radiusFalloff(t)
     if (LITE) { t.downloadQueue.maxJobsPerOrigin = 6; t.parseQueue.maxJobs = 2 } // phones: fewer tiles in flight at once
-    let queued = false
-    const credit = () => {
-      if (queued) return
-      queued = true
-      queueMicrotask(() => {
-        queued = false
-        const value = t.getAttributions().filter((a) => a.type === 'string').map((a) => a.value).join(' ')
-        useGoogle.setState({ credit: value })
-      })
-    }
-    // ready once tiles are on screen: tiles-load-end alone waits for every queue to drain, which an orbiting camera
-    // never allows (next21: tiles drawing, status stuck on 'loading')
-    const ready = () => { if (t.visibleTiles.size && useGoogle.getState().status === 'loading') useGoogle.setState({ status: 'ready' }) }
     const failed = (e) => { if (!t.root) useGoogle.setState({ status: 'failed' }); console.warn('[strata] Google tiles:', e?.error?.message || e) }
     t.addEventListener('load-model', clipGap)
-    t.addEventListener('tiles-load-end', ready)
-    t.addEventListener('tile-visibility-change', credit)
-    t.addEventListener('tile-visibility-change', ready)
+    const unwatch = watchTiles(t, useGoogle) // status and credit follow the tiles actually drawn (google/watch.js)
     t.addEventListener('load-error', failed)
     if (import.meta.env.DEV || new URLSearchParams(location.search).has('capture')) {
       window.__strataTiles = t // the tiles budget test counts its meshes
@@ -103,9 +90,7 @@ export function GoogleTiles() {
     }
     return () => {
       t.removeEventListener('load-model', clipGap)
-      t.removeEventListener('tiles-load-end', ready)
-      t.removeEventListener('tile-visibility-change', credit)
-      t.removeEventListener('tile-visibility-change', ready)
+      unwatch()
       t.removeEventListener('load-error', failed)
     }
   }, [t])
@@ -113,7 +98,7 @@ export function GoogleTiles() {
   if (!key) return null
   return (
     <group rotation-y={FRAME_ROTATION_Y} visible={wanted}>
-      <TilesRenderer ref={setTiles} errorTarget={BUDGET.errorTarget} enabled={wanted}
+      <TilesRenderer ref={setTiles} {...TILE_LOADING} errorTarget={BUDGET.errorTarget} enabled={wanted}
         lruCache-minSize={BUDGET.minSize} lruCache-maxSize={BUDGET.maxSize} lruCache-minBytesSize={BUDGET.minBytes} lruCache-maxBytesSize={BUDGET.maxBytes}>
         <TilesPlugin plugin={GoogleCloudAuthPlugin} args={{ apiToken: key, autoRefreshToken: true }} />
         <TilesPlugin plugin={GLTFExtensionsPlugin} args={{ dracoLoader: draco }} />

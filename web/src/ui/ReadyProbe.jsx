@@ -25,10 +25,10 @@ mgr.itemEnd = (url) => { // errors end too
 }
 let terrainIn = !terrainChunk
 const SETTLE = 0.5 // s of frames with everything in before the card lifts
-// ms: a Google view that has neither arrived nor failed by then (slow or stalled) settles without it. The portfolio's
-// embed waits 2.5 s: its card must lift inside 5 s, and a 403 lands only after the bridge is built (root request, then a
-// retry), so it hit the 8 s cap; tiles that arrive later fade in under the hero shot (TilesFadePlugin)
-const CITY_WAIT = EMBED ? 2500 : 8000
+// ms: a Google view that has neither drawn nor failed by then settles without it: the OSM blocks stand in until tiles
+// actually draw (google/watch.js), and tiles that arrive later fade in (TilesFadePlugin). It was 8 s for the app, which held
+// the card on the tile parse; the embed's card must lift inside 5 s and a 403 lands only after the root request and a retry
+const CITY_WAIT = 2500
 const RIVER_WAIT = 4000 // ms: the river (scene/Water.jsx 'thames', the mirror on desktop) or the card lifts without it
 const waterSlot = !!import.meta.glob('../scene/Water.jsx')['../scene/Water.jsx'] // no file: the stand-in is the river
 

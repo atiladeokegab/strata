@@ -173,9 +173,12 @@ export function claddingKit(topY) {
       new THREE.ConeGeometry(0.22, 0.7, 6).translate(x, 59.1, z),
       box(0.9, 0.35, 0.04, x + 0.4, 58.3, z), // vane
     )
+    // slit windows, flat on an outer face of the octagon (a corner would leave their ends standing proud);
+    // the river face beside the gilt shield (details.jsx, t = sx·π/8 or sx·7π/8) is left plain
     for (const y of [4, 17, 29, 39]) {
-      const ox = sx * 3.3, oz = sz * 0 // slit windows on the outer faces
-      glass.push(box(0.3, 2.6, 0.9, x + ox, y, z + oz), box(0.9, 2.6, 0.3, x, y, z + sz * 3.3))
+      const r = (3.4 - (0.2 * (y + 1.5)) / 46) * Math.cos(Math.PI / 8) - 0.12 // the face's distance at this height, 3 cm proud
+      for (const t of [sx * (Math.PI / 2 - (sz * Math.PI) / 8), -sx * (sz > 0 ? Math.PI / 8 : (7 * Math.PI) / 8)])
+        glass.push(box(0.5, 2.6, 0.3, 0, 0, 0).rotateY(t).translate(x + r * Math.sin(t), y, z + r * Math.cos(t)))
     }
   }
   // central roof: a rectangular pyramid, lantern and spire up to the data height

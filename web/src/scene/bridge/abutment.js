@@ -16,7 +16,8 @@ function lancet(w, h, depth = 0.2) {
   s.absarc(w / 2, sp, w, (2 * Math.PI) / 3, Math.PI, false)
   return new THREE.ExtrudeGeometry(s, { depth, bevelEnabled: false, curveSegments: 5 })
 }
-// An opening on a face: n = 'x' or 'z' is the face normal axis, sign which way it faces.
+// An opening on a face: n = 'x' or 'z' is the face normal axis, sign which way it faces. It is 0.2 deep from
+// (x, y, z) outwards, so start it 0.15 inside the face: set in the wall, 5 cm proud, never floating.
 const opening = (w, h, x, y, z, n, sign) =>
   (n === 'x' ? lancet(w, h).rotateY((sign * Math.PI) / 2) : lancet(w, h).rotateY(sign > 0 ? 0 : Math.PI)).translate(x, y, z)
 
@@ -45,7 +46,7 @@ export function abutmentTower(sx, z, o, { hw, walkX }, { blind = false, lite = L
   // dormer gablet on the outer roof face
   o.stone.push(box(0.8, 2.2, 2.2, outer - sx * 1.2, ABUT_TOP + 1.7, z))
   o.slate.push(new THREE.ConeGeometry(1.5, 1.8, 4).rotateY(Math.PI / 4).scale(0.6, 1, 1).translate(outer - sx * 1.2, ABUT_TOP + 3.7, z))
-  o.windows.push(opening(0.9, 1.6, outer - sx * 0.75, ABUT_TOP + 0.9, z, 'x', sx))
+  o.windows.push(opening(0.9, 1.6, outer - sx * 0.95, ABUT_TOP + 0.9, z, 'x', sx))
   // corner turrets on the outer corners; the inner side is the arch over the road
   const turret = (x, zz, y0) => {
     o.stone.push(new THREE.CylinderGeometry(1.05, 1.05, ABUT_TOP + 3 - y0, 8).translate(x, (ABUT_TOP + 3 + y0) / 2, zz))
@@ -57,12 +58,12 @@ export function abutmentTower(sx, z, o, { hw, walkX }, { blind = false, lite = L
   }
   for (const zz of [land, river]) turret(outer - sx * 0.4, zz + (zz === land ? 0.4 : -0.4), hw)
   // lancet windows: paired on the outer face, single on the ends
-  if (!blind) for (const y of [2.2, 9, 14]) for (const t of [-1.6, 1.6]) o.windows.push(opening(0.9, y > 5 ? 2.8 : 2.2, outer + sx * 0.05, y, z + t, 'x', sx))
-  for (const y of [2.2, 9]) o.windows.push(opening(1.1, 3, xc + sx * 0.6, y, land - 0.05, 'z', -1))
-  o.windows.push(opening(1.1, 3, xc + sx * 0.9, 9, river + 0.05, 'z', 1))
+  if (!blind) for (const y of [2.2, 9, 14]) for (const t of [-1.6, 1.6]) o.windows.push(opening(0.9, y > 5 ? 2.8 : 2.2, outer - sx * 0.15, y, z + t, 'x', sx))
+  for (const y of [2.2, 9]) o.windows.push(opening(1.1, 3, xc + sx * 0.6, y, land + 0.15, 'z', -1))
+  o.windows.push(opening(1.1, 3, xc + sx * 0.9, 9, river - 0.15, 'z', 1))
   // pointed doorway on the road face, under the arch, with a granite surround
-  o.doors.push(opening(2, 3.8, inner - sx * 0.1, 0, z - 1.2, 'x', -sx))
-  o.granite.push(opening(2.6, 4.4, inner - sx * 0.02, -0.1, z - 1.2, 'x', -sx))
+  o.doors.push(opening(2, 3.8, inner, 0, z - 1.2, 'x', -sx))
+  o.granite.push(opening(2.6, 4.4, inner + sx * 0.08, -0.1, z - 1.2, 'x', -sx))
   // chain anchorage: granite boss in the river face, iron shoe and pin taking the chain end
   const ax = sx * walkX
   o.granite.push(box(2.6, 5, 0.5, ax, 15.6, river + 0.2))
@@ -106,5 +107,5 @@ export function abutmentArch(z, o, { lite = LITE } = {}) {
   o.granite.push(box(2 * a, 0.45, 2 * hz + 0.4, 0, 13, z)) // string course carried across
   o.granite.push(box(2 * a, 0.6, 2 * hz + 0.8, 0, ABUT_TOP + 0.3, z)) // cornice
   o.slate.push(new THREE.ConeGeometry(1, 5, 4).rotateY(Math.PI / 4).scale(a * 1.414, 1, hz * 1.414).translate(0, ABUT_TOP + 0.6 + 2.5, z))
-  for (const x of [-4.5, 0, 4.5]) for (const s of [-1, 1]) o.windows.push(opening(1.1, 3, x, 14.6, z + s * (hz + 0.05), 'z', s))
+  for (const x of [-4.5, 0, 4.5]) for (const s of [-1, 1]) o.windows.push(opening(1.1, 3, x, 14.6, z + s * (hz - 0.15), 'z', s))
 }

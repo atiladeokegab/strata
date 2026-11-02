@@ -57,7 +57,7 @@ export function rampKit(side, era, disc) {
       box(0.7, 1, 0.7, x, y + 0.5, z),
       new THREE.CylinderGeometry(0.14, 0.18, 4.4, 8).translate(x, y + 3.2, z),
       new THREE.CylinderGeometry(0.3, 0.16, 0.5, 8).translate(x, y + 5.6, z), // cowl where a lantern would be
-      new THREE.CylinderGeometry(0.34, 0.34, 0.08, 8).translate(x, y + 6.05, z),
+      new THREE.CylinderGeometry(0.34, 0.34, 0.08, 8).translate(x, y + 5.89, z), // rain cap, seated on the cowl
     )
   }
   return o

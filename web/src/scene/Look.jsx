@@ -33,22 +33,28 @@ const ease = THREE.MathUtils.smoothstep
 const air = { sun: new THREE.Color(SUN_COLOR), sunI: 3.4 } // written by Atmosphere, read by Sun
 const _t = new THREE.Color()
 
+function shell(g, alpha) {
+  const p = g.attributes.position, a = new Float32Array(p.count * 4)
+  for (let i = 0; i < p.count; i++) a.set([1, 1, 1, alpha(p.getY(i))], i * 4)
+  g.setAttribute('color', new THREE.BufferAttribute(a, 4))
+  const m = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: false })
+  const d = new THREE.Mesh(g, m)
+  Object.assign(d, { frustumCulled: false, renderOrder: -1, raycast: () => null })
+  d.scale.setScalar(4000)
+  d.userData.noShadow = true
+  return d
+}
+
 function Atmosphere() {
   const scene = useThree((s) => s.scene)
   const y = useRef(useStore.getState().year)
-  const dome = useMemo(() => {
-    const g = new THREE.SphereGeometry(1, 32, 16)
-    const p = g.attributes.position, a = new Float32Array(p.count * 4)
-    for (let i = 0; i < p.count; i++) a.set([1, 1, 1, 1 - 0.55 * ease(p.getY(i), 0, 0.5)], i * 4) // thickest at the horizon
-    g.setAttribute('color', new THREE.BufferAttribute(a, 4))
-    const m = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: THREE.BackSide, fog: false })
-    const d = new THREE.Mesh(g, m)
-    Object.assign(d, { frustumCulled: false, renderOrder: -1, raycast: () => null })
-    d.scale.setScalar(4000)
-    d.userData.noShadow = true
-    return d
-  }, [])
-  useEffect(() => () => { dome.geometry.dispose(); dome.material.dispose() }, [dome])
+  // Two shells round the camera in the fog colour: the period haze dome, and today's thin horizon band, which lifts
+  // the sky's horizon to the fog colour so fogged land and the far ground skirt fade into it with no bright rim.
+  const [dome, band] = useMemo(() => [
+    shell(new THREE.SphereGeometry(1, 32, 16), (y) => 1 - 0.55 * ease(y, 0, 0.5)), // thickest at the horizon
+    shell(new THREE.LatheGeometry([-1, -0.3, -0.1, -0.03, 0, 0.015, 0.03, 0.05, 0.08, 0.12].map((y) => new THREE.Vector2(Math.sqrt(1 - y * y), y)), 64), (y) => 1 - ease(y, 0, 0.08)),
+  ], [])
+  useEffect(() => () => [dome, band].forEach((d) => { d.geometry.dispose(); d.material.dispose() }), [dome, band])
   useFrame(({ camera }, dt) => {
     const w = eraWeights((y.current = THREE.MathUtils.damp(y.current, useStore.getState().year, 3, dt)))
     const fog = scene.fog
@@ -72,8 +78,12 @@ function Atmosphere() {
     dome.material.color.copy(fog.color)
     dome.material.opacity = haze
     dome.position.copy(camera.position)
+    band.visible = w[2] > 0.01
+    band.material.color.copy(fog.color)
+    band.material.opacity = w[2]
+    band.position.copy(camera.position)
   })
-  return <primitive object={dome} />
+  return <><primitive object={dome} /><primitive object={band} /></>
 }
 
 // First frame: a 32x16 copy of the HDRI (inlined, no fetch) lights and fills the sky at once, with the HDRI's

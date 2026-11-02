@@ -12,13 +12,14 @@ until that year, when Buildings.jsx shows the new one. Nothing is traced inside 
 "landmarks": buildings OSM has only as multipolygons, which bake.py skips (the PLA building, 1922); Buildings.jsx draws
 them with the OSM ones.
 Heights (status inferred): there are no surveyed 1890s heights, so each block gets a period height by use:
-riverside and dock warehouses (within 70 m of the water) 15-22 m, one lot in ten of a large inland block (breweries,
+riverside and dock warehouses (within 70 m of the water, bar the 1894 approach roads past the wharf row) 14-21 m, one lot in ten of a large inland block (breweries,
 works) 13-17 m, terraced houses and shops 9-14 m (3-4 storeys). Ground: the bare-earth surface Terrain.jsx draws before 1950, so walls meet it.
 The Blitz (wiki-st-katharine-docks): "All the warehouses around the eastern basin were destroyed, and the site they had
 occupied remained derelict until the 1960s." Buildings within 40 m of the east basin end in 1940 ("e") and leave, until
 1950 when the period city hands over to the modern one, a low rubble heap ("k": "r") with a few gutted wall stubs
 standing on their outline (where and how high is illustrative).
-Chimneys: one brick stack through each roofed house's hip (chimney()).
+Terraces: a roofed lot near the bridge is split into strips (strips()), houses 5-7 m wide a storey up or down from each
+other, warehouses under 8-11 m roof spans. Chimneys: one brick stack through each house's hip (chimney()).
 Roofs: within ROOFED m of the bridge, a near-rectangular plot gets a hipped slate roof over its minimum rectangle
 ("p": the four corners, ridge along the long side; Buildings.jsx builds it). Slate roofs on London stock brick are
 the period's common build (status inferred; the plan shows footprints only, not roof forms).
@@ -114,6 +115,25 @@ def chimney(b):
     return out | {k: b[k] for k in ("s", "e") if k in b}
 
 
+def strips(poly, rect, width):
+    """Split a lot along its minimum rectangle's long side into strips about `width` m wide (a terrace's houses, a
+    warehouse's roof spans): [(footprint, strip rectangle)], so no hip spans the whole 22 m plot."""
+    c = np.array(rect.exterior.coords[:4])
+    if np.linalg.norm(c[1] - c[0]) < np.linalg.norm(c[2] - c[1]):
+        c = np.roll(c, -1, axis=0)  # now c0-c1 is a long side
+    n = max(1, round(np.linalg.norm(c[1] - c[0]) / width))
+    out = []
+    for i in range(n):
+        a, b = i / n, (i + 1) / n
+        q = [c[0] + (c[1] - c[0]) * a, c[0] + (c[1] - c[0]) * b, c[3] + (c[2] - c[3]) * b, c[3] + (c[2] - c[3]) * a]
+        part = poly.intersection(Polygon(q))
+        if part.geom_type == "MultiPolygon":
+            part = max(part.geoms, key=lambda g: g.area)
+        if part.geom_type == "Polygon" and part.area >= 8:
+            out.append((part, q))
+    return out
+
+
 def main():
     meta = json.loads((TERRAIN / "meta.json").read_text())
     minE, minN, maxE, maxN = BBOX
@@ -186,7 +206,9 @@ def main():
 
     # inside the walls and the moat the plan's shading is the Tower itself, drawn from OSM: no houses on the green
     precinct = unary_union(castle).convex_hull.buffer(MOAT)
-    near_water = ndi.distance_transform_edt(~(blue | ~land)) * PX < 70
+    to_water = ndi.distance_transform_edt(~(blue | ~land)) * PX
+    near_water = to_water < 70
+    approach = unary_union([LineString([(e - oE, oN - n) for e, n in line]) for line in ROAD_1894])
     plots = (np.floor(u / PLOT).astype(np.int64) * 1000 + np.floor(v / PLOT).astype(np.int64))
     blocks, nb = ndi.label(shaded)
     sizes = ndi.sum(np.ones_like(blocks), blocks, index=np.arange(nb + 1)) * PX * PX
@@ -218,8 +240,10 @@ def main():
         rr, cc = rr + sl[0].start, cc + sl[1].start
         g = ground[np.clip(rr // 2, 0, 1499), np.clip(cc // 2, 0, 1499)]
         block_area = sizes[blocks[rr[0], cc[0]]]
-        if near_water[rr, cc].mean() > 0.5:
-            height, kind = rng.uniform(15, 22), "w"  # warehouse
+        # the new approach roads were lined with shops and houses once past the wharf row
+        on_approach = poly.centroid.distance(approach) < 30 and to_water[rr, cc].mean() > 25
+        if near_water[rr, cc].mean() > 0.5 and not on_approach:
+            height, kind = rng.uniform(14, 21), "w"  # warehouse, 4-6 storeys
         elif block_area > 2500 and rng.random() < 0.1:  # terraces join into big blocks, so only a few lots are works
             height, kind = rng.uniform(13, 17), "w"
         else:
@@ -251,11 +275,20 @@ def main():
                 if poly.intersection(shape).area > 0.25 * poly.area:
                     b["e"] = min(b.get("e", MODERN), year)
             rect = poly.minimum_rotated_rectangle
-            if poly.centroid.distance(ORIGIN) < ROOFED and poly.area > 0.85 * rect.area:
-                b["p"] = [round(float(v), 1) for q in list(rect.exterior.coords)[:4] for v in q]
-            out.append(b)
-            if "p" in b and kind == "b":
-                out.append(chimney(b))
+            roofed = poly.centroid.distance(ORIGIN) < ROOFED and poly.area > 0.85 * rect.area
+            # houses 5-7 m wide, each its own height and hip; a warehouse keeps one height under 8-11 m spans
+            parts = strips(poly, rect, rng.uniform(5, 7) if kind == "b" else rng.uniform(8, 11)) if roofed else []
+            for part, q in parts:
+                xs, zs = part.exterior.coords.xy
+                h = b | {"o": [round(float(v), 1) for p in zip(list(xs)[:-1], list(zs)[:-1]) for v in p],
+                         "p": [round(float(v), 1) for p in q for v in p]}
+                if kind == "b":
+                    h["t"] = round(top + rng.choice([-3.2, -1.6, 0, 0, 1.6]), 1)  # a storey up or down, house by house
+                out.append(h)
+                if kind == "b":
+                    out.append(chimney(h))
+            if not parts:
+                out.append(b)
     frame = {"origin_osgb": meta["origin_osgb"], "origin_h": oH, "axis_deg": meta["bridge_axis_deg"], "bbox_osgb": meta["bbox_osgb"]}
     source = ("Footprints traced from the OS London Town Plan 1:1056, 1893-96, reproduced with the permission of the "
               "National Library of Scotland (CC-BY); heights inferred by use, see scripts/history/period_city.py")

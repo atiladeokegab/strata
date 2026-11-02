@@ -50,8 +50,9 @@ const FACADES = {
   s: () => facade((g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#4a4e52'; g.fillRect(20, 14, 24, 34); g.fillStyle = '#d6d2ca'; g.fillRect(0, 56, 64, 3) }, 3.6, 3.6),
   // London stock brick: smaller windows, a stone lintel
   b: () => facade((g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#3b3d40'; g.fillRect(22, 20, 20, 28); g.fillStyle = '#efe6d6'; g.fillRect(19, 15, 26, 5) }, 3.2, 3.2),
-  // Victorian riverside warehouse: stock brick, small barred windows, a column of loading doors every bay
-  w: () => facade((g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#2f2b28'; g.fillRect(8, 22, 14, 20); g.fillStyle = '#4a3020'; g.fillRect(40, 12, 18, 40); g.fillStyle = '#e4d8c4'; g.fillRect(0, 58, 64, 3) }, 5.0, 3.4),
+  // Victorian riverside warehouse: stock brick, three small windows, then a column of timber loading doors, one per
+  // floor on a stone sill, stacked up the front every 12 m
+  w: () => facade((g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#2f2b28'; for (const x of [4, 15, 26]) g.fillRect(x, 20, 6, 24); g.fillStyle = '#3a2f26'; g.fillRect(41, 0, 14, 58); g.fillStyle = '#e8dcc4'; g.fillRect(38, 58, 20, 5) }, 12, 3.4),
   // curtain wall: floor slabs and mullions over glass
   g: () => facade((g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#4f5b63'; g.fillRect(0, 54, 64, 10); g.fillStyle = '#c9d2d8'; g.fillRect(0, 0, 3, 64) }, 1.6, 3.8),
   // Kentish ragstone (the Tower of London): rough courses and, one bay in four, a narrow slit; a wall, not a terrace
@@ -62,7 +63,7 @@ const LOOK = {
   s: { color: '#d9d1bf', roughness: 0.86 },
   b: { color: '#b39270', roughness: 0.92 },
   g: { color: '#8ea2b0', roughness: 0.14, metalness: 0.55, envMapIntensity: 1.4 },
-  w: { color: '#7f7464', roughness: 0.95 }, // sooted London stock brick: dull grey-yellow, not orange
+  w: { color: '#86765f', roughness: 0.95 }, // sooted London stock brick: dull grey-yellow, not orange, not green in shade
   k: { color: '#8c8476', roughness: 0.97 }, // Kentish ragstone, grey-brown
   roof: { color: '#6b6862', roughness: 0.95 },
   slate: { color: '#4d5258', roughness: 0.8 }, // Welsh slate
@@ -167,7 +168,7 @@ function build(data) {
         : Math.max(s ?? HISTORIC_BEFORE, HISTORIC_BEFORE)
     const out = sets[start < HISTORIC_BEFORE ? 'o' : 'm']
     for (const grp of geo.groups) {
-      if (grp.materialIndex !== 0) push(out[wall] || out.b, geo, grp, start, bd.b)
+      if (grp.materialIndex !== 0) push(out[wall] || out.b, geo, grp, start, bd.b, null, 1e4, out === sets.m ? modernTint(bd, wall) : WHITE)
       else if (bd.l && !lead) push(out.drape, geo, grp, start, bd.b, tileUv)
       else push(out.roof, geo, grp, start, bd.b)
     }
@@ -208,8 +209,18 @@ const ERA_SHOWN = { o: () => true, p: (y) => y < HISTORIC_BEFORE, m: (y) => y >=
 
 // multipliers on the facade colour, soot-darkened: yellow London stock, grey soot, dull red brick, dirty stucco (houses only), dark stock
 const TINTS = {
-  w: [[1, 1, 1], [0.85, 0.86, 0.9], [1.1, 0.85, 0.8], [0.92, 0.9, 0.88], [1.08, 1.05, 1.0]],
+  w: [[1, 1, 1], [0.9, 0.87, 0.84], [0.98, 0.92, 0.86], [0.92, 0.9, 0.88], [1.08, 1.05, 1.0]], // close to Butler's Wharf
   b: [[0.84, 0.95, 1.0], [0.7, 0.72, 0.76], [0.78, 0.6, 0.64], [1.1, 1.29, 1.52], [0.72, 0.81, 0.89]],
+}
+// from 1950, OSM's undifferentiated stone and brick boxes: stock, red and grey brick; Portland, buff and fair-faced
+// concrete; anything over 20 m concrete (the post-war slabs). Tints only, so no draw calls
+const MODERN_TINTS = {
+  b: [[1, 1, 1], [0.86, 0.92, 0.95], [0.66, 0.68, 0.72], [0.84, 0.55, 0.5], [0.6, 0.62, 0.66]],
+  s: [[1, 1, 1], [0.95, 0.87, 0.74], [0.74, 0.77, 0.82], [0.58, 0.6, 0.64]],
+}
+const modernTint = (bd, wall) => {
+  const t = MODERN_TINTS[wall], n = parseInt(bd.id.slice(1), 10) || 0
+  return !t ? WHITE : wall === 's' && bd.t - bd.b > 20 ? t[2 + (n % 2)] : t[n % t.length]
 }
 const SLATE = [[1, 1, 1], [0.86, 0.88, 0.92], [1.12, 1.06, 1.0]]
 const WHITE = [1, 1, 1]

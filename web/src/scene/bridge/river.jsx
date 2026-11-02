@@ -114,11 +114,11 @@ const wd = new THREE.Object3D() // its own: Fleet's dummy never resets scale
 function Wakes({ craft, foam }) {
   const ref = useRef()
   const disc = useHomeDisc()
-  const mat = useMemo(() => new THREE.MeshBasicMaterial({ map: foam, transparent: true, depthWrite: false, opacity: 0.45 }), [foam])
+  const mat = useMemo(() => new THREE.MeshBasicMaterial({ map: foam, transparent: true, depthWrite: false, opacity: 0.35 }), [foam])
   useFrame(() => {
     craft.forEach((c, i) => {
       const { len, beam } = CRAFT[c.type]
-      let long = c.speed ? 5 + c.speed * 7 : 0
+      let long = c.speed ? 4 + c.speed * 3.5 : 0
       if (offDisc(disc, c.x, c.z, len / 2) || offDisc(disc, c.x - c.dir * (len / 2 + long), c.z)) long = 0
       wd.position.set(c.x - c.dir * (len / 2 + long / 2 - 0.5), WATER_Y + 0.05, c.z)
       wd.rotation.set(0, c.dir > 0 ? Math.PI : 0, 0) // texture is densest at u=0: keep that end at the stern

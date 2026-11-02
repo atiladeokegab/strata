@@ -191,7 +191,7 @@ function foamTexture() {
   for (let i = 0; i < 128; i++)
     for (let j = 0; j < 32; j++) {
       const edge = 1 - Math.abs(j - 15.5) / 16
-      const a = (1 - i / 128) ** 1.5 * edge ** 0.6 * (0.6 + 0.4 * Math.random())
+      const a = (1 - i / 128) ** 2.5 * edge ** 2 * (0.6 + 0.4 * Math.random()) // soft edges and tail: no hard 'beam'
       img.data.set([255, 255, 255, a * 255], (j * 128 + i) * 4)
     }
   x.putImageData(img, 0, 0)
@@ -397,7 +397,7 @@ export function Ship({ rt, year, maxAngle }) {
     bob.current.rotation.z = Math.sin(t * 0.4 + 1) * 0.012 // pitch
     flag.current.rotation.y = Math.sin(t * 3.1) * 0.25
     const k = s.v / CRUISE
-    wake.current.children.forEach((m) => (m.material.opacity = 0.15 + 0.55 * k))
+    wake.current.children.forEach((m) => (m.material.opacity = 0.1 + 0.4 * k))
     wake.current.scale.x = 0.4 + 0.6 * k
     // funnel smoke: puffs rise, swell and fade, streaming aft with the ship's way
     smoke.current?.children.forEach((p, i) => {
@@ -434,8 +434,8 @@ export function Ship({ rt, year, maxAngle }) {
           <planeGeometry args={[70, 10]} />
         </mesh>
         {[-1, 1].map((z) => (
-          <mesh key={z} rotation={[-Math.PI / 2, 0, -z * 0.32]} position={[Math.max(vessel.bow, -29) + 21.8, 0, z * 7.2]} material={mats.foam}>
-            <planeGeometry args={[46, 3]} />
+          <mesh key={z} rotation={[-Math.PI / 2, 0, -z * 0.32]} position={[Math.max(vessel.bow, -29) + 15, 0, z * 5]} material={mats.foam}>
+            <planeGeometry args={[32, 3]} />
           </mesh>
         ))}
       </group>

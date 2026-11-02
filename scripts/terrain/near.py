@@ -137,17 +137,20 @@ def lite(meta):
     out = OUT / "lo"
     out.mkdir(exist_ok=True)
     h = decode(OUT / "bare.png", meta)  # the ground only: the LiDAR view waits for the full DSM
-    n = h.shape[0] // LO
-    small = h[:n * LO, :n * LO].reshape(n, LO, n, LO).mean(axis=(1, 3))
-    small = np.round(small / 0.05) * 0.05  # 5 cm steps: invisible at 4 m, and the PNG halves
-    Image.fromarray(encode(small, meta)).save(out / "bare.png", optimize=True)
+    for res, path in ((LO, out / "bare.png"), (2, OUT / "bare-2m.png")):  # first-load; phones' full tile (~0.3 MB, not 1.7)
+        n = h.shape[0] // res
+        small = h[:n * res, :n * res].reshape(n, res, n, res).mean(axis=(1, 3))
+        small = np.round(small / 0.05) * 0.05  # 5 cm steps: invisible at 2-4 m, and the PNG halves
+        Image.fromarray(encode(small, meta)).save(path, optimize=True)
     for name, px, q in (("color.jpg", 768, 65), ("color-1890s.jpg", 512, 70)):
         Image.open(OUT / name).convert("RGB").resize((px, px), Image.LANCZOS).save(out / name, quality=q, optimize=True, progressive=True)
-    meta["lite"] = {"size_px": [n, n], "res_m": LO, "note": "Shown first on every device, then replaced by the full tile."}
+    meta["lite"] = {"size_px": [h.shape[0] // LO] * 2, "res_m": LO, "note": "Shown first on every device, then replaced by the full tile."}
     total = sum(f.stat().st_size for f in out.iterdir())
     assert total < 500_000, f"first-load tile is {total} bytes"
+    assert (OUT / "bare-2m.png").stat().st_size < 400_000, "the phone tier's ground grew past 0.4 MB"
     return {f"lo/{f}": {"source": f"Downsampled from {f} ({'block mean' if f.endswith('.png') else 'Lanczos'})", "licence": meta["files"][f]["licence"]}
-            for f in ("bare.png", "color.jpg", "color-1890s.jpg")}
+            for f in ("bare.png", "color.jpg", "color-1890s.jpg")} | {
+        "bare-2m.png": {"source": "Downsampled from bare.png (2 m block mean); the phone tier's full tile", "licence": meta["files"]["bare.png"]["licence"]}}
 
 
 def save_jpg(im, path, quality):

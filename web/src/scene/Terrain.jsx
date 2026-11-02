@@ -56,7 +56,8 @@ export function loadLow() {
 
 /** The full 1 m outer tile's ground heights (no drapes), once per page; queued behind the first-load tile. */
 export function loadTerrain() {
-  cache ??= loadLow().then(async ({ meta }) => tile(meta, await decodeHeights(BASE + 'bare.png', meta)))
+  // phones: 2 m (~0.3 MB) is plenty under their 150k-triangle cap; the 1 m file is 1.7 MB
+  cache ??= loadLow().then(async ({ meta }) => tile(meta, await decodeHeights(BASE + (LITE ? 'bare-2m.png' : 'bare.png'), meta)))
   return cache
 }
 

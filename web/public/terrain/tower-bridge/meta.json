@@ -107,6 +107,10 @@
     "lo/bare.png": {
       "source": "Downsampled from bare.png (block mean)",
       "licence": "Open Government Licence v3.0. Contains Environment Agency information \u00a9 Environment Agency copyright and/or database right 2022."
+    },
+    "bare-2m.png": {
+      "source": "Downsampled from bare.png (2 m block mean); the phone tier's full tile",
+      "licence": "Open Government Licence v3.0. Contains Environment Agency information \u00a9 Environment Agency copyright and/or database right 2022."
     }
   },
   "lite": {

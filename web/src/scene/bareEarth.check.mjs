@@ -18,3 +18,18 @@ import assert from 'node:assert/strict'
   assert(!onBridgeGround(sq(-250 * Math.sin(a), -250 * Math.cos(a), 3), 20.95), 'the mirror turn (the old bake sign) is not')
   console.log('bridge ground ok')
 }
+
+// the water's footprint: the river joined to the deck, grown one cell, and never a dry pit cut off from it
+{
+  const { riverFootprint } = await import('./riverFootprint.js')
+  const w = 10, h = 10, heights = new Float32Array(w * h).fill(5)
+  for (let i = 0; i < h; i++) for (let j = 4; j <= 6; j++) heights[i * w + j] = 0 // the river, columns 4-6
+  heights[1 * w + 1] = 0 // a sunken bowl two cells off the river
+  const meta = { bbox_osgb: [0, 0, 40, 40], origin_osgb: [20, 20], water_h: 2 }
+  const { positions, index } = riverFootprint({ meta, heights, w, h })
+  assert.equal(index.length, 6 * h, 'one quad per row: the river and its grown edge, not the bowl')
+  for (let q = 0; q < positions.length; q += 12) assert.deepEqual([positions[q], positions[q + 3]], [-8, 12], 'columns 3-7, in metres from the deck')
+  assert.deepEqual(positions.slice(0, 3), [-8, 0, -16], 'the north row is at z -20..-16 (south +)')
+  assert.throws(() => riverFootprint({ meta, heights: new Float32Array(w * h).fill(5), w, h }), /above the water line/)
+  console.log('river footprint ok')
+}

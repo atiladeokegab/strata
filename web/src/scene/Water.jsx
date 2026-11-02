@@ -1,8 +1,9 @@
-import { Suspense, useEffect, useMemo } from 'react'
+import { Suspense, use, useEffect, useMemo } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { Water as WaterSurface } from 'three/examples/jsm/objects/Water.js'
-import { useTerrainMeta } from './Terrain.jsx'
+import { loadLow } from './Terrain.jsx'
+import { riverFootprint } from './riverFootprint.js'
 import { SUN_COLOR, SUN_DIR } from './look/sun.js'
 import { LITE } from './look/tier'
 
@@ -20,17 +21,23 @@ function flipForMirror(o, out) {
 }
 
 function Surface({ sun }) {
-  const meta = useTerrainMeta()
+  const low = use(loadLow()) // the first-load 4 m ground every device already has
   const fog = useThree((s) => s.scene.fog)
   const water = useMemo(() => {
-    const [minE, minN, maxE, maxN] = meta.bbox_osgb
-    const [oE, oN] = meta.origin_osgb
-    const geom = new THREE.PlaneGeometry(maxE - minE, maxN - minN)
+    const { meta } = low
+    // only over the river itself, whatever ground (ours or Google's) shows around it; three's Water wants its
+    // surface in the local xy plane (normal +z), turned flat below, so the grid frame's (x, z) goes in as (x, -z)
+    const { positions, index } = riverFootprint(low)
+    const geom = new THREE.BufferGeometry()
+    const xy = new Float32Array(positions.length)
+    for (let i = 0; i < xy.length; i += 3) { xy[i] = positions[i]; xy[i + 1] = -positions[i + 2] }
+    geom.setAttribute('position', new THREE.BufferAttribute(xy, 3))
+    geom.setIndex(index)
+    geom.computeVertexNormals()
     const at = (m) => {
       m.name = 'thames'
       m.rotation.x = -Math.PI / 2
-      // the river surface, in the bridge frame (y = 0 is the deck)
-      m.position.set((minE + maxE) / 2 - oE, meta.water_h - meta.origin_h, oN - (minN + maxN) / 2)
+      m.position.y = meta.water_h - meta.origin_h // the river surface, in the bridge frame (y = 0 is the deck)
       m.receiveShadow = true
       return m
     }
@@ -65,7 +72,7 @@ function Surface({ sun }) {
       try { mirror.call(this, renderer, scene, ...a) } finally { for (const o of flipped) o.visible = !o.visible }
     }
     return at(w)
-  }, [meta, fog])
+  }, [low, fog])
   useEffect(() => { water.material.uniforms?.sunDirection.value.set(...sun).normalize() }, [water, sun[0], sun[1], sun[2]]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => { water.geometry.dispose(); water.material.dispose() }, [water])
   useFrame((_, dt) => {

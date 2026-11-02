@@ -6,6 +6,7 @@ import { loadLow } from './Terrain.jsx'
 import { riverFootprint } from './riverFootprint.js'
 import { SUN_COLOR, SUN_DIR } from './look/sun.js'
 import { LITE } from './look/tier'
+import { frameNo } from './look/cadence'
 import { bigSilhouette } from './look/silhouette'
 
 // The mirror reflects the bridge, its traffic and craft, the sky and a coarse ground (Terrain.jsx 'terrain-mirror',
@@ -78,10 +79,10 @@ function Surface({ sun }) {
   }, [low, fog])
   useEffect(() => { water.material.uniforms?.sunDirection.value.set(...sun).normalize() }, [water, sun[0], sun[1], sun[2]]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => { water.geometry.dispose(); water.material.dispose() }, [water])
-  useFrame((_, dt) => {
+  useFrame(({ clock, gl }, dt) => {
     if (!water.material.uniforms) return
     water.material.uniforms.time.value += dt * 0.35
-    water.userData.armed = (water.userData.frame = (water.userData.frame ?? 0) + 1) % 2 === 1
+    water.userData.armed = frameNo(gl, clock.elapsedTime) % 2 === 1 // odd frames: the shadow map takes the even ones
   })
   return <primitive object={water} />
 }

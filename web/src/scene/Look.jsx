@@ -14,6 +14,7 @@ import { LITE } from './look/tier'
 import { useStore } from '../store'
 import { worldUVs } from './look/uvs'
 import { bigSilhouette, farHide, smallBridgeMesh } from './look/silhouette'
+import { frameNo } from './look/cadence'
 
 const Grade = lazy(() => import('./look/Grade.jsx'))
 const ENV_INTENSITY = 0.6
@@ -131,20 +132,20 @@ function Sun({ mapSize }) {
     l.shadow.mapSize.set(mapSize, mapSize)
     last.current = 0
   }, [mapSize])
-  const frame = useRef(0)
   const gl = useThree((s) => s.gl)
   useEffect(() => () => { gl.shadowMap.autoUpdate = true }, [gl]) // if Look goes, the stand-in light updates its own map
   const scene = useThree((s) => s.scene)
   const bridge = useRef(null)
-  useFrame(() => {
+  useFrame(({ clock }) => {
     // The shadow pass runs every SHADOW_EVERY frames (bascules and traffic move); the light moves only on
     // those frames, so receivers never read a stale map.
     gl.shadowMap.autoUpdate = false
     light.current.color.copy(air.sun)
     light.current.intensity = air.sunI
-    if (frame.current++ % SHADOW_EVERY) return
+    const n = frameNo(gl, clock.elapsedTime)
+    if (n % SHADOW_EVERY) return // even frames; the mirror takes the odd ones
     // bounds every ~2 s: bascules lift; a new bridge (era change) is picked up here too
-    if (!bridge.current?.parent || frame.current % 120 < SHADOW_EVERY) {
+    if (!bridge.current?.parent || n % 120 < SHADOW_EVERY) {
       bridge.current = scene.getObjectByName('tower-bridge') ?? null
       if (!bridge.current) return
       _box.setFromObject(bridge.current).getBoundingSphere(_ball)

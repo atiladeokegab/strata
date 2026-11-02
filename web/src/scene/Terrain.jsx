@@ -235,7 +235,7 @@ const OPENED = 1894 // bridge/stages.js, stage 5
 // is dry grass in every bare era; in the photo's eras a footprint whose building is hidden by its date shows paving,
 // not the photo's roof (a shown building covers its own).
 const SURF = { value: null }, SURF_T = { value: new THREE.Vector4() }, SURF_S = { value: 1 }, DOCKS = { value: 0 }
-const DOCKS_UNTIL = 1980, DOCK = new THREE.Color('#2e3838'), GRASS = new THREE.Color('#6f7349'), PAVING = new THREE.Color('#857e74')
+const DOCKS_UNTIL = 1980, DOCK = new THREE.Color('#3b4744'), QUAY = new THREE.Color('#8a847a'), GRASS = new THREE.Color('#6f7349'), PAVING = new THREE.Color('#857e74')
 function loadSurfaces(meta) {
   const [minE, , maxE, maxN] = meta.bbox_osgb, [oE, oN] = meta.origin_osgb, a = (meta.bridge_axis_deg * Math.PI) / 180
   SURF_T.value.set(Math.cos(a), Math.sin(a), oE - minE, maxN - oN)
@@ -244,6 +244,7 @@ function loadSurfaces(meta) {
 }
 const ROAD = { value: new THREE.Color() }, WOOD = new THREE.Color('#6a5645'), ASPHALT = new THREE.Color('#3f3f3f')
 const PAVE_X = 12 // m from the axis: the pavement's outer edge
+const YARD = new THREE.Color('#5f5a52')
 const STONE = new THREE.Color('#969386'), KERB = new THREE.Color('#b3ada3'), FAR = new THREE.Color('#5a524b'), FAR_FROM = 350, FAR_TO = 600
 // Before Google's tiles the ground past HAZE_FROM m fades into the fog's colour by HAZE_TO, inside the tile's 750 m
 // half-width, and the skirt beyond takes the same colour, so the city ends in haze rather than a plain. In the
@@ -290,6 +291,10 @@ const ROAD_TINT = `
       vec3 tStone = ${v3(STONE)} * (0.88 + 0.2 * tM) * (1.0 - 0.3 * fJoint * (1.0 - tEnd)) * (1.0 + 0.3 * tSouth * tEnd);
       vec3 tCol = mix(uRoad * (1.0 - 0.35 * tJoint * (1.0 - tEnd)) * (1.0 - 0.32 * (1.0 - tSouth) * tEnd), tStone, smoothstep(${f2(KERB_X)} - tSoft, ${f2(KERB_X)} + tSoft, tAcross));
       tCol = mix(tCol, vec3(${KERB.toArray().map((c) => c.toFixed(3)).join(', ')}), tKerb);
+      // past the pavement the levelled ground is a dark, worn yard with the drape's own tones blurred in, not a pale
+      // stone plaza (the judges' 1900 and 1971 end-outs: a huge empty grey plaza)
+      vec3 tYard = mix(eraGrade(texture2D(map, vMapUv, 4.0).rgb), ${v3(YARD)}, 0.6) * (0.85 + 0.3 * tMottle);
+      tCol = mix(tCol, tYard, smoothstep(${f1(PAVE_X)}, ${f1(PAVE_X + 4)}, tAcross) * (1.0 - tEnd));
       diffuseColor.rgb = mix(diffuseColor.rgb, tCol, tRoad * (1.0 - wall)); // every era: with Google's tiles off today's photo smears its buses and lumps over the levelled street too
       diffuseColor.rgb = mix(diffuseColor.rgb, vec3(${FAR.toArray().map((c) => c.toFixed(3)).join(', ')}), smoothstep(${f1(FAR_FROM)}, ${f1(FAR_TO)}, length(vRoadW.xz)) * uEra);`
 const SURFACES = `
@@ -298,10 +303,11 @@ const SURFACES = `
       vec3 sM = texture2D(uSurf, vec2((sG.x + uSurfT.z) / uSurfS, 1.0 - (sG.y + uSurfT.w) / uSurfS)).rgb;
       float sDock = smoothstep(0.55, 0.8, sM.r) * uDocks, sQuay = smoothstep(0.08, 0.3, sM.r) * (1.0 - smoothstep(0.55, 0.8, sM.r)) * uDocks;
       // on the streets' own ground the paving is their stone, so a hidden building's footprint leaves no darker patch
-      diffuseColor.rgb = mix(diffuseColor.rgb, mix(${v3(PAVING)} * (0.9 + 0.15 * tMottle), tStone, tRoad), smoothstep(0.5, 0.9, sM.b) * uBare * (1.0 - uEra) * (1.0 - wall));
+      diffuseColor.rgb = mix(diffuseColor.rgb, mix(${v3(PAVING)} * (0.9 + 0.15 * tMottle), tCol, tRoad), smoothstep(0.5, 0.9, sM.b) * uBare * (1.0 - uEra) * (1.0 - wall));
       diffuseColor.rgb = mix(diffuseColor.rgb, ${v3(GRASS)} * (0.85 + 0.25 * tMottle), smoothstep(0.3, 0.7, sM.g) * uBare * (1.0 - wall));
-      diffuseColor.rgb = mix(diffuseColor.rgb, ${v3(KERB)}, sQuay);
-      diffuseColor.rgb = mix(diffuseColor.rgb, ${v3(DOCK)}, sDock);`
+      diffuseColor.rgb = mix(diffuseColor.rgb, ${v3(QUAY)} * (0.85 + 0.25 * tMottle) * (1.0 - 0.5 * wall), sQuay);
+      // the basin, with a slow ripple of tone so it is not a flat dark sheet
+      diffuseColor.rgb = mix(diffuseColor.rgb, ${v3(DOCK)} * (0.92 + 0.16 * tMottle), sDock);`
 // The DTM keeps the approach viaducts (build.py keep_approaches), so under the bridge's own ramps and abutments the
 // ground lay in the plane of their stone and z-fought it: there it drops a real 0.5 m (the bridge frame: rotation only).
 const UNDER_BRIDGE = `float tUnder = (1.0 - smoothstep(9.5, 10.5, abs(vRoadW.x))) * (1.0 - smoothstep(182.5, 183.5, abs(vRoadW.z)));

@@ -4,8 +4,8 @@
 // flies there smoothly) and a few shell inputs it fills in like a visitor would.
 import { create } from 'zustand'
 import { useStore, THIS_YEAR } from '../store.js'
-import { stopTour, isTourPlaying } from './tour.js'
-import { liftForShip } from '../scene/bridge/liftSequence.js'
+import { stopTour, isTourPlaying, OPENED } from './tour.js'
+import { liftForShip, lift, createLift } from '../scene/bridge/liftSequence.js'
 
 export const useGuide = create(() => ({ active: false, i: 0, steps: [] }))
 
@@ -47,8 +47,11 @@ export function askDocent() {
 // cam: a flyTo position (CameraRig looks back at the bridge). spot: the control to point at. when: show the step only if true.
 const DEFAULT = { year: THIS_YEAR, exploded: false, lidar: false, view: 'orbit', selected: null, sheet: false }
 export const STEPS = [
-  { id: 'orbit', title: 'Look around', cam: [170, 75, 190],
-    text: 'Tower Bridge, rebuilt on real LiDAR ground. Drag to orbit, pinch or scroll to zoom.' },
+  // the first card is the wow (judges decide in the first 20 s): opening day, the leaves lifting, the dock's live leaf angle
+  { id: 'orbit', title: 'Opening day, 1894', spot: '.dock .bascule', cam: [-200, 60, 94], state: { year: OPENED },
+    text: 'Tower Bridge on 30 June 1894, rebuilt on real LiDAR ground: the bascules lift for a tall ship, and the dock shows their angle. Drag to orbit, pinch or scroll to zoom.',
+    run: () => { stopTour(); s().setBascule(0); liftForShip({ fast: true }) },
+    leave: () => { Object.assign(lift, createLift()); s().setBascule(0) } }, // a lift cut short by a year change would hang mid-phase
   { id: 'time', title: 'Scrub through time', spot: '.dock .timeline', cam: [265, 40, 34], // down the river from the east: no roofs between the camera and the piers
     text: 'The year slider rebuilds the bridge and the area around it.',
     stops: [

@@ -234,6 +234,7 @@ input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 
   .help ol { gap: var(--s3); margin-bottom: var(--s4); }
   .story-card { left: 0; right: 0; } /* phones: over everything (Tour renders them into .app), the stage band is too short for the opening text */
   .story-caption { left: 8px; right: 8px; bottom: calc(var(--sheet) + 8px); } /* over the dock (the story drives it), so the shot keeps the band above */
+  .story-caption .glass { background: var(--surface-solid); } /* it sits over the dock or the sheet, whose text would show through glass */
   .app.sheet-open .story-caption { top: calc(100% - var(--sheet) + 8px); bottom: auto; align-items: flex-start; } /* over the open sheet's top */
   .move-pad { right: 8px; bottom: calc(var(--sheet) + 200px); } /* above the dock (its top sits about --sheet + 191px up), not over the timeline */
   .no-webgl { left: 8px; right: 8px; top: 120px; transform: none; width: auto; }

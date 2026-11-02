@@ -44,16 +44,20 @@ function radiusFalloff(t) {
   t.calculateTileViewError.falloff = true
 }
 
+// fetched when this chunk loads, not on mount: the mount waits seconds behind the scene's first loads, and the
+// loading card waits on Google's answer (a 403 arrives only after the key and the root request)
+const config = fetch('/api/config').then((r) => (r.ok ? r.json() : {})).catch(() => ({}))
+
 export function GoogleTiles() {
   const wanted = useGoogleWanted(useStore((s) => s.lidar))
   const [key, setKey] = useState(null)
   const [t, setTiles] = useState(null) // the TilesRenderer, once it exists
 
   useEffect(() => {
-    fetch('/api/config').then((r) => (r.ok ? r.json() : {})).then((c) => {
+    config.then((c) => {
       if (c.google_tiles_key) setKey(c.google_tiles_key)
       else useGoogle.setState({ status: 'failed' })
-    }).catch(() => useGoogle.setState({ status: 'failed' }))
+    })
   }, [])
 
   useEffect(() => {

@@ -5,21 +5,30 @@ import { useEffect, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { DefaultLoadingManager } from 'three'
 import { useLoad } from './SceneLoading'
-import { useStore, TILES } from '../store'
+import { useStore, TILES, EMBED } from '../store'
 
 const google = Object.values(import.meta.glob('../scene/google/state.js', { eager: true }))[0]
 const terrainChunk = import.meta.glob('../scene/Terrain.jsx')['../scene/Terrain.jsx']
 // Our own textures and HDRI, counted through three's default loading manager. Google's tile images
 // (blob: URLs out of its glTFs) stream for as long as the camera moves, so they are left out: the
 // 3D city step waits for Google's first view instead.
+// Loads that start after the first lit frame (store.sceneReady: the photo textures and the warm-up, which wait for
+// it) are not counted either: they re-opened this step and held the card a further 2-20 s.
 const own = (url) => !/^(blob|data):/.test(url) && !/googleapis/.test(url)
-const tex = { pending: 0, done: 0 }
+const tex = { pending: 0, done: 0 }, counted = new Map() // url -> loads in flight that were counted (one url can load twice)
 const mgr = DefaultLoadingManager, itemStart = mgr.itemStart.bind(mgr), itemEnd = mgr.itemEnd.bind(mgr)
-mgr.itemStart = (url) => { if (own(url)) tex.pending++; itemStart(url) }
-mgr.itemEnd = (url) => { if (own(url)) { tex.pending--; tex.done++ } itemEnd(url) } // errors end too
+mgr.itemStart = (url) => { if (own(url) && !useStore.getState().sceneReady) { counted.set(url, (counted.get(url) ?? 0) + 1); tex.pending++ } itemStart(url) }
+mgr.itemEnd = (url) => { // errors end too
+  const n = counted.get(url)
+  if (n) { if (n > 1) counted.set(url, n - 1); else counted.delete(url); tex.pending--; tex.done++ }
+  itemEnd(url)
+}
 let terrainIn = !terrainChunk
 const SETTLE = 0.5 // s of frames with everything in before the card lifts
-const CITY_WAIT = 8000 // ms: a Google view that has neither arrived nor failed by then (slow or stalled) settles without it
+// ms: a Google view that has neither arrived nor failed by then (slow or stalled) settles without it. The portfolio's
+// embed waits 2.5 s: its card must lift inside 5 s, and a 403 lands only after the bridge is built (root request, then a
+// retry), so it hit the 8 s cap; tiles that arrive later fade in under the hero shot (TilesFadePlugin)
+const CITY_WAIT = EMBED ? 2500 : 8000
 
 // Never re-renders: loads start inside other components' renders (pbr() and friends), and a probe that
 // re-rendered on them restarted the suspended scene slots for ever. So it polls plain values each frame.

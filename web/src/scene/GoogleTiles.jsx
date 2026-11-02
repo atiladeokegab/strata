@@ -17,10 +17,11 @@ const draco = new DRACOLoader().setDecoderPath('https://www.gstatic.com/draco/ve
 const rad = THREE.MathUtils.degToRad
 
 // Budget: Google's city streamed without limit (next20 desktop 1289 calls, 4.7M tris at 130 s). Coarser error,
-// a small cache that disposes unused tiles, and detail that falls off past R metres from the bridge.
+// a cache that disposes unused tiles (bytes are the real cap: the item count also holds Google's nested tileset JSONs,
+// ancestors and siblings, and a 200-item cap refused every LITE tile on next21), and detail that falls off past R metres from the bridge.
 const BUDGET = LITE
-  ? { errorTarget: 40, R: 400, minSize: 60, maxSize: 200, minBytes: 60e6, maxBytes: 120e6 }
-  : { errorTarget: 24, R: 600, minSize: 120, maxSize: 350, minBytes: 120e6, maxBytes: 220e6 }
+  ? { errorTarget: 32, R: 400, minSize: 300, maxSize: 1000, minBytes: 60e6, maxBytes: 120e6 }
+  : { errorTarget: 24, R: 600, minSize: 400, maxSize: 1500, minBytes: 120e6, maxBytes: 220e6 }
 
 function clipGap({ scene }) {
   scene.traverse((o) => {
@@ -69,12 +70,14 @@ export function GoogleTiles() {
         useGoogle.setState({ credit: value })
       })
     }
-    // ready once the first view has finished streaming, so the terrain and buildings never vanish before the tiles show
-    const ready = () => { if (t.visibleTiles.size) useGoogle.setState({ status: 'ready' }) }
+    // ready once tiles are on screen: tiles-load-end alone waits for every queue to drain, which an orbiting camera
+    // never allows (next21: tiles drawing, status stuck on 'loading')
+    const ready = () => { if (t.visibleTiles.size && useGoogle.getState().status === 'loading') useGoogle.setState({ status: 'ready' }) }
     const failed = (e) => { if (!t.root) useGoogle.setState({ status: 'failed' }); console.warn('[strata] Google tiles:', e?.error?.message || e) }
     t.addEventListener('load-model', clipGap)
     t.addEventListener('tiles-load-end', ready)
     t.addEventListener('tile-visibility-change', credit)
+    t.addEventListener('tile-visibility-change', ready)
     t.addEventListener('load-error', failed)
     if (import.meta.env.DEV || new URLSearchParams(location.search).has('capture')) window.__strataTiles = t // the tiles budget test counts its meshes
     if (import.meta.env.DEV) { // dev probe: ellipsoid/frame calibration from the browser console
@@ -84,6 +87,7 @@ export function GoogleTiles() {
       t.removeEventListener('load-model', clipGap)
       t.removeEventListener('tiles-load-end', ready)
       t.removeEventListener('tile-visibility-change', credit)
+      t.removeEventListener('tile-visibility-change', ready)
       t.removeEventListener('load-error', failed)
     }
   }, [t])

@@ -35,7 +35,7 @@ const yearStop = (year, note) => ({
 // Asked again on every visit (Back included), but never while an answer is still coming or just sent: one request in flight.
 let askedAt = -Infinity
 export function askDocent() {
-  if (document.querySelector('.docent .msg.busy') || performance.now() - askedAt < 1500) return false
+  if (s().docentBusy || performance.now() - askedAt < 1500) return false
   askedAt = performance.now()
   return type('form.ask input', 'How do the counterweights help the bascules open?', true)
 }

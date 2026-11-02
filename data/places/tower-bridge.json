@@ -63,11 +63,11 @@
           "method": "Published reference value; provisional motion limit for the scene."
         },
         "leaf_length": {
-          "value": 30.48,
+          "value": 34.37,
           "unit": "m",
-          "source": "tb-history",
-          "status": "inferred",
-          "method": "Half the 60.96 m clear central opening; provisional geometric approximation, not a measured bascule dimension."
+          "source": "tb-engine",
+          "status": "text-attested",
+          "method": "Pivot to riverward tip of the moving girder; converted from the source dimensions and rounded to centimetres."
         }
       },
       "summary": "Hinged roadway leaf balanced by a counterweight and lifted by hydraulic machinery.",
@@ -88,11 +88,11 @@
           "method": "Published reference value; provisional motion limit for the scene."
         },
         "leaf_length": {
-          "value": 30.48,
+          "value": 34.37,
           "unit": "m",
-          "source": "tb-history",
-          "status": "inferred",
-          "method": "Half the 60.96 m clear central opening; provisional geometric approximation, not a measured bascule dimension."
+          "source": "tb-engine",
+          "status": "text-attested",
+          "method": "Pivot to riverward tip of the moving girder; converted from the source dimensions and rounded to centimetres."
         }
       },
       "summary": "South hinged roadway leaf; the paired counterweighted leaves open a navigable central passage.",
@@ -106,21 +106,30 @@
       "group": "walkways",
       "dims": {
         "span": {
-          "value": 70,
+          "value": 70.1,
           "unit": "m",
-          "source": "tb-inside",
-          "status": "text-attested"
+          "source": "tb-engine",
+          "status": "text-attested",
+          "method": "Clear span between the walkway supports; converted from the source dimensions and rounded to centimetres."
         },
         "height_above_road": {
           "value": 33.5,
           "unit": "m",
           "source": "tb-inside",
           "status": "text-attested"
+        },
+        "support_setback_from_pier_face": {
+          "value": 4.57,
+          "unit": "m",
+          "source": "tb-engine",
+          "status": "text-attested",
+          "method": "Setback of each support from the adjacent pier face; converted from the source dimensions and rounded to centimetres."
         }
       },
       "summary": "Elevated pedestrian route between the towers; also carries suspension members.",
       "sources": [
-        "tb-inside"
+        "tb-inside",
+        "tb-engine"
       ]
     },
     {
@@ -129,21 +138,30 @@
       "group": "walkways",
       "dims": {
         "span": {
-          "value": 70,
+          "value": 70.1,
           "unit": "m",
-          "source": "tb-inside",
-          "status": "text-attested"
+          "source": "tb-engine",
+          "status": "text-attested",
+          "method": "Clear span between the walkway supports; converted from the source dimensions and rounded to centimetres."
         },
         "height_above_road": {
           "value": 33.5,
           "unit": "m",
           "source": "tb-inside",
           "status": "text-attested"
+        },
+        "support_setback_from_pier_face": {
+          "value": 4.57,
+          "unit": "m",
+          "source": "tb-engine",
+          "status": "text-attested",
+          "method": "Setback of each support from the adjacent pier face; converted from the source dimensions and rounded to centimetres."
         }
       },
       "summary": "Elevated pedestrian route between the towers; also carries suspension members.",
       "sources": [
-        "tb-inside"
+        "tb-inside",
+        "tb-engine"
       ]
     },
     {
@@ -224,7 +242,15 @@
       "id": "pivot-north",
       "name": "North bascule pivot",
       "group": "machinery",
-      "dims": {},
+      "dims": {
+        "setback_from_pier_face": {
+          "value": 3.89,
+          "unit": "m",
+          "source": "tb-engine",
+          "status": "text-attested",
+          "method": "Landward setback from the pier face bounding the central opening; converted from the source dimensions and rounded to centimetres."
+        }
+      },
       "summary": "Large hinge pin and bearing carry the north leaf as it rotates.",
       "sources": [
         "tb-engine"
@@ -234,7 +260,15 @@
       "id": "pivot-south",
       "name": "South bascule pivot",
       "group": "machinery",
-      "dims": {},
+      "dims": {
+        "setback_from_pier_face": {
+          "value": 3.89,
+          "unit": "m",
+          "source": "tb-engine",
+          "status": "text-attested",
+          "method": "Landward setback from the pier face bounding the central opening; converted from the source dimensions and rounded to centimetres."
+        }
+      },
       "summary": "Large hinge pin and bearing carry the south leaf as it rotates.",
       "sources": [
         "tb-engine"
@@ -771,7 +805,8 @@
       "id": "tb-engine",
       "title": "Tower Bridge: a lecture by John Wolfe Barry",
       "url": "https://upload.wikimedia.org/wikipedia/commons/0/0d/The_tower_bridge%3B_a_lecture_%28IA_towerbridgelectu00barriala%29.pdf",
-      "kind": "contemporary engineering account"
+      "kind": "contemporary engineering account",
+      "locator": "Printed p. 37 (PDF p. 47), The Opening Span: pivot setback 12 ft 9 in, pivot-to-riverward-tip 112 ft 9 in, landward girder arm 49 ft 6 in; Fig. 27 on printed p. 38 (PDF p. 48). Printed p. 27 (PDF p. 37): walkway supports set back 15 ft, clear span 230 ft. The central 200 ft opening is between pier faces. Metric conversions use 0.3048 m per foot and are rounded to centimetres."
     },
     {
       "id": "tb-history",

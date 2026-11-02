@@ -244,6 +244,8 @@ function loadSurfaces(meta) {
 }
 const ROAD = { value: new THREE.Color() }, WOOD = new THREE.Color('#6a5645'), ASPHALT = new THREE.Color('#3f3f3f')
 const PAVE_X = 12 // m from the axis: the pavement's outer edge
+const RAMP_TOP = 148.5 // m along: the ramps' top (bridge/structures.jsx abutmentKit z0), where their kerb bands start
+const BLACKOUT = { value: 0 }
 const YARD = new THREE.Color('#5f5a52')
 const STONE = new THREE.Color('#969386'), KERB = new THREE.Color('#b3ada3'), FAR = new THREE.Color('#5a524b'), FAR_FROM = 350, FAR_TO = 600
 // Before Google's tiles the ground past HAZE_FROM m fades into the fog's colour by HAZE_TO, inside the tile's 750 m
@@ -290,7 +292,9 @@ const ROAD_TINT = `
       float tM = mix(tMottle, 0.5, tEnd);
       vec3 tStone = ${v3(STONE)} * (0.88 + 0.2 * tM) * (1.0 - 0.3 * fJoint * (1.0 - tEnd)) * (1.0 + 0.3 * tSouth * tEnd);
       vec3 tCol = mix(uRoad * (1.0 - 0.35 * tJoint * (1.0 - tEnd)) * (1.0 - 0.32 * (1.0 - tSouth) * tEnd), tStone, smoothstep(${f2(KERB_X)} - tSoft, ${f2(KERB_X)} + tSoft, tAcross));
-      tCol = mix(tCol, vec3(${KERB.toArray().map((c) => c.toFixed(3)).join(', ')}), tKerb);
+      // in the blackout the kerb is painted in 1 m white bands every 2 m, in step with the ramps' (bridge/approach.jsx)
+      float tBand = uBlackout * step(fract((tAlong - ${f1(RAMP_TOP)}) / 2.0), 0.5);
+      tCol = mix(tCol, mix(vec3(${KERB.toArray().map((c) => c.toFixed(3)).join(', ')}), vec3(0.95), tBand), tKerb);
       // past the pavement the levelled ground is a dark, worn yard with the drape's own tones blurred in, not a pale
       // stone plaza (the judges' 1900 and 1971 end-outs: a huge empty grey plaza)
       vec3 tYard = mix(eraGrade(texture2D(map, vMapUv, 4.0).rgb), ${v3(YARD)}, 0.6) * (0.85 + 0.3 * tMottle);
@@ -327,6 +331,7 @@ function facades(shader) {
   shader.uniforms.uEra = ERA
   shader.uniforms.uBare = BARE
   shader.uniforms.uPre = PRE
+  shader.uniforms.uBlackout = BLACKOUT
   shader.uniforms.uRoad = ROAD
   Object.assign(shader.uniforms, { uSurf: SURF, uSurfT: SURF_T, uSurfS: SURF_S, uDocks: DOCKS })
   shader.vertexShader = shader.vertexShader
@@ -337,7 +342,7 @@ transformed.y = mix(transformed.y, aOld, uPre);
 vRoadW = (modelMatrix * vec4(transformed, 1.0)).xyz;
 ${UNDER_BRIDGE}`)
   shader.fragmentShader = shader.fragmentShader
-    .replace('#include <common>', `#include <common>\nvarying float vUp;\nvarying vec3 vRoadW;\nuniform float uEra;\nuniform float uBare;\nuniform float uPre;\nuniform vec3 uRoad;\nuniform sampler2D uSurf;\nuniform vec4 uSurfT;\nuniform float uSurfS;\nuniform float uDocks;${ERA_GRADE}`)
+    .replace('#include <common>', `#include <common>\nvarying float vUp;\nvarying vec3 vRoadW;\nuniform float uEra;\nuniform float uBare;\nuniform float uPre;\nuniform float uBlackout;\nuniform vec3 uRoad;\nuniform sampler2D uSurf;\nuniform vec4 uSurfT;\nuniform float uSurfS;\nuniform float uDocks;${ERA_GRADE}`)
     .replace(
       '#include <map_fragment>',
       `#include <map_fragment>
@@ -526,6 +531,8 @@ function TerrainMesh({ t, hole, name = 'terrain', visible = true }) {
   material.polygonOffset = !!hole
   const bare = useStore((s) => s.year < GOOGLE_FROM)
   const wood = useStore((s) => eraFor(s.year).woodBlocks)
+  const blackout = useStore((s) => eraFor(s.year).blackout)
+  useEffect(() => { BLACKOUT.value = blackout ? 1 : 0 }, [blackout])
   useEffect(() => { ERA.value = old ? 1 : 0 }, [old])
   useEffect(() => { ROAD.value.copy(wood ? WOOD : ASPHALT) }, [wood])
   useEffect(() => { BARE.value = bare ? 1 : 0 }, [bare])

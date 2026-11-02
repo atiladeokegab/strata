@@ -53,6 +53,7 @@ export function loadLow() {
     const base = meta.lite ? BASE + 'lo/' : BASE
     const [px, ...maps] = await Promise.all([decodeHeights(base + 'bare.png', meta), ...MAPS.map((f) => texture(base + f))])
     const t = ground(meta, px)
+    loadSurfaces(meta)
     return { ...t, maps, mesh: await meshOf(t, BUDGET.low) }
   })()
   return lowCache
@@ -215,6 +216,19 @@ const ERA = { value: 0 }, BARE = { value: 0 }
 // granite kerb 0.3 m wide lines it; both fade out with distance before they would alias. The old map's sheet also stops short of the tile's edge in a beige plain, so past
 // FAR_FROM m from the bridge it fades into FAR, the tone of distant roofs under haze. Asphalt is the deck's (bridge/roadway.js SURFACES); the wood is
 // darker than the deck's #7a6450 base, which its block texture darkens, or it melts into the stone on the flat ground.
+// The ground's surfaces (scripts/terrain/surfaces.py: R St Katharine's basins, G the Tower's moat, B every OSM
+// footprint), on the tile's grid, sampled by world position so the outer and near tiers share it. Before the marina
+// (DOCKS_UNTIL) the basins are still water in a stone quay, and their photo's yachts go; the moat, drained in 1843-45,
+// is dry grass in every bare era; in the photo's eras a footprint whose building is hidden by its date shows paving,
+// not the photo's roof (a shown building covers its own).
+const SURF = { value: null }, SURF_T = { value: new THREE.Vector4() }, SURF_S = { value: 1 }, DOCKS = { value: 0 }
+const DOCKS_UNTIL = 1980, DOCK = new THREE.Color('#2e3838'), GRASS = new THREE.Color('#6f7349'), PAVING = new THREE.Color('#857e74')
+function loadSurfaces(meta) {
+  const [minE, , maxE, maxN] = meta.bbox_osgb, [oE, oN] = meta.origin_osgb, a = (meta.bridge_axis_deg * Math.PI) / 180
+  SURF_T.value.set(Math.cos(a), Math.sin(a), oE - minE, maxN - oN)
+  SURF_S.value = maxE - minE
+  texture(BASE + 'surfaces.png').then((t) => { SURF.value = t }, () => {}) // missing: the ground keeps the drape
+}
 const ROAD = { value: new THREE.Color() }, WOOD = new THREE.Color('#5a4636'), ASPHALT = new THREE.Color('#3f3f3f')
 const PAVE_X = 12 // m from the axis: the pavement's outer edge
 const STONE = new THREE.Color('#9a9184'), KERB = new THREE.Color('#b3ada3'), FAR = new THREE.Color('#5a524b'), FAR_FROM = 350, FAR_TO = 600
@@ -250,6 +264,16 @@ const ROAD_TINT = `
       tCol = mix(tCol, vec3(${KERB.toArray().map((c) => c.toFixed(3)).join(', ')}), tKerb);
       diffuseColor.rgb = mix(diffuseColor.rgb, tCol, tRoad * max(uEra, uBare));
       diffuseColor.rgb = mix(diffuseColor.rgb, vec3(${FAR.toArray().map((c) => c.toFixed(3)).join(', ')}), smoothstep(${f1(FAR_FROM)}, ${f1(FAR_TO)}, length(vRoadW.xz)) * uEra);`
+const v3 = (c) => `vec3(${c.toArray().map((v) => v.toFixed(3)).join(', ')})`
+const SURFACES = `
+      // world (bridge frame) to the tile's grid (east, south from the origin), then to the mask's uv (v = 1 north)
+      vec2 sG = vec2(vRoadW.x * uSurfT.x - vRoadW.z * uSurfT.y, vRoadW.x * uSurfT.y + vRoadW.z * uSurfT.x);
+      vec3 sM = texture2D(uSurf, vec2((sG.x + uSurfT.z) / uSurfS, 1.0 - (sG.y + uSurfT.w) / uSurfS)).rgb;
+      float sDock = smoothstep(0.55, 0.8, sM.r) * uDocks, sQuay = smoothstep(0.08, 0.3, sM.r) * (1.0 - smoothstep(0.55, 0.8, sM.r)) * uDocks;
+      diffuseColor.rgb = mix(diffuseColor.rgb, ${v3(PAVING)} * (0.9 + 0.15 * tMottle), smoothstep(0.5, 0.9, sM.b) * uBare * (1.0 - uEra));
+      diffuseColor.rgb = mix(diffuseColor.rgb, ${v3(GRASS)} * (0.85 + 0.25 * tMottle), smoothstep(0.3, 0.7, sM.g) * uBare);
+      diffuseColor.rgb = mix(diffuseColor.rgb, ${v3(KERB)}, sQuay);
+      diffuseColor.rgb = mix(diffuseColor.rgb, ${v3(DOCK)}, sDock);`
 // The DTM keeps the approach viaducts (build.py keep_approaches), so under the bridge's own ramps and abutments the
 // ground lay in the plane of their stone and z-fought it: there it drops a real 0.5 m (the bridge frame: rotation only).
 const UNDER_BRIDGE = `float tUnder = (1.0 - smoothstep(9.5, 10.5, abs(vRoadW.x))) * (1.0 - smoothstep(180.0, 186.0, abs(vRoadW.z)));
@@ -269,6 +293,7 @@ function facades(shader) {
   shader.uniforms.uEra = ERA
   shader.uniforms.uBare = BARE
   shader.uniforms.uRoad = ROAD
+  Object.assign(shader.uniforms, { uSurf: SURF, uSurfT: SURF_T, uSurfS: SURF_S, uDocks: DOCKS })
   shader.vertexShader = shader.vertexShader
     .replace('#include <common>', '#include <common>\nvarying float vUp;\nvarying vec3 vRoadW;\nuniform float uBare;\nattribute float aOld;')
     .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\nif (uBare > 0.5 && position.y - aOld > 0.3) objectNormal = vec3(0.0, 1.0, 0.0);\nvUp = objectNormal.y;')
@@ -277,7 +302,7 @@ transformed.y = mix(transformed.y, aOld, uBare);
 vRoadW = (modelMatrix * vec4(transformed, 1.0)).xyz;
 ${UNDER_BRIDGE}`)
   shader.fragmentShader = shader.fragmentShader
-    .replace('#include <common>', `#include <common>\nvarying float vUp;\nvarying vec3 vRoadW;\nuniform float uEra;\nuniform float uBare;\nuniform vec3 uRoad;${ERA_GRADE}`)
+    .replace('#include <common>', `#include <common>\nvarying float vUp;\nvarying vec3 vRoadW;\nuniform float uEra;\nuniform float uBare;\nuniform vec3 uRoad;\nuniform sampler2D uSurf;\nuniform vec4 uSurfT;\nuniform float uSurfS;\nuniform float uDocks;${ERA_GRADE}`)
     .replace(
       '#include <map_fragment>',
       `#include <map_fragment>
@@ -285,7 +310,7 @@ ${UNDER_BRIDGE}`)
       float wall = 1.0 - smoothstep(0.35, 0.7, vUp);
       vec3 blur = eraGrade(texture2D(map, vMapUv, 5.0).rgb);
       vec3 facade = mix(blur, vec3(0.42, 0.39, 0.34), 0.3) * 0.8;
-      diffuseColor.rgb = mix(diffuseColor.rgb, facade, wall);${ROAD_TINT}`,
+      diffuseColor.rgb = mix(diffuseColor.rgb, facade, wall);${ROAD_TINT}${SURFACES}`,
     )
     .replace('#include <fog_fragment>', `#include <fog_fragment>
       #ifdef USE_FOG
@@ -463,6 +488,8 @@ function TerrainMesh({ t, hole, name = 'terrain', visible = true }) {
   useEffect(() => { ERA.value = old ? 1 : 0 }, [old])
   useEffect(() => { ROAD.value.copy(wood ? WOOD : ASPHALT) }, [wood])
   useEffect(() => { BARE.value = bare ? 1 : 0 }, [bare])
+  const docks = useStore((s) => s.year < DOCKS_UNTIL)
+  useEffect(() => { DOCKS.value = docks ? 1 : 0 }, [docks])
   useEffect(() => () => chunks.forEach((c) => c.dispose()), [chunks])
   useEffect(() => () => material.dispose(), [material])
   // no castShadow: bare earth casts next to nothing, and the shadow pass would redraw all of it

@@ -1,6 +1,6 @@
 /* The guided tour card and spotlight (Guide.jsx). Desktop: centred over the stage, above the time bar.
    Phones: at the bottom over the dock, above it when the step points into it, or just above the sheet when the sheet is open. */
-.guide-card { position: absolute; z-index: 7; left: calc(50% + var(--panel-w) / 2 + var(--gap) / 2); bottom: calc(var(--gap) + 96px);
+.guide-card { position: absolute; z-index: 7; left: calc(50% + var(--panel-w) / 2 + var(--gap) / 2); bottom: calc(var(--gap) + 120px); /* clear of the dock and the ring around it (the dock is about 105px tall) */
   transform: translateX(-50%); width: min(440px, calc(100% - 32px)); padding: var(--s5) var(--s5) var(--s4); border-radius: var(--r-lg);
   box-shadow: var(--shadow); animation: guide-in .45s cubic-bezier(.2, .8, .2, 1) both; }
 .guide-card h2 { margin: 0 0 var(--s2); font: 600 var(--t4)/1.2 var(--sans); letter-spacing: -.01em; color: var(--ink); }

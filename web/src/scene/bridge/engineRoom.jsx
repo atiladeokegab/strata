@@ -9,6 +9,7 @@ import * as THREE from 'three'
 import { beam, box, merge, M } from './geom.js'
 import { LITE } from '../look/tier.js'
 import { Part } from './Part.jsx'
+import { useNear } from './useNear.js'
 import { L } from './structures.jsx'
 import { WATER_Y } from './vessels.js'
 import { OPEN_TIME_S } from './hydraulics.js'
@@ -373,13 +374,18 @@ function Flow({ rt, steam }) {
 
 // Electro-hydraulic pump house added in 1976, against the east wall.
 export function EngineRoom({ rt, explode = [14, 6, 20], steam = true, third = true, museum = false }) {
+  // desktop: the machinery draws only within ~60 m of the house (or walk, exploded, engine room selected); lite as before
+  const inside = useRef()
+  const near = useNear(inside, [(H.x0 + H.x1) / 2, H.wall / 2, (H.z0 + H.z1) / 2], ['engine-room'])
   return (
     <>
       <Part id="engine-room" rt={rt} explode={explode} xray>
         <Shell steam={steam} />
       </Part>
       <Part id="engine-room" rt={rt} explode={explode}>
-        <Machinery sim={rt.sim} steam={steam} third={third} museum={museum} />
+        <group ref={inside} visible={LITE || near}>
+          <Machinery sim={rt.sim} steam={steam} third={third} museum={museum} />
+        </group>
         <mesh geometry={outsideMains()} material={M.iron} castShadow />
       </Part>
       {steam && <Smoke sim={rt.sim} />}

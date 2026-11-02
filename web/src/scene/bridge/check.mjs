@@ -891,7 +891,18 @@ console.log('geom materials untextured, all kinded ok')
     delete globalThis.__cam
     const gated = ['stairs-north', 'stairs-south', 'lift-north', 'lift-south']
     for (const id of gated) assert.ok(!far[id]?.[0], `far camera: ${id} still draws ${far[id]?.[0]} calls`)
-    console.log(`render budget full, far camera 2026: ${sum(0, far)} calls, ${Math.round(sum(1, far))} tris (interiors hidden: ${gated.join(', ')})`)
+    const near = {}
+    tally({ type: TowerBridge, props: {} }, null, near) // no camera position: interiors drawn, as within 60 m
+    assert.ok(far['engine-room'][0] < near['engine-room'][0], `far camera: engine-room machinery still draws (${far['engine-room'][0]} calls, ${near['engine-room'][0]} near)`)
+    for (const id of gated) assert.ok(near[id]?.[0], `near camera: ${id} draws nothing`)
+    globalThis.__cam = { position: new T.Vector3(0, 30, 400) }
+    useStore.getState().setView('walk')
+    const walk = {}
+    tally({ type: TowerBridge, props: {} }, null, walk)
+    useStore.getState().setView('orbit')
+    delete globalThis.__cam
+    for (const id of [...gated, 'engine-room']) assert.equal(walk[id]?.[0], near[id]?.[0], `walk mode, far camera: ${id} draws ${walk[id]?.[0]} calls, ${near[id]?.[0]} near`)
+    console.log(`render budget full, far camera 2026: ${sum(0, far)} calls, ${Math.round(sum(1, far))} tris (interiors hidden: ${gated.join(', ')}, engine-room machinery ${near['engine-room'][0]} -> ${far['engine-room'][0]} calls)`)
   }
   // 1890 (centring under the leaves, derricks on the frames): phones render the build years too, so the
   // construction works (works-*) may not draw more calls than budget.json's baseline1890 records

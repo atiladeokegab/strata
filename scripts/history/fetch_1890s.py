@@ -1,6 +1,6 @@
 """Mosaic the NLS OS London Town Plan (1893-96) tiles onto the terrain's OSGB grid.
 
-uv run --with pyproj --with pillow --with numpy python scripts/history/fetch_1890s.py  ->  web/public/terrain/tower-bridge/color-1890s.jpg
+uv run --with pyproj --with pillow --with numpy --with scipy python scripts/history/fetch_1890s.py  ->  web/public/terrain/tower-bridge/color-1890s.jpg
 Same bbox and 1 m pixels as color.jpg (row 0 north), so Terrain.jsx can swap it in for years before 1950.
 Tiles: OS London Five-foot to the mile 1893-96, "Reproduced with the permission of the National Library of Scotland"
 (CC-BY, https://maps.nls.uk/copyright.html); credit it on screen with a link to https://maps.nls.uk/.
@@ -12,8 +12,9 @@ from pathlib import Path
 import urllib.request
 
 import numpy as np
-from PIL import Image, ImageFilter
+from PIL import Image
 from pyproj import Transformer
+from scipy import ndimage
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "web/public/terrain/tower-bridge"
@@ -59,28 +60,63 @@ def osgb_mosaic(px=1.0):
     return out, (x1 - x0 + 1) * (y1 - y0 + 1)
 
 
-def corridor(h, w, near=150.0, feather=50.0):
-    """1 within `near` m of the bridge axis (out to the bbox ends), 0 past near + feather: the ground the end views see."""
+def grid(bbox, shape):
+    """The scene's u (across the bridge axis, bareEarth.js frame) and E, N at each pixel centre of an OSGB bbox, row 0 north."""
     meta = json.loads((OUT / "meta.json").read_text())
     oE, oN = meta["origin_osgb"][:2]
     t = math.radians(meta["bridge_axis_deg"])
-    x = (np.arange(w) + 0.5) + BBOX[0] - oE
-    z = oN - (BBOX[3] - (np.arange(h) + 0.5))
-    X, Z = np.meshgrid(x, z)
-    u = np.abs(X * math.cos(t) + Z * math.sin(t))  # across the axis (bareEarth.js frame)
-    return np.clip(1 - (u - near) / feather, 0, 1)[..., None]
+    h, w = shape
+    E = bbox[0] + (np.arange(w) + 0.5) * (bbox[2] - bbox[0]) / w
+    N = bbox[3] - (np.arange(h) + 0.5) * (bbox[3] - bbox[1]) / h
+    E, N = np.meshgrid(E, N)
+    return (E - oE) * math.cos(t) + (oN - N) * math.sin(t), E, N, meta
+
+
+def finish(img, bbox, ink=3):
+    """The draped sheet from a raw mosaic (uint8 RGB on the OSGB bbox, row 0 north), at any pixel size.
+
+    Ink lines are ~1 px, so an `ink` px min filter thickens them to survive the mipmaps seen from orbit. Near the bridge
+    the camera sits low, so the lettering read as print on the ground and the ramps: within 150 m of the axis (feathered
+    over 50 m) a 5 m grey closing (max then min) wipes ink thinner than 5 m and keeps the water and block tints. Open
+    paper by today's river, where the sheet draws the old foreshore or a blank wharf yard but the ground is quay, read
+    as a flat pale slab (south foreshore, hero-1890): it becomes stone flags."""
+    h, w = img.shape[:2]
+    px = (bbox[2] - bbox[0]) / w  # m per pixel
+    m = lambda metres: max(1, round(metres / px))
+    u, E, N, meta = grid(bbox, (h, w))
+    inked = ndimage.minimum_filter(img, (ink, ink, 1)).astype(float)
+    clean = ndimage.grey_closing(img, (m(5), m(5), 1)).astype(float)
+    a = np.clip(1 - (np.abs(u) - 150) / 50, 0, 1)[..., None]
+    out = clean * a + inked * (1 - a)
+
+    rgb = np.asarray(Image.open(OUT / "bare.png").convert("RGB")).astype(float)  # 1 m, the outer bbox
+    ground = meta["min_h"] + (rgb[..., 0] * 256 + rgb[..., 1]) / 65535 * (meta["max_h"] - meta["min_h"])
+    bed, _ = ndimage.label(ground < meta["water_h"] - 1.5)  # the carved bed (water_h - 2) and low pits such as the Scoop
+    river = bed == np.bincount(bed.ravel())[1:].argmax() + 1  # the river is the largest
+    river = ndimage.distance_transform_edt(~river) < 40
+    ob = meta["bbox_osgb"]
+    r = np.clip((ob[3] - N).astype(int), 0, ground.shape[0] - 1)
+    c = np.clip((E - ob[0]).astype(int), 0, ground.shape[1] - 1)
+    # warm paper (not the pale blue-green water) once thin ink is closed away, open for 9 m (not a street between blocks)
+    paper = (clean.min(-1) > 200) & (np.ptp(clean, -1) < 40) & (clean[..., 1] <= clean[..., 0])
+    paper = ndimage.minimum_filter(paper, m(9))
+    q = ndimage.gaussian_filter(((ground[r, c] >= meta["water_h"]) & river[r, c] & paper).astype(float), m(1))[..., None]
+
+    # stone flags 3 x 2 m in courses, each a little lighter or darker, with dark joints; mid-tone so the era grade draws
+    # weathered stone, not paper
+    rng = np.random.default_rng(1890)
+    fu, fv = (E - ob[0]) / 3, (ob[3] - N) / 2
+    fu = fu + (fv.astype(int) % 2) * 0.5
+    flag = rng.normal(0, 8, (int(fv.max()) + 1, int(fu.max()) + 1))[fv.astype(int), fu.astype(int)]
+    joint = ((fv % 1 < max(px, 0.15) / 2) | (fu % 1 < max(px, 0.15) / 3)) * -14.0
+    stone = np.clip(np.array([160.0, 150, 134]) + (flag + joint)[..., None], 0, 255)
+    return (stone * q + out * (1 - q)).round().astype(np.uint8)
 
 
 def main():
     out, n = osgb_mosaic()
-    im = Image.fromarray(out)
-    # ink lines are ~1 px; a 3 px min filter thickens them so they survive the mipmaps seen from orbit
-    inked = np.asarray(im.filter(ImageFilter.MinFilter(3)), float)
-    # near the bridge the camera sits low, so the sheet's lettering read as print on the ground and the ramps:
-    # a 5 px grey closing (max then min) wipes ink thinner than 5 m, keeping the water and block tints
-    clean = np.asarray(im.filter(ImageFilter.MaxFilter(5)).filter(ImageFilter.MinFilter(5)), float)
-    m = corridor(*out.shape[:2])
-    Image.fromarray((clean * m + inked * (1 - m)).round().astype(np.uint8)).save(OUT / "color-1890s.jpg", quality=85)
+    img = finish(out, BBOX)
+    Image.fromarray(img).save(OUT / "color-1890s.jpg", quality=85)
     print(f"{n} tiles -> {OUT / 'color-1890s.jpg'}")
 
 

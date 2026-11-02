@@ -19,17 +19,21 @@ demolished or edited since (and the carved river, banks and bridge cut from buil
 import io
 import json
 import math
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import httpx
 import numpy as np
 import tifffile
-from PIL import Image, ImageFilter
+from PIL import Image
 from pyproj import Transformer
 from scipy import ndimage
 
 from build import CACHE, OUT, dsm
+
+sys.path.append(str(Path(__file__).resolve().parents[1] / "history"))
+from fetch_1890s import finish  # noqa: E402
 
 NEAR = (533370, 180040, 533970, 180640)  # 600 m: the bridge, both approaches, the Tower of London and Shad Thames
 RES = 0.5  # m per height pixel
@@ -202,8 +206,8 @@ def main():
     img, nimg = xyz(ESRI, ESRI_Z, "esri", IMG_PX)
     q_img = save_jpg(img, near / "color.jpg", 82)
     old, ntiles = xyz(NLS, NLS_Z, "nls", IMG_PX)
-    # ink lines are ~1 px; a 3 px min filter keeps them through the mipmaps, as scripts/history/fetch_1890s.py does
-    q_old = save_jpg(old.filter(ImageFilter.MinFilter(3)), near / "color-1890s.jpg", 82)
+    # the outer sheet's finish (thickened ink; no lettering or blank paper by the bridge): scripts/history/fetch_1890s.py
+    q_old = save_jpg(Image.fromarray(finish(np.asarray(old), NEAR)), near / "color-1890s.jpg", 82)
 
     fine_share = round(float(1 - keep.mean()), 3)
     ea22 = "Open Government Licence v3.0. Contains Environment Agency information © Environment Agency copyright and/or database right 2022."

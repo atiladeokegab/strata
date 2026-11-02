@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { useStore, EMBED } from './store'
-import { Stage } from './ui/Stage'
+const Stage = lazy(() => import('./ui/Stage').then((m) => ({ default: m.Stage }))) // three.js and the scene stay out of Home's entry chunk
 import { Panel } from './ui/Panel'
 import { Controls, Dock } from './ui/Dock'
 // photo tools load after first paint
@@ -129,7 +129,7 @@ export default function App() {
     full.searchParams.delete('embed')
     return (
       <div className="app embed">
-        {noGL ? <NoWebGL /> : <Guard name="Stage" fallback={<NoWebGL />}><Stage /></Guard>}
+        {noGL ? <NoWebGL /> : <Guard name="Stage" fallback={<NoWebGL />}><Suspense fallback={null}><Stage /></Suspense></Guard>}
         {!noGL && !error && <SceneLoading />}
         <a className="embed-open glass" href={full.toString()} target="_blank" rel="noreferrer">Open the full app <span aria-hidden="true">↗</span></a>
         <Credit />
@@ -141,7 +141,7 @@ export default function App() {
   if (!entered && !noGL) return <Guard name="Home" fallback={<AutoEnter go={enter} />}><Home onEnter={enter} /></Guard>
   return (
     <div className={`app view-${view}${sheet ? ' sheet-open' : ''}`}>
-      {noGL ? <NoWebGL /> : <Guard name="Stage" fallback={<NoWebGL />}><Stage /></Guard>}
+      {noGL ? <NoWebGL /> : <Guard name="Stage" fallback={<NoWebGL />}><Suspense fallback={null}><Stage /></Suspense></Guard>}
       {!noGL && !error && <SceneLoading />}{/* before the panel and controls, so they paint over it and stay usable */}
       <Panel />
       <Dock />

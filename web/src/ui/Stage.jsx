@@ -6,7 +6,7 @@ import { Sky } from '@react-three/drei'
 import { useStore, TILES, EMBED } from '../store'
 import { CameraRig } from './CameraRig'
 import { makeSlot } from './slots'
-import { ReadyProbe } from './SceneLoading'
+import { ReadyProbe } from './ReadyProbe'
 import { BridgeStandIn, GroundStandIn, WaterStandIn } from './StandIns'
 
 export const WORLD_TURN = (20.95 * Math.PI) / 180 // meta.json bridge_axis_deg
@@ -28,8 +28,8 @@ function partOf(object, ids) {
 
 // Scene labels (drei <Html> buttons in .stage) are kept readable: nearest first, each one hides while it overlaps
 // the on-screen controls or a nearer label, or while its anchor is behind or inside a raised leaf; a label cut
-// by the screen edge is slid back inside it. Embeds keep only the few nearest.
-const CLEAR_OF = '.controls, .credit, .dock, .embed-open'
+// by the screen edge or the desktop side panel is slid back beside it (never cut). Embeds keep only the few nearest.
+const CLEAR_OF = '.controls, .credit, .dock, .embed-open, .panel'
 const overlaps = (a, b, m = 6) => a.left < b.right + m && a.right > b.left - m && a.top < b.bottom + m && a.bottom > b.top - m
 const LEAF = /^bascule-(north|south)$/
 const EDGE = 8 // px kept clear of the screen edge
@@ -72,18 +72,20 @@ export function guardLabels(scene, camera, canvas, max = Infinity) {
   const keep = [...document.querySelectorAll(CLEAR_OF)].map((el) => el.getBoundingClientRect())
   const anchors = labelAnchors(scene, camera, canvas)
   const W = innerWidth, H = innerHeight
+  const p = document.querySelector('.panel')?.getBoundingClientRect() // desktop: a column down the left; phone: a bottom sheet
+  const lo = p && p.top < H / 2 && p.left < W / 2 ? Math.max(EDGE, p.right + EDGE) : EDGE // left edge of the open view
   const labels = [...document.querySelectorAll('.stage button')].map((b) => {
     const r = b.getBoundingClientRect(), was = +(b.dataset.dx || 0)
     const left = r.left - was, right = r.right - was
     const cx = (left + right) / 2, cy = (r.top + r.bottom) / 2 // labels are centred on their anchor
     const a = anchors.find((p) => Math.abs(p.x - cx) < 4 && Math.abs(p.y - cy) < 4)
-    const dx = Math.max(EDGE - left, Math.min(0, W - EDGE - right)) // slide a label cut by the edge back on screen
+    const dx = Math.max(lo - left, Math.min(0, W - EDGE - right)) // slide a label cut by an edge back into view
     return { b, dx, a, cx, cy, r: { left: left + dx, right: right + dx, top: r.top, bottom: r.bottom } }
   }).filter((l) => l.a) // landmark labels only: the leaf lever's screen-reader button and "Lift for a ship" stay as they are
     .sort((p, q) => p.a.d - q.a.d) // nearest first
   const shown = []
   for (const l of labels) {
-    const off = l.cx < 0 || l.cx > W || l.cy < EDGE || l.cy > H - EDGE // anchor off screen: no clamping to a wrong place
+    const off = l.cx < lo - EDGE || l.cx > W || l.cy < EDGE || l.cy > H - EDGE // anchor off screen or under the panel: no clamping to a wrong place
       || l.a.hidden || shown.length >= max
       || keep.some((k) => overlaps(l.r, k)) || shown.some((s) => overlaps(l.r, s.r, 4))
     if (!off) shown.push(l)

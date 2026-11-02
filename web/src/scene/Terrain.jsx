@@ -236,7 +236,7 @@ const OPENED = 1894 // bridge/stages.js, stage 5
 // is dry grass in every bare era; in the photo's eras a footprint whose building is hidden by its date shows paving,
 // not the photo's roof (a shown building covers its own).
 const SURF = { value: null }, SURF_T = { value: new THREE.Vector4() }, SURF_S = { value: 1 }, DOCKS = { value: 0 }
-const DOCKS_UNTIL = 1980, DOCK = new THREE.Color('#3b4744'), QUAY = new THREE.Color('#8a847a'), GRASS = new THREE.Color('#6f7349'), PAVING = new THREE.Color('#857e74')
+const DOCKS_UNTIL = 1980, DOCK = new THREE.Color('#3b4744'), QUAY = new THREE.Color('#736e66'), GRASS = new THREE.Color('#6f7349'), PAVING = new THREE.Color('#857e74')
 function loadSurfaces(meta) {
   const [minE, , maxE, maxN] = meta.bbox_osgb, [oE, oN] = meta.origin_osgb, a = (meta.bridge_axis_deg * Math.PI) / 180
   SURF_T.value.set(Math.cos(a), Math.sin(a), oE - minE, maxN - oN)
@@ -298,8 +298,8 @@ const ROAD_TINT = `
       tCol = mix(tCol, mix(vec3(${KERB.toArray().map((c) => c.toFixed(3)).join(', ')}), vec3(0.95), tBand), tKerb);
       // past the pavement the levelled ground is a dark, worn yard with the drape's own tones blurred in, not a pale
       // stone plaza (the judges' 1900 and 1971 end-outs: a huge empty grey plaza)
-      vec3 tYard = mix(eraGrade(texture2D(map, vMapUv, 4.0).rgb), ${v3(YARD)}, 0.6) * (0.85 + 0.3 * tMottle);
-      tCol = mix(tCol, tYard, smoothstep(${f1(PAVE_X)}, ${f1(PAVE_X + 4)}, tAcross) * (1.0 - tEnd));
+      vec3 tYard = mix(eraGrade(texture2D(map, vMapUv, 4.0).rgb), ${v3(YARD)}, 0.8) * (0.85 + 0.3 * tMottle);
+      tCol = mix(tCol, tYard, smoothstep(${f1(PAVE_X)}, ${f1(PAVE_X + 4)}, tAcross)); // beside the ramps too: no deck footway there to meet
       diffuseColor.rgb = mix(diffuseColor.rgb, tCol, tRoad * (1.0 - wall)); // every era: with Google's tiles off today's photo smears its buses and lumps over the levelled street too
       diffuseColor.rgb = mix(diffuseColor.rgb, vec3(${FAR.toArray().map((c) => c.toFixed(3)).join(', ')}), smoothstep(${f1(FAR_FROM)}, ${f1(FAR_TO)}, length(vRoadW.xz)) * uEra);`
 const SURFACES = `
@@ -323,7 +323,7 @@ const ERA_GRADE = `
   vec3 eraGrade(vec3 c) {
     vec3 s = pow(max(c, 0.0), vec3(1.0 / 2.2));
     float l = dot(s, vec3(0.3, 0.59, 0.11));
-    vec3 tone = mix(vec3(0.30, 0.21, 0.13), vec3(0.87, 0.78, 0.62), smoothstep(0.30, 0.88, l));
+    vec3 tone = mix(vec3(0.30, 0.21, 0.13), vec3(0.76, 0.68, 0.54), smoothstep(0.30, 0.88, l));
     vec3 t = mix(tone, tone * s / max(l, 0.05), 0.35);
     return mix(c, pow(clamp(t, 0.0, 1.0), vec3(2.2)) * ${ERA_GAIN}, uEra);
   }`
@@ -348,9 +348,11 @@ ${UNDER_BRIDGE}`)
       '#include <map_fragment>',
       `#include <map_fragment>
       diffuseColor.rgb = eraGrade(diffuseColor.rgb);
-      float wall = 1.0 - smoothstep(0.35, 0.7, vUp);
+      // the steeper of the smoothed normal and the triangle's own: at a one-cell step (a river wall, a viaduct's side)
+      // the shared vertices average the flat top with the face, so vUp alone left those faces pale map paper
+      float wall = 1.0 - smoothstep(0.35, 0.7, min(vUp, abs(normalize(cross(dFdx(vRoadW), dFdy(vRoadW))).y)));
       vec3 blur = eraGrade(texture2D(map, vMapUv, 5.0).rgb);
-      vec3 facade = mix(blur, vec3(0.34, 0.32, 0.29), 0.75) * 0.8;
+      vec3 facade = mix(blur * 0.5, vec3(0.13, 0.125, 0.115), 0.8); // dark: a face turned to the sun lights far brighter than the flat ground
       diffuseColor.rgb = mix(diffuseColor.rgb, facade, wall);${ROAD_TINT}${SURFACES}`,
     )
     .replace('#include <fog_fragment>', `#include <fog_fragment>

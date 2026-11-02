@@ -8,10 +8,11 @@ import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { heightAt } from './Terrain.jsx'
 
-// [x, z, height above the ground] in metres; kept off the bridge so none hides it
+// [x, z, height above the ground] in metres; kept off the bridge so none hides it. 300-600 m out and 110-190 m up,
+// inside the 1940 overcast (FogExp2 0.0014 is half gone by 600 m), so they show in the usual frames; real ones flew higher.
 const SITES = [
-  [-620, -380, 260], [-420, -620, 340], [-150, -540, 300], [180, -600, 380], [460, -450, 280], [650, -200, 330],
-  [560, 260, 300], [300, 520, 360], [-60, 600, 270], [-380, 430, 320], [-640, 160, 290], [80, -330, 230],
+  [-480, -300, 160], [-300, -520, 190], [-60, -440, 130], [220, -480, 170], [430, -300, 150], [520, 20, 180],
+  [420, 330, 140], [200, 500, 190], [-120, 480, 150], [-380, 340, 170], [-540, 60, 140], [120, -330, 110],
 ]
 const WIND = 0.6 // every balloon rides nose into the same wind
 
@@ -25,7 +26,7 @@ export function Barrage({ terrain }) {
   const balloons = useRef()
   const geo = useMemo(() => ({ balloon: balloonGeometry() }), [])
   const mats = useMemo(() => ({
-    balloon: new THREE.MeshStandardMaterial({ color: '#c3c6c7', roughness: 0.55, metalness: 0.15 }),
+    balloon: new THREE.MeshStandardMaterial({ color: '#8d9195', roughness: 0.55, metalness: 0.15 }), // darker than the grey sky, so it reads
   }), [])
   useLayoutEffect(() => {
     const m = new THREE.Matrix4(), q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, WIND, 0)), one = new THREE.Vector3(1, 1, 1)

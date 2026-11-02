@@ -18,6 +18,7 @@ The Blitz (wiki-st-katharine-docks): "All the warehouses around the eastern basi
 occupied remained derelict until the 1960s." Buildings within 40 m of the east basin end in 1940 ("e") and leave, until
 1950 when the period city hands over to the modern one, a low rubble heap ("k": "r") with a few gutted wall stubs
 standing on their outline (where and how high is illustrative).
+Chimneys: one brick stack through each roofed house's hip (chimney()).
 Roofs: within ROOFED m of the bridge, a near-rectangular plot gets a hipped slate roof over its minimum rectangle
 ("p": the four corners, ridge along the long side; Buildings.jsx builds it). Slate roofs on London stock brick are
 the period's common build (status inferred; the plan shows footprints only, not roof forms).
@@ -96,6 +97,21 @@ def landmarks(meta, ground):
     keep = {"k": "s", "s": PLA_FROM, "n": "Port of London Authority"}
     return [{"id": "r1020011", "b": round(base, 1), "t": round(top, 1), "o": flat(PLA_OUTER), "h": [flat(PLA_INNER)], **keep},
             {"id": "r1020011-tower", "b": round(top - 1, 1), "t": round(peak - oH, 1), "o": flat(tower), **keep}]
+
+
+def chimney(b):
+    """A house's stack: 3 x 1.2 m on the middle of one short side of its roof rectangle, 1.5 m in, standing 1.2 m clear
+    of the hip's ridge (Buildings.jsx's rise, pitch 0.7 capped at 3.5 m). Dimensions illustrative."""
+    c = np.array(b["p"]).reshape(4, 2)
+    if np.linalg.norm(c[1] - c[0]) > np.linalg.norm(c[2] - c[1]):
+        c = np.roll(c, -1, axis=0)  # now c0-c1 is a short side
+    mid, along = (c[0] + c[1]) / 2, (c[3] - c[0]) / np.linalg.norm(c[3] - c[0])
+    across = (c[1] - c[0]) / np.linalg.norm(c[1] - c[0])
+    centre = mid + along * 2.1
+    pts = [centre + i * across * 1.5 + j * along * 0.6 for i, j in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+    rise = min(np.linalg.norm(c[1] - c[0]) / 2 * 0.7, 3.5)
+    out = {"b": round(b["t"] - 1, 1), "t": round(b["t"] + rise + 1.2, 1), "k": "b", "o": [round(float(v), 1) for q in pts for v in q]}
+    return out | {k: b[k] for k in ("s", "e") if k in b}
 
 
 def main():
@@ -215,9 +231,9 @@ def main():
         if blitzed[rr, cc].mean() > 0.5:
             out.append({"b": round(base, 1), "t": round(top, 1), "k": kind, "e": BLITZ, "o": o})
             ground_y = float(np.median(g)) - oH
-            out.append({"b": round(base, 1), "t": round(ground_y + 1.2, 1), "k": "r", "s": BLITZ, "e": MODERN, "o": o})
+            out.append({"b": round(base, 1), "t": round(ground_y + rng.uniform(1.5, 3.5), 1), "k": "r", "s": BLITZ, "e": MODERN, "o": o})
             ring = poly.exterior
-            for _ in range(int(rng.integers(1, 4))):  # gutted shells: stretches of outer wall left standing
+            for _ in range(int(rng.integers(2, 6))):  # gutted shells: stretches of outer wall left standing
                 a0 = rng.uniform(0, ring.length)
                 seg = substring(ring, a0, min(a0 + rng.uniform(6, 18), ring.length))
                 wall = seg.buffer(0.35, cap_style="flat")
@@ -238,6 +254,8 @@ def main():
             if poly.centroid.distance(ORIGIN) < ROOFED and poly.area > 0.85 * rect.area:
                 b["p"] = [round(float(v), 1) for q in list(rect.exterior.coords)[:4] for v in q]
             out.append(b)
+            if "p" in b and kind == "b":
+                out.append(chimney(b))
     frame = {"origin_osgb": meta["origin_osgb"], "origin_h": oH, "axis_deg": meta["bridge_axis_deg"], "bbox_osgb": meta["bbox_osgb"]}
     source = ("Footprints traced from the OS London Town Plan 1:1056, 1893-96, reproduced with the permission of the "
               "National Library of Scotland (CC-BY); heights inferred by use, see scripts/history/period_city.py")

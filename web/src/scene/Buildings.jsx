@@ -93,6 +93,33 @@ function turrets(bd) {
   return { walls, caps }
 }
 
+// The Royal Mint (Smirke, 1805-09, OSM w53866192): a pale stone block under lead, with a central gable across it whose
+// west end is the pediment over the front on Tower Hill. Its span is where the footprint's mid-line crosses the walls;
+// 22 m wide and 4.5 m high are illustrative.
+const MINT = 'w53866192'
+function pediment(bd) {
+  const n = bd.o.length / 2, zs = bd.o.filter((_, i) => i % 2 === 1), zc = (Math.min(...zs) + Math.max(...zs)) / 2, xs = []
+  for (let i = 0; i < n; i++) {
+    const [ax, az, bx, bz] = [bd.o[2 * i], bd.o[2 * i + 1], bd.o[(2 * i + 2) % (2 * n)], bd.o[(2 * i + 3) % (2 * n)]]
+    if ((az - zc) * (bz - zc) < 0) xs.push(ax + ((zc - az) / (bz - az)) * (bx - ax))
+  }
+  const [x0, x1, y, w, h] = [Math.min(...xs), Math.max(...xs), bd.t, 11, 4.5]
+  const v = (x, dy, dz) => new THREE.Vector3(x, y + dy, zc + dz)
+  const [a0, b0, p0, a1, b1, p1] = [v(x0, 0, -w), v(x0, 0, w), v(x0, h, 0), v(x1, 0, -w), v(x1, 0, w), v(x1, h, 0)]
+  const mid = v((x0 + x1) / 2, h / 3, 0), e1 = new THREE.Vector3(), e2 = new THREE.Vector3()
+  const geo = (tris) => { // wind every face outward from the prism's middle; flat normals, one uv (plain stone, plain lead)
+    for (let i = 0; i < tris.length; i += 3) {
+      if (e1.subVectors(tris[i + 1], tris[i]).cross(e2.subVectors(tris[i + 2], tris[i])).dot(e2.subVectors(tris[i], mid)) < 0) [tris[i + 1], tris[i + 2]] = [tris[i + 2], tris[i + 1]]
+    }
+    const g = new THREE.BufferGeometry()
+    g.setAttribute('position', new THREE.Float32BufferAttribute(tris.flatMap((p) => [p.x, p.y, p.z]), 3))
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(new Array(tris.length * 2).fill(0), 2))
+    g.computeVertexNormals()
+    return g
+  }
+  return { walls: [geo([a0, b0, p0, a1, b1, p1])], caps: [geo([a0, p0, p1, a0, p1, a1, b0, b1, p1, b0, p1, p0])] }
+}
+
 // Era cut and contact shadow, injected into a stock material (and its shadow depth twin).
 function eraPatch(uniforms, shade) {
   return (sh) => {
@@ -127,6 +154,9 @@ function build(data) {
     // before 1950 only buildings with a real date show; the period city (below) carries the rest
     const date = data.dates[bd.id.split('-')[0]], dated = date?.s
     const tower = date?.src === 'wiki-tower-of-london' // ragstone under lead, not the drape: the 1890s map made white boxes
+    // shortcut: a riverside warehouse is known by its OSM name (Butlers Wharf Buildings, Java Wharf); unnamed ones stay generic
+    const wharf = bd.k !== 'g' && /wharf|warehouse|brewhouse/i.test(bd.n ?? '') && !/car park/i.test(bd.n)
+    const wall = tower ? 'k' : wharf ? 'w' : bd.k, lead = tower || wharf || bd.id === MINT // own roofs, not the photo
     const s = dated ?? bd.s
     // shortcut: a real OSM start_date of exactly 1950 reads as bake.py's guess; none is known here
     const guess = dated == null && (s == null || s === TALL_GUESS)
@@ -135,14 +165,14 @@ function build(data) {
         : Math.max(s ?? HISTORIC_BEFORE, HISTORIC_BEFORE)
     const out = sets[start < HISTORIC_BEFORE ? 'o' : 'm']
     for (const grp of geo.groups) {
-      if (grp.materialIndex !== 0) push(out[tower ? 'k' : bd.k] || out.b, geo, grp, start, bd.b)
-      else if (bd.l && !tower) push(out.drape, geo, grp, start, bd.b, tileUv)
+      if (grp.materialIndex !== 0) push(out[wall] || out.b, geo, grp, start, bd.b)
+      else if (bd.l && !lead) push(out.drape, geo, grp, start, bd.b, tileUv)
       else push(out.roof, geo, grp, start, bd.b)
     }
     geo.dispose()
-    if (bd.id === WHITE_TOWER) {
-      const { walls, caps } = turrets(bd)
-      for (const [list, b] of [[walls, out.k], [caps, out.roof]]) {
+    if (bd.id === WHITE_TOWER || bd.id === MINT) {
+      const { walls, caps } = bd.id === MINT ? pediment(bd) : turrets(bd) // the pediment's stone ends, its lead slopes
+      for (const [list, b] of [[walls, bd.id === MINT ? out.s : out.k], [caps, out.roof]]) {
         for (const g of list) { push(b, g, { start: 0, count: g.attributes.position.count }, start, bd.b); g.dispose() }
       }
     }

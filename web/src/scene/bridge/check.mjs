@@ -686,12 +686,12 @@ console.log('geom materials untextured, all kinded ok')
         const h = cast(root, [x, y, -180], [0, 0, 1], 360)[0]
         assert.ok(!h, `${year}: road blocked at x ${x}, y ${y}, z ${h?.point.z.toFixed(1)} by ${h?.object.userData.from}`)
       }
-    // nothing stands proud of the tower arch's jambs (next20 h3: the frame's inner columns showed as a grey pole)
+    // nothing stands proud of the tower arch's jambs (next20 h3: the frame's inner columns showed as a grey pole;
+    // the corner turrets' octagon edges and their stairs stood 0.8 m into the passage)
     if (year === 2026)
       for (const x of [-9.47, 9.47])
         for (const sz of [-1, 1]) {
-          // shortcut: the corner turrets (and the stairs inside them) still poke 0.8 m into the passage, so both are skipped; drop the filter if they move
-          const h = cast(root, [x, 6, sz * 35.6], [0, 0, sz], 19.8).find((h) => !/TowerCladding|Stairs/.test(h.object.userData.from))
+          const h = cast(root, [x, 6, sz * 35.6], [0, 0, sz], 19.8)[0]
           assert.ok(!h, `${year}: ${h?.object.userData.from} stands in the tower arch at x ${x}, z ${h?.point.z.toFixed(1)}`)
         }
     // and there is road (paint counts as road) under every 2 m of it, so walk mode never falls through

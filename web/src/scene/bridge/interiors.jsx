@@ -21,8 +21,10 @@ export function Stairs() {
       const rail = []
       for (let i = 0; i <= n; i++) {
         const a = (i / PER_TURN) * Math.PI * 2, y = i * RISE
-        stone.push(box(1.9, 0.2, 0.9, 1.95, 0, 0).rotateY(-a).translate(x, y, z))
-        rail.push([x + 2.75 * Math.cos(a), y + 1, z + 2.75 * Math.sin(a)])
+        // the turret's road-arch face is pulled back to 2.45 m off its axis: steps and rail stop 0.1 m inside it
+        const c = -Math.sign(x) * Math.cos(a), reach = c > 0 ? 2.35 / c : Infinity, len = Math.min(1.9, reach - 1), r = Math.min(2.75, reach)
+        stone.push(box(len, 0.2, 0.9, 1 + len / 2, 0, 0).rotateY(-a).translate(x, y, z))
+        rail.push([x + r * Math.cos(a), y + 1, z + r * Math.sin(a)])
       }
       for (let i = 1; i < rail.length; i++) iron.push(beam(rail[i - 1], rail[i], 0.04, 4))
       iron.push(new THREE.CylinderGeometry(1.05, 1.05, L.walkY, 10).translate(x, L.walkY / 2, z)) // newel round the column

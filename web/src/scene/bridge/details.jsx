@@ -173,9 +173,11 @@ function lampHead(out, x, y, z, gas) {
   }
 }
 
-const dashes = (out, z0, z1) => {
-  for (let z = z0; z + 3 <= z1; z += 6) out.white.push(box(0.18, 0.03, 3, 0, 0.02, z + 1.5))
-  for (const x of [-KERB_X + 0.5, KERB_X - 0.5]) out.white.push(box(0.15, 0.03, z1 - z0, x, 0.02, (z0 + z1) / 2))
+// blackout: lines in matt off-white (the portland stone mesh), not the over-bright band paint, so they don't glow
+const dashes = (out, z0, z1, era) => {
+  const paint = era?.blackout ? out.stone : out.white
+  for (let z = z0; z + 3 <= z1; z += 6) paint.push(box(0.18, 0.03, 3, 0, 0.02, z + 1.5))
+  for (const x of [-KERB_X + 0.5, KERB_X - 0.5]) paint.push(box(0.15, 0.03, z1 - z0, x, 0.02, (z0 + z1) / 2))
 }
 
 // granite kerb and paved footway on both sides, flat, from z0 to z1 (z0 < z1)
@@ -218,7 +220,7 @@ export function ApproachDetails({ era }) {
         for (let z = L.spanEnd + 6; z < L.pierZ - L.towerHalfZ - 3; z += 12) lamps.push(z)
         balustrade(o, L.spanEnd, L.pierZ - L.towerHalfZ, lamps, LITE)
         for (const z of lamps) for (const x of [-BAL_X, BAL_X]) lamp(o, x, BAL_Y, z, era) // its 1 m base stands in the balustrade as a pedestal
-        if (!era?.woodBlocks) dashes(o, L.spanEnd + 1, L.pierZ - L.towerHalfZ - 1) // no painted lines on the wood blocks
+        if (!era?.woodBlocks) dashes(o, L.spanEnd + 1, L.pierZ - L.towerHalfZ - 1, era) // no painted lines on the wood blocks
         footways(o, L.spanEnd, L.pierZ - L.towerHalfZ, era)
         return o
       }}
@@ -239,7 +241,7 @@ export function DeckMarkings({ era }) {
 
 export function deckMarkingsKit(era) {
   const o = kit()
-  if (!era?.woodBlocks) dashes(o, L.pierZ - 9.5, L.pierZ + 9.5)
+  if (!era?.woodBlocks) dashes(o, L.pierZ - 9.5, L.pierZ + 9.5, era)
   footways(o, L.pierZ - L.towerHalfZ, L.pierZ + L.towerHalfZ, era)
   if (era?.blackout) sandbagWalls(o, L)
   if (era?.blackout && !LITE) {
@@ -258,7 +260,7 @@ export function BasculeDetails({ era }) {
       build={() => {
         const o = kit()
         for (const z of [-31, -21, -11]) for (const x of [-9, 9]) lamp(o, x, 0.05, z, era)
-        if (!era?.woodBlocks) dashes(o, L.pivotZ + 0.5, -0.5)
+        if (!era?.woodBlocks) dashes(o, L.pivotZ + 0.5, -0.5, era)
         footways(o, L.pierZ + L.towerHalfZ, 0, era)
         for (const gs of Object.values(o)) gs.forEach((g) => g.translate(0, -L.pivotY, -L.pivotZ))
         if (!LITE) return o

@@ -16,10 +16,10 @@ export const L = {
   bed: -17, // riverbed / pier foundations
   pierTop: -1,
   pierZ: -45.5, // pier and tower centre; inner face at z=-30.5 leaves the 61 m opening
-  pivotZ: -35, // sourced: Barry, Tower Bridge lecture 1894 (tb-engine), printed p.37 / PDF p.47: pivot 12 ft 9 in back from the pier face (-30.48), ~0.7 m clear of the tower face. Don't move it out
+  pivotZ: -34.375, // binary-exact so the closed decks meet on z 0 to the bit (34.37 left a 1e-15 seam the road probe fell through). Sourced: Barry, Tower Bridge lecture 1894 (tb-engine), printed p.37 / PDF p.47: pivot 12 ft 9 in back from the pier face (-30.48), riverward arm 112 ft 9 in; ~0.7 m clear of the tower face. Don't move it out
   pivotY: -1.5,
   towerHalfX: 13,
-  towerHalfZ: 10,
+  towerHalfZ: 10, // walkway: Barry 1894 (tb-engine, printed p.27 / PDF p.37) has its supports 15 ft back from the pier faces, 230 ft (70.1 m) clear; ours is 71.0 m (0.45 m per end long). Known and accepted rather than thinning the towers: don't 'fix' it blind
   archHalf: 9.5,
   bodyTop: 42,
   walkX: 10.5,

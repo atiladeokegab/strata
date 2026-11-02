@@ -560,11 +560,11 @@ console.log('geom materials untextured, all kinded ok')
   const out = join(tmpdir(), `bridge-corridor-${process.pid}.mjs`)
   const resolveDir = fileURLToPath(new URL('.', import.meta.url))
   // three is bundled too, so the scene and the components share one copy
-  await bundle({ stdin: { contents: `export { TowerBridge } from './TowerBridge.jsx'; export { L } from './structures.jsx'; export { BODIES, BODY, bodyGeo, GLASS } from './traffic.jsx'; export { centringGeo } from './construction.jsx'; export { useStore } from '../../store.js'; export { Fragment } from 'react/jsx-runtime'; export { setLite } from '../look/tier.js'; export * as T from 'three'`, resolveDir, loader: 'js' }, bundle: true, format: 'esm', platform: 'node', jsx: 'automatic', plugins: [stubs], outfile: out, logLevel: 'error' })
+  await bundle({ stdin: { contents: `export { TowerBridge } from './TowerBridge.jsx'; export { L, leafParts } from './structures.jsx'; export { BODIES, BODY, bodyGeo, GLASS } from './traffic.jsx'; export { centringGeo } from './construction.jsx'; export { useStore } from '../../store.js'; export { Fragment } from 'react/jsx-runtime'; export { setLite } from '../look/tier.js'; export * as T from 'three'`, resolveDir, loader: 'js' }, bundle: true, format: 'esm', platform: 'node', jsx: 'automatic', plugins: [stubs], outfile: out, logLevel: 'error' })
   const noop = new Proxy(() => noop, { get: () => noop }) // canvas textures draw into a no-op 2D context
   globalThis.document ??= { createElement: () => ({ getContext: () => noop }) }
   globalThis.location ??= { search: '' } // store.js reads ?embed= at import
-  const { TowerBridge, L, BODIES, BODY, bodyGeo, GLASS, useStore, Fragment, T, setLite, centringGeo } = await import(out)
+  const { TowerBridge, L, leafParts, BODIES, BODY, bodyGeo, GLASS, useStore, Fragment, T, setLite, centringGeo } = await import(out)
   // no-float: in-river construction timber reaches below the drawn river (WATER_Y), not just high water
   const cg = centringGeo(); cg.computeBoundingBox()
   assert.ok(cg.boundingBox.min.y < WATER_Y, `centring trestle feet at ${cg.boundingBox.min.y.toFixed(2)} float over the river at ${WATER_Y.toFixed(2)}`)
@@ -992,6 +992,14 @@ console.log('geom materials untextured, all kinded ok')
     }
     console.log(`raised leaf: at most ${deep.d.toFixed(2)} m behind the tower face (${deep.o && who(deep.o)})`)
     assert.ok(deep.d <= NICK, `raised leaf ${deep.d.toFixed(2)} m into its tower at (${deep.at?.toArray().map((n) => n.toFixed(1))}): ${deep.o && who(deep.o)}`)
+    // closed, the two decks meet on the centre line; the leaf is the data's length (Barry 1894: 112 ft 9 in)
+    const deck = leafParts().road[0]
+    deck.computeBoundingBox()
+    assert.ok(Math.abs(L.pivotZ + deck.boundingBox.max.z) < 1e-6, `closed leaf tip at z ${(L.pivotZ + deck.boundingBox.max.z).toFixed(3)}, not 0`)
+    for (const id of ['bascule-north', 'bascule-south']) {
+      const len = tb.parts.find((p) => p.id === id).dims.leaf_length.value
+      assert.ok(Math.abs(-L.pivotZ - len) <= 0.1, `${id}: pivot to tip ${-L.pivotZ} m, data leaf_length ${len} m`)
+    }
   }
 }
 // Road surface by era: waits for Look's maps, then swaps in place (no new material, no draw call).

@@ -9,8 +9,8 @@ separate houses, and extruded. Buildings dated to 1894 or earlier (OSM start_dat
 London precinct) are cut out:
 Buildings.jsx already draws those from OSM, so nothing overlaps.
 Heights (status inferred): there are no surveyed 1890s heights, so each block gets a period height by use:
-riverside and dock warehouses (within 70 m of the water) 18-24 m, large inland blocks (breweries, works) 14-18 m,
-terraced houses and shops 9-13 m. Ground: the bare-earth surface Terrain.jsx draws before 1950, so walls meet it.
+riverside and dock warehouses (within 70 m of the water) 15-22 m, one lot in ten of a large inland block (breweries,
+works) 13-17 m, terraced houses and shops 9-14 m (3-4 storeys). Ground: the bare-earth surface Terrain.jsx draws before 1950, so walls meet it.
 The Blitz (wiki-st-katharine-docks): "All the warehouses around the eastern basin were destroyed, and the site they had
 occupied remained derelict until the 1960s." Buildings within 40 m of the east basin end in 1940 ("e") and leave, until
 1950 when the period city hands over to the modern one, a low rubble heap ("k": "r") with a few gutted wall stubs
@@ -153,11 +153,11 @@ def main():
         g = ground[np.clip(rr // 2, 0, 1499), np.clip(cc // 2, 0, 1499)]
         block_area = sizes[blocks[rr[0], cc[0]]]
         if near_water[rr, cc].mean() > 0.5:
-            height, kind = rng.uniform(18, 24), "w"  # warehouse
-        elif block_area > 2500:
-            height, kind = rng.uniform(14, 18), "w"
+            height, kind = rng.uniform(15, 22), "w"  # warehouse
+        elif block_area > 2500 and rng.random() < 0.1:  # terraces join into big blocks, so only a few lots are works
+            height, kind = rng.uniform(13, 17), "w"
         else:
-            height, kind = rng.uniform(9, 13), "b"
+            height, kind = rng.uniform(9, 14), "b"
         base = float(g.min()) - oH - 0.6  # sunk so no gap shows on a slope
         top = float(np.median(g)) - oH + height
         xs, zs = poly.exterior.coords.xy

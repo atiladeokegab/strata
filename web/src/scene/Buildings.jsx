@@ -59,7 +59,7 @@ const LOOK = {
   s: { color: '#d9d1bf', roughness: 0.86 },
   b: { color: '#b39270', roughness: 0.92 },
   g: { color: '#8ea2b0', roughness: 0.14, metalness: 0.55, envMapIntensity: 1.4 },
-  w: { color: '#8f6f55', roughness: 0.95 }, // sooted London stock brick
+  w: { color: '#7f7464', roughness: 0.95 }, // sooted London stock brick: dull grey-yellow, not orange
   roof: { color: '#6b6862', roughness: 0.95 },
   slate: { color: '#4d5258', roughness: 0.8 }, // Welsh slate
   r: { color: '#8b6f58', roughness: 1 }, // Blitz rubble: brick dust and charred timber, 1940-1950
@@ -141,10 +141,10 @@ const NEAR = { osm: 700, period: 500 }, SKYLINE = 60
 const beyond = (bd, r) => { let x = 0, z = 0; const n = bd.o.length / 2; for (let i = 0; i < n; i++) { x += bd.o[2 * i]; z += bd.o[2 * i + 1] } return Math.hypot(x / n, z / n) > r }
 const ERA_SHOWN = { o: () => true, p: (y) => y < HISTORIC_BEFORE, m: (y) => y >= HISTORIC_BEFORE }
 
-// multipliers on the facade colour: yellow London stock, sooted stock, red brick, painted stucco (houses only)
+// multipliers on the facade colour, soot-darkened: yellow London stock, grey soot, dull red brick, dirty stucco (houses only), dark stock
 const TINTS = {
-  w: [[1, 1, 1], [0.82, 0.8, 0.78], [1.08, 0.86, 0.74], [0.9, 0.86, 0.8], [1.05, 1.0, 0.92]],
-  b: [[1.12, 1.08, 1.0], [0.86, 0.84, 0.82], [1.1, 0.82, 0.7], [1.38, 1.4, 1.42], [1.0, 0.96, 0.9]],
+  w: [[1, 1, 1], [0.85, 0.86, 0.9], [1.1, 0.85, 0.8], [0.92, 0.9, 0.88], [1.08, 1.05, 1.0]],
+  b: [[0.84, 0.95, 1.0], [0.64, 0.75, 0.93], [0.78, 0.6, 0.64], [1.1, 1.29, 1.52], [0.72, 0.81, 0.89]],
 }
 const SLATE = [[1, 1, 1], [0.86, 0.88, 0.92], [1.12, 1.06, 1.0]]
 const WHITE = [1, 1, 1]
@@ -161,12 +161,13 @@ function extrude(bd) {
 }
 
 // A hipped roof over a footprint's minimum rectangle (corners [x0,z0, .. x3,z3]), ridge along the long side, rising
-// pitch x half the short side (0.7 is about 35 degrees, slate's usual; warehouses sit lower). The flat cap stays under it.
+// pitch x half the short side (0.7 is about 35 degrees, slate's usual; warehouses sit lower), at most 3.5 m so a big plot is not a
+// pyramid (a real deep plot has several ridges). The flat cap stays under it.
 function hipRoof(p, y, pitch) {
   const c = [0, 2, 4, 6].map((k) => new THREE.Vector3(p[k], y, p[k + 1]))
   if (c[0].distanceTo(c[1]) < c[1].distanceTo(c[2])) c.push(c.shift()) // c0-c1 is a long side
   const long = c[0].distanceTo(c[1]), half = c[1].distanceTo(c[2]) / 2
-  const mid = c[0].clone().add(c[2]).multiplyScalar(0.5).setY(y + Math.min(half * pitch, 6))
+  const mid = c[0].clone().add(c[2]).multiplyScalar(0.5).setY(y + Math.min(half * pitch, 3.5))
   const along = c[1].clone().sub(c[0]).normalize().multiplyScalar(Math.max(long / 2 - half, 0))
   const r0 = mid.clone().sub(along), r1 = mid.clone().add(along)
   const tris = [c[0], c[1], r1, c[0], r1, r0, c[1], c[2], r1, c[2], c[3], r0, c[2], r0, r1, c[3], c[0], r0]

@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { useStore } from '../store'
 import { GOOGLE_FROM } from './google/state'
-import { APPROACH, STREETS, levelStreets, rampFloor, sinkShelves } from './bareEarth.js'
+import { APPROACH, STREETS, levelStreets, rampFloor, sinkShelves, snapDocks } from './bareEarth.js'
 import { eraFor } from './bridge/stages.js'
 import { KERB_X, FOOTWAY_H } from './bridge/roadway.js'
 import { GAP } from './google/frame.js'
@@ -46,10 +46,20 @@ async function decodeHeights(url, meta) {
 const tile = (meta, { heights, w, h, pre = heights }) => ({ meta, heights, old: heights, pre, w, h })
 // The ground: bare.png with the approach streets brought up to the deck ends and the river's shelves sunk (bareEarth.js);
 // never the DSM. Before 1894 there were no streets at deck level: the DTM as surveyed, the ramps' footprints at their foot.
-const ground = (meta, px) => {
-  const pre = sinkShelves({ meta, ...px, heights: rampFloor({ meta, ...px, heights: Float32Array.from(px.heights) }) })
-  return tile(meta, { ...px, pre, heights: sinkShelves({ meta, ...px, heights: levelStreets({ meta, ...px }) }) })
+// St Katharine's docks are snapped to their OSM outline (bareEarth.js snapDocks) when surfaces.png is in.
+const ground = (meta, px, mask) => {
+  const docks = (heights) => (mask ? snapDocks({ meta, ...px, heights }, mask) : heights)
+  const pre = docks(sinkShelves({ meta, ...px, heights: rampFloor({ meta, ...px, heights: Float32Array.from(px.heights) }) }))
+  return tile(meta, { ...px, pre, heights: docks(sinkShelves({ meta, ...px, heights: levelStreets({ meta, ...px }) })) })
 }
+// surfaces.png's pixels (R: the docks), once; null when missing, and the docks keep the DTM
+let maskCache
+const loadMask = () => (maskCache ??= (async () => {
+  const bmp = await createImageBitmap(await (await fetch(BASE + 'surfaces.png')).blob(), { colorSpaceConversion: 'none', premultiplyAlpha: 'none' })
+  const ctx = new OffscreenCanvas(bmp.width, bmp.height).getContext('2d', { willReadFrequently: true })
+  ctx.drawImage(bmp, 0, 0)
+  return { data: ctx.getImageData(0, 0, bmp.width, bmp.height).data, w: bmp.width, h: bmp.height }
+})().catch(() => null))
 
 const BUDGET = { low: 150_000, full: LITE ? 150_000 : 250_000, near: 250_000, mirror: 30_000 }
 
@@ -57,8 +67,8 @@ export function loadLow() {
   lowCache ??= (async () => {
     const meta = await loadMeta()
     const base = meta.lite ? BASE + 'lo/' : BASE
-    const [px, ...maps] = await Promise.all([decodeHeights(base + 'bare.png', meta), ...MAPS.map((f) => texture(base + f))])
-    const t = ground(meta, px)
+    const [px, mask, ...maps] = await Promise.all([decodeHeights(base + 'bare.png', meta), loadMask(), ...MAPS.map((f) => texture(base + f))])
+    const t = ground(meta, px, mask)
     loadSurfaces(meta)
     return { ...t, maps, mesh: await meshOf(t, BUDGET.low) }
   })()
@@ -68,7 +78,7 @@ export function loadLow() {
 /** The full 1 m outer tile's ground heights (no drapes), once per page; queued behind the first-load tile. */
 export function loadTerrain() {
   // phones: 2 m (~0.3 MB) is plenty under their 150k-triangle cap; the 1 m file is 1.7 MB
-  cache ??= loadLow().then(async ({ meta }) => ground(meta, await decodeHeights(BASE + (LITE ? 'bare-2m.png' : 'bare.png'), meta)))
+  cache ??= loadLow().then(async ({ meta }) => ground(meta, await decodeHeights(BASE + (LITE ? 'bare-2m.png' : 'bare.png'), meta), await loadMask()))
   return cache
 }
 
@@ -236,7 +246,8 @@ const OPENED = 1894 // bridge/stages.js, stage 5
 // is dry grass in every bare era; in the photo's eras a footprint whose building is hidden by its date shows paving,
 // not the photo's roof (a shown building covers its own).
 const SURF = { value: null }, SURF_T = { value: new THREE.Vector4() }, SURF_S = { value: 1 }, DOCKS = { value: 0 }
-const DOCKS_UNTIL = 1980, DOCK = new THREE.Color('#3b4744'), QUAY = new THREE.Color('#736e66'), GRASS = new THREE.Color('#6f7349'), PAVING = new THREE.Color('#857e74')
+const QUAY_BAND = 8 // m out from the dock outline: the ragged fringe, inside the width snapDocks brings fully up to the quay
+const DOCKS_UNTIL = 1980, DOCK = new THREE.Color('#3b4744'), QUAY = new THREE.Color('#6b6c69'), GRASS = new THREE.Color('#6f7349'), PAVING = new THREE.Color('#857e74')
 function loadSurfaces(meta) {
   const [minE, , maxE, maxN] = meta.bbox_osgb, [oE, oN] = meta.origin_osgb, a = (meta.bridge_axis_deg * Math.PI) / 180
   SURF_T.value.set(Math.cos(a), Math.sin(a), oE - minE, maxN - oN)
@@ -305,8 +316,13 @@ const ROAD_TINT = `
 const SURFACES = `
       // world (bridge frame) to the tile's grid (east, south from the origin), then to the mask's uv (v = 1 north)
       vec2 sG = vec2(vRoadW.x * uSurfT.x - vRoadW.z * uSurfT.y, vRoadW.x * uSurfT.y + vRoadW.z * uSurfT.x);
-      vec3 sM = texture2D(uSurf, vec2((sG.x + uSurfT.z) / uSurfS, 1.0 - (sG.y + uSurfT.w) / uSurfS)).rgb;
-      float sDock = smoothstep(0.55, 0.8, sM.r) * uDocks, sQuay = smoothstep(0.08, 0.3, sM.r) * (1.0 - smoothstep(0.55, 0.8, sM.r)) * uDocks;
+      vec2 sUv = vec2((sG.x + uSurfT.z) / uSurfS, 1.0 - (sG.y + uSurfT.w) / uSurfS);
+      vec3 sM = texture2D(uSurf, sUv).rgb;
+      // the quay: R dilated by QUAY_BAND m (eight taps), the ground bareEarth.js snapDocks raised to quay level, so the
+      // photo's ragged wall-top fringe there reads as granite
+      float sNear = sM.r;
+      for (int i = 0; i < 8; i++) { float t = float(i) * 0.7854; sNear = max(sNear, texture2D(uSurf, sUv + vec2(cos(t), sin(t)) * ${f1(QUAY_BAND)} / uSurfS).r); }
+      float sDock = smoothstep(0.55, 0.8, sM.r) * uDocks, sQuay = smoothstep(0.3, 0.6, sNear) * uDocks; // the basin paints over it, so no strip of photo between them
       // on the streets' own ground the paving is their stone, so a hidden building's footprint leaves no darker patch
       diffuseColor.rgb = mix(diffuseColor.rgb, mix(${v3(PAVING)} * (0.9 + 0.15 * tMottle), tCol, tRoad), smoothstep(0.5, 0.9, sM.b) * uBare * (1.0 - uEra) * (1.0 - wall));
       diffuseColor.rgb = mix(diffuseColor.rgb, ${v3(GRASS)} * (0.85 + 0.25 * tMottle), smoothstep(0.3, 0.7, sM.g) * uBare * (1.0 - wall));

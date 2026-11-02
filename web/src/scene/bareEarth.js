@@ -95,6 +95,57 @@ export function sinkShelves({ meta, heights, w, h }) {
   return heights
 }
 
+// St Katharine's basins. The DTM's dock walls wander a few metres either side of OSM's outline (surfaces.png R), and
+// beside them it dips in a jagged fringe, below the river in places, that the drape shows as the marina's white boats
+// and green trees. Snapped to the outline: the basin a flat sheet at its median level, a wall on the outline (R's soft
+// edge places it between cells), and the ground within `reach` m outside brought up to the quay around it (the highest
+// ground within `look` m among cells `from`-`reach` m out, and never under `rise` m above the basin: the east basin's
+// DTM is low for 25 m out, under seven blocks that should stand on the quay), tapering back to the DTM from `taper` m. Run after sinkShelves, so the river's sunk
+// foreshore at the lock is bed and stays.
+export const DOCK_EDGE = { reach: 20, taper: 12, from: 3, look: 6, rise: 2 }
+
+/** Snaps the docks in a tile's bare earth ({ meta, heights, w, h }, m OD) to their outline (mask: { data, w, h }, R of
+ * surfaces.png, 4 bytes a pixel, over the same bbox). Mutates and returns heights. */
+export function snapDocks({ meta, heights, w, h }, mask) {
+  const E = DOCK_EDGE, res = (meta.bbox_osgb[2] - meta.bbox_osgb[0]) / w, n = w * h
+  const r = new Float32Array(n), dist = new Float32Array(n).fill(Infinity), queue = new Int32Array(n)
+  let tail = 0
+  for (let i = 0; i < h; i++) for (let j = 0; j < w; j++) { // R at the cell centre, nearest mask pixel
+    const k = i * w + j, mi = Math.min(mask.h - 1, Math.floor(((i + 0.5) * mask.h) / h)), mj = Math.min(mask.w - 1, Math.floor(((j + 0.5) * mask.w) / w))
+    r[k] = mask.data[(mi * mask.w + mj) * 4] / 255
+    if (r[k] >= 0.5) { dist[k] = 0; queue[tail++] = k }
+  }
+  if (!tail) return heights
+  const inside = []
+  for (let q = 0; q < tail; q++) if (r[queue[q]] > 0.99) inside.push(heights[queue[q]])
+  inside.sort((a, b) => a - b)
+  const basin = inside.length ? inside[inside.length >> 1] : null
+  for (let head = 0; head < tail; head++) { // metres out from the outline, 4-neighbour, as far as `reach`
+    const k = queue[head], d = dist[k] + res, i = Math.floor(k / w), j = k % w
+    if (d > E.reach) continue
+    const visit = (m) => { if (dist[m] === Infinity) { dist[m] = d; queue[tail++] = m } }
+    if (i > 0) visit(k - w)
+    if (i < h - 1) visit(k + w)
+    if (j > 0) visit(k - 1)
+    if (j < w - 1) visit(k + 1)
+  }
+  // the quay: separable max over `look` m of the ground `from`-`reach` m out, past the fringe (the river's carved bed
+  // never counts, nor is it raised: the lock opens onto it)
+  const bed = meta.water_h - 1, L = Math.max(1, Math.round(E.look / res)), src = new Float32Array(n).fill(-Infinity), row = new Float32Array(n).fill(-Infinity)
+  for (let q = 0; q < tail; q++) { const k = queue[q]; if (dist[k] >= E.from && heights[k] >= bed) src[k] = heights[k] }
+  for (let q = 0; q < tail; q++) { const k = queue[q], j = k % w; if (src[k] > -Infinity) for (let t = Math.max(0, j - L); t <= Math.min(w - 1, j + L); t++) row[k - j + t] = Math.max(row[k - j + t], src[k]) }
+  const quay = (k) => { const i = Math.floor(k / w); let v = -Infinity; for (let t = Math.max(0, i - L); t <= Math.min(h - 1, i + L); t++) v = Math.max(v, row[k + (t - i) * w]); return v }
+  const out = new Float32Array(tail)
+  for (let q = 0; q < tail; q++) {
+    const k = queue[q], top = Math.max(quay(k), basin === null ? -Infinity : basin + E.rise), d = dist[k]
+    let y = heights[k]
+    if (top > -Infinity && y >= bed) y += (Math.max(y, top) - y) * (1 - smooth(E.taper, E.reach, d))
+    out[q] = basin === null ? y : y + (basin - y) * smooth(0.25, 0.75, r[k])
+  }
+  for (let q = 0; q < tail; q++) heights[queue[q]] = out[q]
+  return heights
+}
+
 // The bridge's own ground, in the scene frame (u downstream, v along the bridge, south +): the towers, piers and side
 // spans to the abutments, the approach roadway either side of the axis, and the south-east engine house and
 // accumulator (bridge/engineRoom.jsx: house x 20-44, z 146-166; accumulator at 18.9, 143.8). No city building may

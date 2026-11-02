@@ -84,3 +84,30 @@ import assert from 'node:assert/strict'
   assert.equal(heights[80 * n + 50], 10, 'the bank stays')
   console.log('river shelves ok')
 }
+
+// the docks: the basin flat at its median, the fringe outside the outline brought up to the quay, the river bed and
+// ground past reach untouched
+{
+  const { snapDocks, DOCK_EDGE } = await import('./bareEarth.js')
+  const n = 80, heights = new Float32Array(n * n).fill(7), data = new Uint8Array(n * n * 4)
+  const inDock = (i, j) => i >= 20 && i < 40 && j >= 20 && j < 40
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+    const k = i * n + j, out = Math.max(20 - i, i - 39, 20 - j, j - 39)
+    if (inDock(i, j)) { data[k * 4] = 255; heights[k] = 4 + ((i + j) % 3) * 0.1 } else if (out <= 3) heights[k] = 4.5 + (k % 2) // the ragged fringe
+  }
+  for (let i = 20; i < 40; i++) for (let j = 0; j < 17; j++) heights[i * n + j] = 2.5 // west: low ground, no quay in the DTM
+  heights[30 * n + 41] = 0 // the river's bed, 2 m out
+  const dip = 30 * n + 39 + Math.round((DOCK_EDGE.taper + DOCK_EDGE.reach) / 2)
+  heights[dip] = 5 // a dip between taper and reach
+  const meta = { bbox_osgb: [0, 0, n, n], water_h: 2.3 }
+  snapDocks({ meta, heights, w: n, h: n }, { data, w: n, h: n })
+  for (let i = 20; i < 40; i++) for (let j = 20; j < 40; j++) assert.equal(heights[i * n + j], heights[20 * n + 20], 'the basin is one flat sheet')
+  assert(Math.abs(heights[20 * n + 20] - 4.1) < 1e-6, `at its median: ${heights[20 * n + 20]}`)
+  for (let d = 1; d <= DOCK_EDGE.taper; d++) assert.equal(heights[25 * n + 39 + d], 7, `the fringe ${d} m out is quay`)
+  for (let d = 1; d <= DOCK_EDGE.taper; d++) assert(Math.abs(heights[30 * n + 20 - d] - (4.1 + DOCK_EDGE.rise)) < 1e-6, `low ground ${d} m out rises to the quay: ${heights[30 * n + 20 - d]}`)
+  assert.equal(heights[30 * n + 41], 0, 'the river bed is never raised')
+  assert(heights[dip] > 5 && heights[dip] < 7, `the taper: ${heights[dip]}`)
+  assert.equal(heights[5 * n + 5], 7, 'far ground stays')
+  assert.equal(snapDocks({ meta, heights: Float32Array.of(1, 2, 3, 4), w: 2, h: 2 }, { data: new Uint8Array(16), w: 2, h: 2 })[2], 3, 'no docks: untouched')
+  console.log('dock edge ok')
+}

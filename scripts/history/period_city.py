@@ -94,7 +94,7 @@ def main():
     # the bridge's own ground: bareEarth.js BRIDGE_GROUND (piers and spans, approach roadway, engine house), 1 m clear
     cut = (np.abs(u) < 33) & (np.abs(v) < 146)
     cut |= (np.abs(u) < 11) & (np.abs(v) < 321)
-    cut |= (u > 13) & (u < 50.5) & (v > 137.5) & (v < 172.5)
+    cut |= (u > 14.5) & (u < 42) & (v > 139.5) & (v < 167.5)
     shaded &= ~cut
 
     # OSM buildings already dated to the period are drawn from OSM: cut them out (1 m clear)

@@ -67,8 +67,10 @@ export function keepApproaches(old, heights, w, meta) {
 
 // The bridge's own ground, in the scene frame (u downstream, v along the bridge, south +): the towers, piers and side
 // spans to the abutments, the approach roadway either side of the axis, and the south-east engine house and
-// accumulator (bridge-local x 14-49.5, z 138.5-171.5). No city building may stand on any of it.
-export const BRIDGE_GROUND = [[-32, -145, 32, 145], [-10, -APPROACH.to, 10, APPROACH.to], [14, 138.5, 49.5, 171.5]]
+// accumulator (bridge/engineRoom.jsx: house x 20-44, z 146-166; accumulator at 18.9, 143.8). No city building may
+// stand on any of it. The box stops at x 41, Anchor Brewhouse's west wall: the real landmark stays, and its corner
+// shares 5 m2 with the house's north-east corner (x 41-44, z 146-150).
+export const BRIDGE_GROUND = [[-32, -145, 32, 145], [-10, -APPROACH.to, 10, APPROACH.to], [15.5, 140.5, 41, 166.5]]
 
 // True when a footprint (flat [x0, z0, x1, z1, ...] in the grid frame, turned by axisDeg into the scene) touches it.
 export function onBridgeGround(o, axisDeg) {

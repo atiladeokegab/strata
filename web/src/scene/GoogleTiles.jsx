@@ -10,13 +10,37 @@ import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import * as THREE from 'three'
 import { useStore } from '../store'
 import { useGoogle, useGoogleShown, useGoogleWanted } from './google/state'
+import { LITE } from './look/tier'
 import { FRAME_ROTATION_Y, ORIGIN, cutGap } from './google/frame'
 
 const draco = new DRACOLoader().setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/')
 const rad = THREE.MathUtils.degToRad
 
+// Budget: Google's city streamed without limit (next20 desktop 1289 calls, 4.7M tris at 130 s). Coarser error,
+// a small cache that disposes unused tiles, and detail that falls off past R metres from the bridge.
+const BUDGET = LITE
+  ? { errorTarget: 40, R: 400, minSize: 60, maxSize: 200, minBytes: 60e6, maxBytes: 120e6 }
+  : { errorTarget: 24, R: 600, minSize: 120, maxSize: 350, minBytes: 120e6, maxBytes: 220e6 }
+
 function clipGap({ scene }) {
-  scene.traverse((o) => { if (o.material) [o.material].flat().forEach(cutGap) })
+  scene.traverse((o) => {
+    if (o.material) [o.material].flat().forEach(cutGap)
+    if (o.isMesh) o.userData.noShadow = true // photogrammetry has its shadows baked in; Look would add a shadow-map draw per mesh
+  })
+}
+
+// beyond R from the bridge a tile's screen error shrinks with distance squared, so the far city stays coarse
+function radiusFalloff(t) {
+  if (t.calculateTileViewError.falloff) return // StrictMode runs the effect twice
+  const bridge = new THREE.Vector3()
+  const base = t.calculateTileViewError.bind(t)
+  t.calculateTileViewError = (tile, target) => {
+    base(tile, target)
+    bridge.setFromMatrixPosition(t.group.matrixWorldInverse) // the world origin (deck centre) in the tileset frame
+    const d = tile.engineData.boundingVolume.distanceToPoint(bridge)
+    if (d > BUDGET.R) target.error *= (BUDGET.R / d) ** 2
+  }
+  t.calculateTileViewError.falloff = true
 }
 
 export function GoogleTiles() {
@@ -33,6 +57,8 @@ export function GoogleTiles() {
 
   useEffect(() => {
     if (!t) return
+    radiusFalloff(t)
+    if (LITE) { t.downloadQueue.maxJobsPerOrigin = 6; t.parseQueue.maxJobs = 2 } // phones: fewer tiles in flight at once
     let queued = false
     const credit = () => {
       if (queued) return
@@ -50,8 +76,8 @@ export function GoogleTiles() {
     t.addEventListener('tiles-load-end', ready)
     t.addEventListener('tile-visibility-change', credit)
     t.addEventListener('load-error', failed)
+    if (import.meta.env.DEV || new URLSearchParams(location.search).has('capture')) window.__strataTiles = t // the tiles budget test counts its meshes
     if (import.meta.env.DEV) { // dev probe: ellipsoid/frame calibration from the browser console
-      window.__strataTiles = t
       window.__strataProbe = (x, z) => new THREE.Raycaster(new THREE.Vector3(x, 600, z), new THREE.Vector3(0, -1, 0)).intersectObject(t.group, true)[0]?.point.y
     }
     return () => {
@@ -65,8 +91,8 @@ export function GoogleTiles() {
   if (!key) return null
   return (
     <group rotation-y={FRAME_ROTATION_Y} visible={wanted}>
-      {/* errorTarget 20 is Google's recommendation; on a laptop at street level it keeps ~150 tiles. */}
-      <TilesRenderer ref={setTiles} errorTarget={20} enabled={wanted} lruCache-minSize={600} lruCache-maxSize={900}>
+      <TilesRenderer ref={setTiles} errorTarget={BUDGET.errorTarget} enabled={wanted}
+        lruCache-minSize={BUDGET.minSize} lruCache-maxSize={BUDGET.maxSize} lruCache-minBytesSize={BUDGET.minBytes} lruCache-maxBytesSize={BUDGET.maxBytes}>
         <TilesPlugin plugin={GoogleCloudAuthPlugin} args={{ apiToken: key, autoRefreshToken: true }} />
         <TilesPlugin plugin={GLTFExtensionsPlugin} args={{ dracoLoader: draco }} />
         <TilesPlugin plugin={ReorientationPlugin} args={{ lat: rad(ORIGIN.lat), lon: rad(ORIGIN.lon), height: ORIGIN.height }} />

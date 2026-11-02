@@ -242,8 +242,11 @@ const f1 = (v) => v.toFixed(1), f2 = (v) => v.toFixed(2)
 const v3 = (c) => `vec3(${c.toArray().map((v) => v.toFixed(3)).join(', ')})`
 const ROAD_TINT = `
       float tAlong = abs(vRoadW.z), tAcross = abs(vRoadW.x);
+      // in the photo's eras the ground between the north approach and St Katharine's west dock is today's photo on the
+      // LiDAR's slope down to the marina, which smears; there the stone runs on at full strength to the dock's quay
+      float tNE = step(0.0, vRoadW.x) * step(vRoadW.z, 0.0) * uBare * (1.0 - uEra);
       float tRoad = (smoothstep(${f1(APPROACH.from - 1.25)}, ${f1(APPROACH.from + 1.25)}, tAlong) - smoothstep(${f1(APPROACH.to)}, ${f1(APPROACH.to + 60)}, tAlong))
-        * (1.0 - smoothstep(${f1(STREETS.half)}, ${f1(STREETS.edge + 20)}, tAcross));
+        * (1.0 - smoothstep(mix(${f1(STREETS.half)}, ${f1(STREETS.edge)}, tNE), ${f1(STREETS.edge + 20)}, tAcross));
       // metres per pixel across and along: the kerb edge sharpens near the camera and softens far off, and the setts'
       // joints and the kerb fade out before they would alias
       float tFx = fwidth(vRoadW.x), tFz = fwidth(vRoadW.z), tSoft = clamp(2.0 * tFx, 0.05, 0.75);
@@ -278,7 +281,8 @@ const SURFACES = `
       vec2 sG = vec2(vRoadW.x * uSurfT.x - vRoadW.z * uSurfT.y, vRoadW.x * uSurfT.y + vRoadW.z * uSurfT.x);
       vec3 sM = texture2D(uSurf, vec2((sG.x + uSurfT.z) / uSurfS, 1.0 - (sG.y + uSurfT.w) / uSurfS)).rgb;
       float sDock = smoothstep(0.55, 0.8, sM.r) * uDocks, sQuay = smoothstep(0.08, 0.3, sM.r) * (1.0 - smoothstep(0.55, 0.8, sM.r)) * uDocks;
-      diffuseColor.rgb = mix(diffuseColor.rgb, ${v3(PAVING)} * (0.9 + 0.15 * tMottle), smoothstep(0.5, 0.9, sM.b) * uBare * (1.0 - uEra));
+      // on the streets' own ground the paving is their stone, so a hidden building's footprint leaves no darker patch
+      diffuseColor.rgb = mix(diffuseColor.rgb, mix(${v3(PAVING)} * (0.9 + 0.15 * tMottle), tStone, tRoad), smoothstep(0.5, 0.9, sM.b) * uBare * (1.0 - uEra));
       diffuseColor.rgb = mix(diffuseColor.rgb, ${v3(GRASS)} * (0.85 + 0.25 * tMottle), smoothstep(0.3, 0.7, sM.g) * uBare);
       diffuseColor.rgb = mix(diffuseColor.rgb, ${v3(KERB)}, sQuay);
       diffuseColor.rgb = mix(diffuseColor.rgb, ${v3(DOCK)}, sDock);`

@@ -130,6 +130,7 @@ assert.equal(resolveYears([{ year: 1900, title: 'river foundations begin', sourc
   cam.position.set(60, 4, -40); cam.lookAt(140, 6, -150); cam.updateMatrixWorld()
   const view = new THREE.Frustum().setFromProjectionMatrix(new THREE.Matrix4().multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse))
   const sails = real.filter((m) => m.barge && view.containsPoint(new THREE.Vector3(m.a, WATER_Y + 5, -m.c)) && Math.hypot(m.a - 60, m.c - 40) < 250)
+  // layout() is seeded (rng(7)) and deterministic, so this count only moves when the tiers or the LiDAR do
   assert.ok(sails.length >= 2, `riverside-low-1890 sees ${sails.length} sailing barges, want 2+`)
   console.log(`river water ok (craft at ${WATER_Y.toFixed(2)} m); moorings ok (${tiers.length} hulls, no overlap; ${real.length} on the LiDAR, ${real.filter((m) => m.barge).length} barges, ${sails.length} in riverside-low-1890)`)
 }

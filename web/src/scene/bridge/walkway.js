@@ -123,10 +123,13 @@ export function walkwayKnees(x, ze, y0) {
   return steel
 }
 
-// Tower junctions: where each walkway enters a tower face, an arched doorway (cast-iron architrave around a dark
-// opening) inside a landing frame (stanchions, head and haunches against the face, threshold plate on the deck).
+// Tower junctions: the corner turrets stand 2.3 m proud of the tower faces across each walkway's end, so the
+// walkway closes in a steel bulkhead TURRET_INSET short of the face, just in front of the turret. On it: an
+// arched doorway (cast-iron architrave around a dark opening) inside a landing frame (stanchions, head and
+// haunches), threshold plate on the deck. The truss runs on behind it into the tower.
 // Lists per material, merged into the walkway's own steel and slate meshes.
 export const DOOR = { half: 0.95, spring: 2.3, frame: 0.16, depth: 0.12 }
+export const TURRET_INSET = 2.4
 const archShape = (half, spring) => {
   const s = new THREE.Shape()
   s.moveTo(-half, 0)
@@ -140,10 +143,14 @@ export function walkwayJunctions(x, ze, y0, y1) {
   const { w } = WALK, { half, spring, frame, depth } = DOOR, yf = y0 + FLOOR_TOP
   const steel = [], slate = []
   for (const sz of [-1, 1]) {
-    const face = sz * ze, at = (g, d) => g.rotateY(sz > 0 ? Math.PI : 0).translate(x, yf, face - sz * d)
+    const face = sz * (ze - TURRET_INSET), at = (g, d) => g.rotateY(sz > 0 ? Math.PI : 0).translate(x, yf, face - sz * d)
     const ring = archShape(half + frame, spring)
     ring.holes.push(archShape(half, spring))
     steel.push(at(new THREE.ExtrudeGeometry(ring, { depth, bevelEnabled: false, curveSegments: 10 }), 0))
+    const e = w - 0.02, top = y1 - 0.3 - yf
+    const wall = new THREE.Shape([[-e, 0], [e, 0], [e, top], [-e, top]].map(([u, v]) => new THREE.Vector2(u, v)))
+    wall.holes.push(archShape(half, spring))
+    steel.push(at(new THREE.ExtrudeGeometry(wall, { depth: 0.1, bevelEnabled: false, curveSegments: 10 }), -0.1)) // bulkhead, behind the architrave
     slate.push(at(new THREE.ShapeGeometry(archShape(half, spring), 10), 0.01)) // the dark opening, facing into the walkway
     const zf = face - sz * 0.12, ys = y1 - 0.3 // landing frame against the face, up to the roof cross girder
     for (const sx of [-1, 1]) {

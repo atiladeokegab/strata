@@ -843,7 +843,7 @@ console.log('geom materials untextured, all kinded ok')
   assert.ok(near.min.z >= ze - KNEE.reach - 0.1, 'the +z knees stay within reach of the +z tower')
   console.log('walkway knee brackets ok')
   // tower junctions: doorway and landing frame stand on the deck, inside the walkway, against each face
-  const { walkwayJunctions, walkwayLamps, DOOR } = await import('./walkway.js')
+  const { walkwayJunctions, walkwayLamps, DOOR, TURRET_INSET } = await import('./walkway.js')
   const jn = walkwayJunctions(10.5, ze, y0, y1)
   const js = bb([...jn.steel, ...jn.slate])
   assert.ok(js.min.z >= -ze - 1e-4 && js.max.z <= ze + 1e-4, 'junctions stay out of the towers')
@@ -851,8 +851,10 @@ console.log('geom materials untextured, all kinded ok')
   assert.ok(js.min.x >= 10.5 - WALK.w && js.max.x <= 10.5 + WALK.w, 'junctions inside the girders')
   for (const sz of [-1, 1]) {
     const d = bb(jn.slate.filter((g) => (g.computeBoundingBox(), Math.sign(g.boundingBox.max.z) === sz)))
-    assert.ok(Math.abs(d.max.z - sz * (ze - 0.01)) < 0.02 && d.max.y - y0 - FLOOR_TOP >= DOOR.spring + DOOR.half - 0.01, `doorway at the ${sz > 0 ? '+' : '-'}z face`)
+    assert.ok(Math.abs(d.max.z - sz * (ze - TURRET_INSET - 0.01)) < 0.02 && d.max.y - y0 - FLOOR_TOP >= DOOR.spring + DOOR.half - 0.01, `doorway at the ${sz > 0 ? '+' : '-'}z face`)
   }
+  // the bulkhead stands in front of the corner turrets (centre 9 m back from the face, r <= 3.25 at walkway height)
+  assert.ok(ze - TURRET_INSET + 0.1 <= ze + 1 - 3.25, 'walkway bulkhead clear of the turrets')
   // lamps: one set per era, under the roof girders and clear of heads (WalkwayPeople ~1.8 m)
   for (const gas of [true, false]) {
     const lp = walkwayLamps(10.5, ze, y1, gas), l = bb([...lp.steel, ...lp.lantern])

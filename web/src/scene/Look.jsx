@@ -13,6 +13,7 @@ import { loadPhotos, pbr, warmMaterialTextures } from './look/textures'
 import { LITE } from './look/tier'
 import { useStore } from '../store'
 import { worldUVs } from './look/uvs'
+import { bigSilhouette } from './look/silhouette'
 
 const Grade = lazy(() => import('./look/Grade.jsx'))
 const ENV_INTENSITY = 0.6
@@ -116,7 +117,6 @@ function SkyBackground() {
 const _focus = new THREE.Vector3()
 const _box = new THREE.Box3()
 const _ball = new THREE.Sphere()
-const inBridge = (o) => { for (; o; o = o.parent) if (o.name === 'tower-bridge') return true; return false }
 const _right = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), SUN_DIR).normalize()
 const _up = new THREE.Vector3().crossVectors(SUN_DIR, _right).normalize()
 const SHADOW_EVERY = LITE ? 3 : 2
@@ -237,7 +237,7 @@ function texture(mesh) {
 }
 
 // Meshes load late (terrain, bridge), so once a second opt new meshes into shadows and textures.
-// Only the bridge casts (the shadow pass stays small); a mesh can opt out with userData.noShadow, and
+// Only the bridge's big silhouettes cast (look/silhouette.js: the shadow pass stays small); a mesh can opt out with userData.noShadow, and
 // transparent ones (water, glass) only receive.
 // R3F resets gl.shadowMap.enabled to the Canvas `shadows` prop on every Canvas re-render, so re-assert it here.
 function SceneUpgrades() {
@@ -258,14 +258,14 @@ function SceneUpgrades() {
     scene.traverse((o) => {
       if (!o.isMesh) return
       // owners set castShadow in their props, and a prop change (terrain's bare toggle) sets it again
-      if (o.castShadow && !o.userData.noShadow && !inBridge(o)) o.castShadow = false
+      if (o.castShadow && !o.userData.noShadow && !bigSilhouette(o)) o.castShadow = false
       if (o.userData.lookShadow === stamp.current) return
       o.userData.lookShadow = stamp.current
       texture(o)
       if (o.userData.noShadow) return
       const mats = Array.isArray(o.material) ? o.material : [o.material]
       o.receiveShadow = true
-      o.castShadow = inBridge(o) && !mats.some((m) => m?.transparent) // terrain, OSM, tiles: receive only
+      o.castShadow = bigSilhouette(o) && !mats.some((m) => m?.transparent) // terrain, OSM, tiles, small bridge parts: receive only
       mats.forEach((m) => m && (m.needsUpdate = true)) // shadow flags change the compiled shader
     })
   })

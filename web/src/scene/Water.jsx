@@ -6,16 +6,19 @@ import { loadLow } from './Terrain.jsx'
 import { riverFootprint } from './riverFootprint.js'
 import { SUN_COLOR, SUN_DIR } from './look/sun.js'
 import { LITE } from './look/tier'
+import { bigSilhouette } from './look/silhouette'
 
 // The mirror reflects the bridge, its traffic and craft, the sky and a coarse ground (Terrain.jsx 'terrain-mirror',
 // hidden from every other pass). Skipped: both full terrain tiles and the city, whose warped bank reflections nobody
-// misses (they were ~40% of a desktop frame), and Google's tiles (bridge and sky only when they show). Not descended into: the bridge. Each flipped object is flipped back after.
+// misses (they were ~40% of a desktop frame), and Google's tiles (bridge and sky only when they show). The bridge shows only its big
+// silhouettes (look/silhouette.js): traffic, cabins and small parts stay out. Each flipped object is flipped back after.
 const MIRROR_SKIP = new Set(['terrain', 'terrain-near', 'osm-buildings', 'landmarks', 'TilesRenderer.TilesGroup'])
 function flipForMirror(o, out) {
   for (const c of o.children) {
     if (MIRROR_SKIP.has(c.name)) { if (c.visible) { c.visible = false; out.push(c) } }
     else if (c.name === 'terrain-mirror') { if (!c.visible) { c.visible = true; out.push(c) } }
-    else if (c.name !== 'tower-bridge') flipForMirror(c, out)
+    else if (c.name === 'tower-bridge') c.traverseVisible((m) => { if (m.isMesh && !bigSilhouette(m)) { m.visible = false; out.push(m) } })
+    else flipForMirror(c, out)
   }
   return out
 }

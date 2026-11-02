@@ -208,8 +208,10 @@ function Ground() {
   return <mesh name="terrain-ground" raycast={raycast} frustumCulled={false}><bufferGeometry /></mesh>
 }
 
-// Aerial imagery only sees roofs, so draped walls smear into streaks. On steep faces, swap to a
-// blurred sample of the imagery (a far mip) toned toward London stone, which reads as a clean facade.
+// Aerial imagery only sees roofs, so draped walls smear into streaks. On steep faces (river walls, the drops beside
+// the streets, building bases) swap to dark London stone with a little of a blurred sample of the imagery (a far mip):
+// the map's paper or a pale photo would light them snow-white in the sun, and anything sampled in plan (the streets'
+// stone, the mask's paving) runs down a face in vertical streaks, so none of that reaches a wall.
 // The 1890s OS sheet as an old map: its paper renders as dulled #ddc79e stock in full light, never cream (the albedo is
 // warmer still to offset the blue sky fill, measured on a still) and its ink as dark brown, with a
 // little of the sheet's own hue kept (blue water, tinted blocks). The tone runs on gamma-encoded colour
@@ -288,7 +290,7 @@ const ROAD_TINT = `
       vec3 tStone = ${v3(STONE)} * (0.88 + 0.2 * tM) * (1.0 - 0.3 * fJoint * (1.0 - tEnd)) * (1.0 + 0.3 * tSouth * tEnd);
       vec3 tCol = mix(uRoad * (1.0 - 0.35 * tJoint * (1.0 - tEnd)) * (1.0 - 0.32 * (1.0 - tSouth) * tEnd), tStone, smoothstep(${f2(KERB_X)} - tSoft, ${f2(KERB_X)} + tSoft, tAcross));
       tCol = mix(tCol, vec3(${KERB.toArray().map((c) => c.toFixed(3)).join(', ')}), tKerb);
-      diffuseColor.rgb = mix(diffuseColor.rgb, tCol, tRoad); // every era: with Google's tiles off today's photo smears its buses and lumps over the levelled street too
+      diffuseColor.rgb = mix(diffuseColor.rgb, tCol, tRoad * (1.0 - wall)); // every era: with Google's tiles off today's photo smears its buses and lumps over the levelled street too
       diffuseColor.rgb = mix(diffuseColor.rgb, vec3(${FAR.toArray().map((c) => c.toFixed(3)).join(', ')}), smoothstep(${f1(FAR_FROM)}, ${f1(FAR_TO)}, length(vRoadW.xz)) * uEra);`
 const SURFACES = `
       // world (bridge frame) to the tile's grid (east, south from the origin), then to the mask's uv (v = 1 north)
@@ -296,8 +298,8 @@ const SURFACES = `
       vec3 sM = texture2D(uSurf, vec2((sG.x + uSurfT.z) / uSurfS, 1.0 - (sG.y + uSurfT.w) / uSurfS)).rgb;
       float sDock = smoothstep(0.55, 0.8, sM.r) * uDocks, sQuay = smoothstep(0.08, 0.3, sM.r) * (1.0 - smoothstep(0.55, 0.8, sM.r)) * uDocks;
       // on the streets' own ground the paving is their stone, so a hidden building's footprint leaves no darker patch
-      diffuseColor.rgb = mix(diffuseColor.rgb, mix(${v3(PAVING)} * (0.9 + 0.15 * tMottle), tStone, tRoad), smoothstep(0.5, 0.9, sM.b) * uBare * (1.0 - uEra));
-      diffuseColor.rgb = mix(diffuseColor.rgb, ${v3(GRASS)} * (0.85 + 0.25 * tMottle), smoothstep(0.3, 0.7, sM.g) * uBare);
+      diffuseColor.rgb = mix(diffuseColor.rgb, mix(${v3(PAVING)} * (0.9 + 0.15 * tMottle), tStone, tRoad), smoothstep(0.5, 0.9, sM.b) * uBare * (1.0 - uEra) * (1.0 - wall));
+      diffuseColor.rgb = mix(diffuseColor.rgb, ${v3(GRASS)} * (0.85 + 0.25 * tMottle), smoothstep(0.3, 0.7, sM.g) * uBare * (1.0 - wall));
       diffuseColor.rgb = mix(diffuseColor.rgb, ${v3(KERB)}, sQuay);
       diffuseColor.rgb = mix(diffuseColor.rgb, ${v3(DOCK)}, sDock);`
 // The DTM keeps the approach viaducts (build.py keep_approaches), so under the bridge's own ramps and abutments the
@@ -336,7 +338,7 @@ ${UNDER_BRIDGE}`)
       diffuseColor.rgb = eraGrade(diffuseColor.rgb);
       float wall = 1.0 - smoothstep(0.35, 0.7, vUp);
       vec3 blur = eraGrade(texture2D(map, vMapUv, 5.0).rgb);
-      vec3 facade = mix(blur, vec3(0.42, 0.39, 0.34), 0.3) * 0.8;
+      vec3 facade = mix(blur, vec3(0.34, 0.32, 0.29), 0.75) * 0.8;
       diffuseColor.rgb = mix(diffuseColor.rgb, facade, wall);${ROAD_TINT}${SURFACES}`,
     )
     .replace('#include <fog_fragment>', `#include <fog_fragment>

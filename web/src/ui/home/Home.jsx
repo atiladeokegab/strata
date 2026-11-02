@@ -2,7 +2,7 @@
 // round plinth and slow turntable drift, reduced to one place.
 // <Home onEnter={fn} />: the landing stage, "a museum of places". Tower Bridge turns under a spotlight.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Canvas, useFrame } from '@react-three/fiber'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { ACESFilmicToneMapping, CanvasTexture, SRGBColorSpace } from 'three'
 import { makeSlot, hasGuide, startGuide } from '../slots'
 import { startTour } from '../../tour/tour.js'
@@ -100,6 +100,21 @@ function WarmLightRig() {
   )
 }
 
+// keep the plinth clear of the copy: desktop puts it right of the buttons; the stacked phone layout widens the lens
+// and lowers the bridge into the band between the buttons and the coming-next pills
+function Frame() {
+  const { camera, size } = useThree()
+  useLayoutEffect(() => {
+    const phone = size.width <= 860 // home.css's stacked breakpoint
+    const x = phone ? 0 : -130, y = phone ? 140 : 10
+    camera.fov = phone ? 62 : 30
+    camera.position.set(x, y + (phone ? 180 : 210), phone ? 760 : 880)
+    camera.lookAt(x, y, 0)
+    camera.updateProjectionMatrix()
+  }, [camera, size.width])
+  return null
+}
+
 function Turntable({ still }) {
   const g = useRef(null)
   useFrame((_, dt) => { if (!still) g.current.rotation.y += Math.min(dt, 0.1) * 0.07 })
@@ -120,12 +135,12 @@ export default function Home({ onEnter }) {
         <Canvas
           dpr={[1, 1.5]}
           frameloop={!visible ? 'never' : still ? 'demand' : 'always'}
-          camera={{ fov: 30, position: [-70, 190, 760], near: 5, far: 5000 }}
-          onCreated={({ camera }) => camera.lookAt(-70, 10, 0)}
+          camera={{ fov: 30, near: 5, far: 5000 }}
           gl={{ antialias: true, powerPreference: 'high-performance', toneMapping: ACESFilmicToneMapping, toneMappingExposure: 1.05 }}
         >
           <color attach="background" args={['#f5f5f7']} />
-          <fog attach="fog" args={['#f5f5f7', 900, 1700]} />
+          <fog attach="fog" args={['#f5f5f7', 1000, 1800]} />
+          <Frame />
           <WarmLightRig />
           <LightPool />
           <Turntable still={still} />

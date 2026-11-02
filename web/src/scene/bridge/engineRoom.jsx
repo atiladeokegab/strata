@@ -161,6 +161,18 @@ const put = (m, i, p, rz, sx = 1) => {
   m.setMatrixAt(i, _o.matrix)
 }
 
+// The mains outside the house, in their own mesh so a near-camera gate on Machinery never hides them:
+// house to the south pier along the approach (two pipes), dropping below the ramp outside its parapet
+// (x 9.6) so nothing crosses the road, plus the branch to the accumulator ram.
+let OUTSIDE
+const outsideMains = () => (OUTSIDE ??= merge([
+  ...[6.4, 7.4].flatMap((x) => [
+    beam([H.x0, 0.6, 151], [x + 4.1, 0.6, 151], 0.22), beam([x + 4.1, 0.6, 151], [x + 4.1, -2, 151], 0.22),
+    beam([x + 4.1, -2, 151], [x, -2, 146], 0.22), beam([x, -2, 146], [x, -2, 56], 0.22, 8),
+  ]),
+  beam([ACC.x, 0.6, 151], [ACC.x, 0.6, ACC.z + 1], 0.18),
+]))
+
 function Machinery({ sim, steam, third, museum }) {
   const m = mats()
   const fly = useRef(), cross = useRef(), rod = useRef(), ram = useRef(), fire = useRef()
@@ -179,14 +191,7 @@ function Machinery({ sim, steam, third, museum }) {
     // two Lancashire boilers, brick-set, lengthwise in the east bay
     for (const x of [39.6, 42.2]) iron.push(new THREE.CylinderGeometry(1.25, 1.25, 9, 18).rotateX(Math.PI / 2).translate(x, 1.8, 161))
     iron.push(new THREE.CylinderGeometry(0.7, 0.7, 2 + ACC.travel, 14).translate(ACC.x, ACC.base + (2 + ACC.travel) / 2, ACC.z)) // ram
-    // hydraulic mains: house to the south pier along the approach (two pipes); they drop below the
-    // ramp outside its parapet (x 9.6) so nothing crosses the road
-    for (const x of [6.4, 7.4])
-      iron.push(
-        beam([H.x0, 0.6, 151], [x + 4.1, 0.6, 151], 0.22), beam([x + 4.1, 0.6, 151], [x + 4.1, -2, 151], 0.22),
-        beam([x + 4.1, -2, 151], [x, -2, 146], 0.22), beam([x, -2, 146], [x, -2, 56], 0.22, 8),
-      )
-    iron.push(beam([37, 0.6, engines[0]], [37, 0.6, engines.at(-1)], 0.18), beam([ACC.x, 0.6, 151], [ACC.x, 0.6, ACC.z + 1], 0.18)) // pumps on the main; branch to the ram
+    iron.push(beam([37, 0.6, engines[0]], [37, 0.6, engines.at(-1)], 0.18)) // pumps on the main
     // from 1982 the engine rooms are a museum: visitors in the aisles between the engines (inferred).
     // Dark silhouettes in the iron mesh, so they cost no draw call.
     if (museum)
@@ -375,6 +380,7 @@ export function EngineRoom({ rt, explode = [14, 6, 20], steam = true, third = tr
       </Part>
       <Part id="engine-room" rt={rt} explode={explode}>
         <Machinery sim={rt.sim} steam={steam} third={third} museum={museum} />
+        <mesh geometry={outsideMains()} material={M.iron} castShadow />
       </Part>
       {steam && <Smoke sim={rt.sim} />}
       <Flow rt={rt} steam={steam} />

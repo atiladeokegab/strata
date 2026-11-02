@@ -33,3 +33,36 @@ import assert from 'node:assert/strict'
   assert.throws(() => riverFootprint({ meta, heights: new Float32Array(w * h).fill(5), w, h }), /above the water line/)
   console.log('river footprint ok')
 }
+
+// the approach streets: level with the deck ends, falling to APPROACH.to, the rest of the ground untouched
+{
+  const { levelStreets, STREETS, APPROACH } = await import('./bareEarth.js')
+  const n = 801, meta = { bbox_osgb: [0, 0, n, n], origin_osgb: [400.5, 400.5], origin_h: 10, bridge_axis_deg: 0 }
+  const heights = levelStreets({ meta, heights: new Float32Array(n * n).fill(1), w: n, h: n })
+  const at = (x, z) => heights[(z + 400) * n + (x + 400)] - meta.origin_h // scene y at bridge x, z (axis 0: grid = bridge)
+  const near = (a, b, m) => assert(Math.abs(a - b) < 1e-3, `${m}: ${a} vs ${b}`)
+  near(at(0, -184), STREETS.north[0] - 0.7 * 0.5 / 136.5, 'the north street meets the deck end')
+  near(at(-STREETS.half, 184), STREETS.south[0] - 3.4 * 0.5 / 136.5, 'the south street is level across, to its edge')
+  near(at(10, 320), STREETS.south[1], 'it falls to the city level at APPROACH.to')
+  near(at(0, 100), -9, 'under the bridge: untouched')
+  near(at(STREETS.edge + 5, -250), -9, 'beyond the edge: untouched')
+  near(at(0, APPROACH.to + 30), -9, 'past the fade: untouched')
+  console.log('approach streets ok')
+}
+
+// the river's shelves: low ground joined to the river within reach sinks to the bed; banks, far shelves and pits stay
+{
+  const { sinkShelves, SHELVES } = await import('./bareEarth.js')
+  const n = 201, meta = { bbox_osgb: [0, 0, n, n], origin_osgb: [100.5, 100.5], water_h: 2 }
+  const heights = new Float32Array(n * n).fill(10) // a bank, well above the water
+  const set = (j0, j1, i0, i1, v) => { for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) heights[i * n + j] = v }
+  set(0, 200, 90, 110, 0) // the river, rows 90-110, under the deck at (100, 100)
+  set(0, 200, 111, 111 + SHELVES.reach + 20, 3) // a shelf off its south side, 80 m deep
+  set(20, 30, 20, 30, 3) // a low pit inland, at shelf level but not joined to the river
+  sinkShelves({ meta, heights, w: n, h: n })
+  assert.equal(heights[(111 + 10) * n + 50], 0, 'a shelf 10 m out sinks to the bed (2 m under the water)')
+  assert.equal(heights[(111 + SHELVES.reach + 10) * n + 50], 3, 'past reach it stays')
+  assert.equal(heights[25 * n + 25], 3, 'an inland pit stays')
+  assert.equal(heights[80 * n + 50], 10, 'the bank stays')
+  console.log('river shelves ok')
+}

@@ -3,7 +3,7 @@ import { useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../store'
 import { GOOGLE_FROM } from './google/state'
-import { APPROACH } from './bareEarth.js'
+import { APPROACH, STREETS, levelStreets, sinkShelves } from './bareEarth.js'
 import { eraFor } from './bridge/stages.js'
 import { KERB_X } from './bridge/roadway.js'
 import { LITE } from './look/tier'
@@ -41,6 +41,9 @@ async function decodeHeights(url, meta) {
 // The ground is bare.png in every era: the EA LiDAR DTM with the approach viaducts kept (scripts/terrain/build.py).
 // `old` (the shader's aOld) is the same ground; height.png, the DSM with roofs and trees, is only the LiDAR point view.
 const tile = (meta, { heights, w, h }) => ({ meta, heights, old: heights, w, h })
+// The ground: bare.png with the approach streets brought up to the deck ends and the river's shelves sunk (bareEarth.js);
+// never the DSM.
+const ground = (meta, px) => tile(meta, { ...px, heights: sinkShelves({ meta, ...px, heights: levelStreets({ meta, ...px }) }) })
 
 const BUDGET = { low: 150_000, full: LITE ? 150_000 : 250_000, near: 250_000, mirror: 30_000 }
 
@@ -49,7 +52,7 @@ export function loadLow() {
     const meta = await loadMeta()
     const base = meta.lite ? BASE + 'lo/' : BASE
     const [px, ...maps] = await Promise.all([decodeHeights(base + 'bare.png', meta), ...MAPS.map((f) => texture(base + f))])
-    const t = tile(meta, px)
+    const t = ground(meta, px)
     return { ...t, maps, mesh: await meshOf(t, BUDGET.low) }
   })()
   return lowCache
@@ -58,7 +61,7 @@ export function loadLow() {
 /** The full 1 m outer tile's ground heights (no drapes), once per page; queued behind the first-load tile. */
 export function loadTerrain() {
   // phones: 2 m (~0.3 MB) is plenty under their 150k-triangle cap; the 1 m file is 1.7 MB
-  cache ??= loadLow().then(async ({ meta }) => tile(meta, await decodeHeights(BASE + (LITE ? 'bare-2m.png' : 'bare.png'), meta)))
+  cache ??= loadLow().then(async ({ meta }) => ground(meta, await decodeHeights(BASE + (LITE ? 'bare-2m.png' : 'bare.png'), meta)))
   return cache
 }
 
@@ -197,26 +200,56 @@ function Ground() {
 
 // Aerial imagery only sees roofs, so draped walls smear into streaks. On steep faces, swap to a
 // blurred sample of the imagery (a far mip) toned toward London stone, which reads as a clean facade.
-// The 1890s OS sheet as an old map: its paper renders as warm #d9c49a stock in full light (the albedo is
+// The 1890s OS sheet as an old map: its paper renders as dulled #ddc79e stock in full light, never cream (the albedo is
 // warmer still to offset the blue sky fill, measured on a still) and its ink as dark brown, with a
 // little of the sheet's own hue kept (blue water, tinted blocks). The tone runs on gamma-encoded colour
 // because the map sample is linear here; ERA_GAIN sets how bright the paper sits under the scene light.
 // ERA is 1 while the old map is draped. BARE is 1 before Google's tiles (GOOGLE_FROM): the ground is bare earth
 // (aOld), flat-lit. aOld now equals the position (the mesh is the DTM in every era), so BARE moves nothing.
 const ERA = { value: 0 }, BARE = { value: 0 }
-// The old map has no approach road, so the ramps would dead-end in cream paper: while it is draped, the approach
-// corridor (bareEarth.js APPROACH, in the bridge frame) takes a road colour between the deck's kerb lines, at a constant
-// width, and pale York stone pavements either side. Asphalt is the deck's (bridge/roadway.js SURFACES); the wood is
+// The old map has no approach road, so the ramps would dead-end in cream paper, and the 1950s-2011 photo smears the
+// real, curving road and its roofs over the levelled street: before Google's tiles the approach streets (bareEarth.js
+// STREETS, in the bridge frame) take a road colour between the deck's kerb lines, at a constant width, and pale York
+// stone, flagged by the road, over the whole levelled street, fading into the map or photo down its slopes, and
+// over 60 m where it meets the city. Before 1950 the carriageway is laid in setts (or wood blocks), and in every era a
+// granite kerb 0.3 m wide lines it; both fade out with distance before they would alias. The old map's sheet also stops short of the tile's edge in a beige plain, so past
+// FAR_FROM m from the bridge it fades into FAR, the tone of distant roofs under haze. Asphalt is the deck's (bridge/roadway.js SURFACES); the wood is
 // darker than the deck's #7a6450 base, which its block texture darkens, or it melts into the stone on the flat ground.
 const ROAD = { value: new THREE.Color() }, WOOD = new THREE.Color('#5a4636'), ASPHALT = new THREE.Color('#3f3f3f')
-const STONE = new THREE.Color('#9a9184')
-const f1 = (v) => v.toFixed(1)
+const PAVE_X = 12 // m from the axis: the pavement's outer edge
+const STONE = new THREE.Color('#9a9184'), KERB = new THREE.Color('#b3ada3'), FAR = new THREE.Color('#5a524b'), FAR_FROM = 350, FAR_TO = 600
+// Under the old map the ground past HAZE_FROM m fades into the fog's colour by HAZE_TO, inside the tile's 750 m
+// half-width, and the skirt beyond is the fog's colour, so the city ends in haze rather than a plain. Not in the
+// photo's eras: their fog is paler than the sky and the river, so it drew a bright void at the horizon
+const HAZE_FROM = 450, HAZE_TO = 740
+const f1 = (v) => v.toFixed(1), f2 = (v) => v.toFixed(2)
 const ROAD_TINT = `
       float tAlong = abs(vRoadW.z), tAcross = abs(vRoadW.x);
-      float tRoad = (smoothstep(${f1(APPROACH.from - 1.25)}, ${f1(APPROACH.from + 1.25)}, tAlong) - smoothstep(${f1(APPROACH.to - 1.25)}, ${f1(APPROACH.to + 1.25)}, tAlong))
-        * (1.0 - smoothstep(${f1(APPROACH.half - 1.25)}, ${f1(APPROACH.half + 1.25)}, tAcross));
-      vec3 tCol = mix(uRoad, vec3(${STONE.toArray().map((c) => c.toFixed(3)).join(', ')}), smoothstep(${f1(KERB_X - 0.75)}, ${f1(KERB_X + 0.75)}, tAcross));
-      diffuseColor.rgb = mix(diffuseColor.rgb, tCol, tRoad * uEra);`
+      float tRoad = (smoothstep(${f1(APPROACH.from - 1.25)}, ${f1(APPROACH.from + 1.25)}, tAlong) - smoothstep(${f1(APPROACH.to)}, ${f1(APPROACH.to + 60)}, tAlong))
+        * (1.0 - smoothstep(${f1(STREETS.half)}, ${f1(STREETS.edge + 20)}, tAcross));
+      // metres per pixel across and along: the kerb edge sharpens near the camera and softens far off, and the setts'
+      // joints and the kerb fade out before they would alias
+      float tFx = fwidth(vRoadW.x), tFz = fwidth(vRoadW.z), tSoft = clamp(2.0 * tFx, 0.05, 0.75);
+      vec2 tP = vec2(vRoadW.x / 0.45, vRoadW.z / 0.22); tP.x += 0.5 * mod(floor(tP.y), 2.0);
+      vec2 tE = (0.5 - abs(fract(tP) - 0.5)) * vec2(0.45, 0.22); // metres to the nearest joint
+      float tJoint = max((1.0 - smoothstep(0.015, 0.015 + tFx, tE.x)) * (1.0 - smoothstep(0.04, 0.1, tFx)),
+        (1.0 - smoothstep(0.015, 0.015 + tFz, tE.y)) * (1.0 - smoothstep(0.04, 0.1, tFz))) * uEra;
+      float tKerb = (smoothstep(${f2(KERB_X)} - tFx, ${f2(KERB_X)} + tFx, tAcross) - smoothstep(${f2(KERB_X + 0.3)} - tFx, ${f2(KERB_X + 0.3)} + tFx, tAcross))
+        * (1.0 - smoothstep(0.08, 0.25, tFx));
+      // the pavement: York stone flags 0.9 by 0.6 m out to PAVE_X, and a slow mottle on all the stone so it is never a
+      // flat plain
+      vec2 fP = vec2(vRoadW.x / 0.9, vRoadW.z / 0.6); fP.y += 0.5 * mod(floor(fP.x), 2.0);
+      vec2 fE = (0.5 - abs(fract(fP) - 0.5)) * vec2(0.9, 0.6);
+      float fJoint = max((1.0 - smoothstep(0.02, 0.02 + tFx, fE.x)) * (1.0 - smoothstep(0.05, 0.15, tFx)),
+        (1.0 - smoothstep(0.02, 0.02 + tFz, fE.y)) * (1.0 - smoothstep(0.05, 0.15, tFz))) * (1.0 - smoothstep(${f1(PAVE_X)}, ${f1(PAVE_X + 0.5)}, tAcross));
+      vec2 mC = floor(vRoadW.xz / 7.0), mF = fract(vRoadW.xz / 7.0); mF = mF * mF * (3.0 - 2.0 * mF);
+      #define tHash(q) fract(sin(dot(q, vec2(127.1, 311.7))) * 43758.5453)
+      float tMottle = mix(mix(tHash(mC), tHash(mC + vec2(1, 0)), mF.x), mix(tHash(mC + vec2(0, 1)), tHash(mC + vec2(1, 1)), mF.x), mF.y);
+      vec3 tStone = vec3(${STONE.toArray().map((c) => c.toFixed(3)).join(', ')}) * (0.88 + 0.2 * tMottle) * (1.0 - 0.3 * fJoint);
+      vec3 tCol = mix(uRoad * (1.0 - 0.35 * tJoint), tStone, smoothstep(${f2(KERB_X)} - tSoft, ${f2(KERB_X)} + tSoft, tAcross));
+      tCol = mix(tCol, vec3(${KERB.toArray().map((c) => c.toFixed(3)).join(', ')}), tKerb);
+      diffuseColor.rgb = mix(diffuseColor.rgb, tCol, tRoad * max(uEra, uBare));
+      diffuseColor.rgb = mix(diffuseColor.rgb, vec3(${FAR.toArray().map((c) => c.toFixed(3)).join(', ')}), smoothstep(${f1(FAR_FROM)}, ${f1(FAR_TO)}, length(vRoadW.xz)) * uEra);`
 // The DTM keeps the approach viaducts (build.py keep_approaches), so under the bridge's own ramps and abutments the
 // ground lay in the plane of their stone and z-fought it: there it drops a real 0.5 m (the bridge frame: rotation only).
 const UNDER_BRIDGE = `float tUnder = (1.0 - smoothstep(9.5, 10.5, abs(vRoadW.x))) * (1.0 - smoothstep(180.0, 186.0, abs(vRoadW.z)));
@@ -227,7 +260,7 @@ const ERA_GRADE = `
   vec3 eraGrade(vec3 c) {
     vec3 s = pow(max(c, 0.0), vec3(1.0 / 2.2));
     float l = dot(s, vec3(0.3, 0.59, 0.11));
-    vec3 tone = mix(vec3(0.30, 0.21, 0.13), vec3(0.957, 0.816, 0.58), smoothstep(0.30, 0.88, l));
+    vec3 tone = mix(vec3(0.30, 0.21, 0.13), vec3(0.87, 0.78, 0.62), smoothstep(0.30, 0.88, l));
     vec3 t = mix(tone, tone * s / max(l, 0.05), 0.35);
     return mix(c, pow(clamp(t, 0.0, 1.0), vec3(2.2)) * ${ERA_GAIN}, uEra);
   }`
@@ -244,7 +277,7 @@ transformed.y = mix(transformed.y, aOld, uBare);
 vRoadW = (modelMatrix * vec4(transformed, 1.0)).xyz;
 ${UNDER_BRIDGE}`)
   shader.fragmentShader = shader.fragmentShader
-    .replace('#include <common>', `#include <common>\nvarying float vUp;\nvarying vec3 vRoadW;\nuniform float uEra;\nuniform vec3 uRoad;${ERA_GRADE}`)
+    .replace('#include <common>', `#include <common>\nvarying float vUp;\nvarying vec3 vRoadW;\nuniform float uEra;\nuniform float uBare;\nuniform vec3 uRoad;${ERA_GRADE}`)
     .replace(
       '#include <map_fragment>',
       `#include <map_fragment>
@@ -254,6 +287,10 @@ ${UNDER_BRIDGE}`)
       vec3 facade = mix(blur, vec3(0.42, 0.39, 0.34), 0.3) * 0.8;
       diffuseColor.rgb = mix(diffuseColor.rgb, facade, wall);${ROAD_TINT}`,
     )
+    .replace('#include <fog_fragment>', `#include <fog_fragment>
+      #ifdef USE_FOG
+      gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor, smoothstep(${f1(HAZE_FROM)}, ${f1(HAZE_TO)}, length(vRoadW.xz)) * uEra);
+      #endif`)
 }
 
 // Scene-space rect [x0, z0, x1, z1] of an OSGB bbox, for cutting the near tile's hole in the outer one.
@@ -436,17 +473,23 @@ function TerrainMesh({ t, hole, name = 'terrain', visible = true }) {
   )
 }
 
-// Beyond the tile: flat ground at the tile edge's median height, in the edge's mean colour, thinning into the sky
+// Beyond the tile: flat ground at the tile edge's median height, in the edge's mean colour (the old map's: FAR, the haze
+// its edge fades into, so the city never stops at a plain of paper), thinning into the sky
 // with distance (the fog colour is lighter than the sky at the horizon, so fogging it drew a bright rim).
 // Without it, low views with tiles off end in a cliff against the sky ~750 m out.
 const SKIRT = 20000 // m
 function fadeOut(shader) {
+  shader.uniforms.uEra = ERA
   shader.vertexShader = shader.vertexShader
     .replace('#include <common>', '#include <common>\nvarying float vSkirt;')
     .replace('#include <fog_vertex>', '#include <fog_vertex>\nvSkirt = -mvPosition.z;')
   shader.fragmentShader = shader.fragmentShader
-    .replace('#include <common>', '#include <common>\nvarying float vSkirt;')
-    .replace('#include <dithering_fragment>', '#include <dithering_fragment>\ngl_FragColor.a *= 1.0 - smoothstep(1500.0, 9000.0, vSkirt);')
+    .replace('#include <common>', '#include <common>\nvarying float vSkirt;\nuniform float uEra;')
+    .replace('#include <dithering_fragment>', `#include <dithering_fragment>
+#ifdef USE_FOG
+gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor, uEra);
+#endif
+gl_FragColor.a *= 1.0 - smoothstep(1500.0, 9000.0, vSkirt);`)
 }
 function edgeColour(tex) {
   try {
@@ -482,11 +525,11 @@ function Skirt({ t }) {
     g.setIndex(index)
     return g
   }, [t])
-  const colours = useMemo(() => t.maps.map(edgeColour), [t])
+  const colour = useMemo(() => edgeColour(t.maps[0]), [t])
   useEffect(() => () => geometry.dispose(), [geometry])
   return (
     <mesh name="terrain-skirt" geometry={geometry} raycast={noRaycast} frustumCulled={false}>
-      <meshStandardMaterial color={colours[old ? 1 : 0]} roughness={1} metalness={0} transparent depthWrite={false} onBeforeCompile={fadeOut} customProgramCacheKey={() => 'terrain-skirt'} />
+      <meshStandardMaterial color={old ? FAR : colour} roughness={1} metalness={0} transparent depthWrite={false} onBeforeCompile={fadeOut} customProgramCacheKey={() => 'terrain-skirt'} />
     </mesh>
   )
 }

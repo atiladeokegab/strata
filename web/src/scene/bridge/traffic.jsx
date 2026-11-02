@@ -65,8 +65,8 @@ export const BODIES = {
   ],
   bus: () => [
     paint(box(2.5, 4.1, 8.4, 0, 2.45, 0), '#c8102e'),
-    paint(box(2.54, 0.9, 7.6, 0, 1.9, 0), '#2a2f36'),
-    paint(box(2.54, 0.9, 7.8, 0, 3.6, 0), '#2a2f36'),
+    paint(box(2.54, 0.9, 8.44, 0, 1.9, 0), '#2a2f36'), // full length, so the ends show glass too, not a blank red slab
+    paint(box(2.54, 0.9, 8.44, 0, 3.6, 0), '#2a2f36'),
     paint(box(2.56, 0.18, 8.42, 0, 2.75, 0), '#f1e9d2'),
     ...wheels(0.5, 1.15, [-2.6, 2.8]),
   ],

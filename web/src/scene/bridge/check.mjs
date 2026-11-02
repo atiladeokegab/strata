@@ -15,7 +15,8 @@ import { steelColour } from './geom.js'
 import { createShip, stepShip, WAIT_X, HOLD_X, CRUISE } from './shipSim.js'
 import { leverAfter, leverForKey, leverLabel, KEY_STEP } from './drive.js'
 import { vesselForYear, needsLift, leafInput, CLEARANCE, WATER_Y } from './vessels.js'
-import { layout, clash } from '../moorings.js'
+import { layout, clash, riverWet } from '../moorings.js'
+import { decodeHeights, heightAt } from './terrainNode.js'
 import { createRiver, stepRiver, gap, CRAFT, CLEAR } from './riverSim.js'
 import { createTraffic, stepTraffic, onLeaves, roadY, streetProfile, RAMP_FOOT, TYPES, STOP_U, BASCULE_U, START_U, END_U, ABUT_Z, RAMP_LEN, POST_X, POST_Z, POST_W, GATE_U, nearCam, CAM_CLEAR, CAM_TOP } from './trafficSim.js'
 import { createLift, liftForShip, stepLift, liftSpeed, setLiftTimeScale, applyShipWarp, gatesClosed, heldLever, PASSED_X, FILM_SCALE, substep } from './liftSequence.js'
@@ -119,7 +120,18 @@ assert.equal(resolveYears([{ year: 1900, title: 'river foundations begin', sourc
   const tiers = layout(() => true) // every slot wet: the densest case
   for (let i = 0; i < tiers.length; i++) for (let j = 0; j < i; j++) assert.ok(!clash(tiers[i], tiers[j]), `moored hulls ${j} and ${i} overlap`)
   assert.ok(tiers.some((m) => m.barge) && tiers.length > 100)
-  console.log(`river water ok (craft at ${WATER_Y.toFixed(2)} m); moorings ok (${tiers.length} hulls, no overlap)`)
+  // the real layout on the LiDAR: tiers stay off the 30 m fairway (ship, tugs) and riverside-low-1890 sees sails
+  const t = decodeHeights(readFileSync(new URL('../../../public/terrain/tower-bridge/bare.png', import.meta.url)), meta)
+  assert.ok(Math.abs(heightAt(t, 0, 0) - (-13.17)) < 0.1, 'bare.png decodes to the river bed under the bridge')
+  const real = layout(riverWet(t, heightAt))
+  assert.ok(real.every((m) => Math.abs(m.c) - 2.8 > 40), 'moored hulls clear of the fairway')
+  // Tour pose riverside-low-1890 (bridge frame, so a hull sits at x = a, z = -c), 1920x1080 at fov 45
+  const cam = new THREE.PerspectiveCamera(45, 16 / 9, 0.3, 6000)
+  cam.position.set(60, 4, -40); cam.lookAt(140, 6, -150); cam.updateMatrixWorld()
+  const view = new THREE.Frustum().setFromProjectionMatrix(new THREE.Matrix4().multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse))
+  const sails = real.filter((m) => m.barge && view.containsPoint(new THREE.Vector3(m.a, WATER_Y + 5, -m.c)) && Math.hypot(m.a - 60, m.c - 40) < 250)
+  assert.ok(sails.length >= 2, `riverside-low-1890 sees ${sails.length} sailing barges, want 2+`)
+  console.log(`river water ok (craft at ${WATER_Y.toFixed(2)} m); moorings ok (${tiers.length} hulls, no overlap; ${real.length} on the LiDAR, ${real.filter((m) => m.barge).length} barges, ${sails.length} in riverside-low-1890)`)
 }
 // Minimum gap (next20 #5): through gates shutting and opening, at real and film speed, no road user gets
 // closer than its type's gap to the one ahead, and the gaps read as gaps (2.5 m vehicles, 0.9 m people).

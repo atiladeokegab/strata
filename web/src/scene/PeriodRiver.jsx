@@ -5,18 +5,15 @@
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import { heightAt } from './Terrain.jsx'
-import { layout, rng } from './moorings.js'
+import { layout, rng, AXIS, at, riverWet } from './moorings.js'
 
-const AXIS = (20.95 * Math.PI) / 180 // meta bridge_axis_deg; the river runs across it
 const ALONG = [Math.cos(AXIS), Math.sin(AXIS)] // downstream, (x, z)
 const ACROSS = [Math.sin(AXIS), -Math.cos(AXIS)] // towards the north bank
 
-// moorings: tiers a few hulls deep off each bank, kept clear of the bridge, the open channel and each other
+// moorings: barge tiers mid-river and lighter tiers off each bank, kept clear of the bridge, the open channel and each other
 function moorings(t) {
   const water = t.meta.water_h - t.meta.origin_h
-  const at = (a, c) => [ALONG[0] * a + ACROSS[0] * c, ALONG[1] * a + ACROSS[1] * c]
-  const wet = (a, c) => { const h = heightAt(t, ...at(a, c)); return h != null && h < water + 0.8 }
-  return layout(wet).map((m) => { const [x, z] = at(m.a, m.c); return { x, y: water, z, yaw: -AXIS + m.jitter, barge: m.barge } })
+  return layout(riverWet(t, heightAt)).map((m) => { const [x, z] = at(m.a, m.c); return { x, y: water, z, yaw: -AXIS + m.jitter, barge: m.barge } })
 }
 
 // steam tugs in the open channel, heading up or down river

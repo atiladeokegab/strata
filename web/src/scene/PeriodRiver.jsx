@@ -26,7 +26,7 @@ function tugs() {
   return out
 }
 
-// wharf cranes: a post on the river wall where the bare-earth ground first rises out of the water, jib over the river.
+// wharf cranes: a post on the quay just behind the river wall, jib over the river.
 // Not on Tower Wharf (the Tower's own frontage) and not by the bridge.
 function cranes(t) {
   const water = t.meta.water_h - t.meta.origin_h
@@ -41,8 +41,12 @@ function cranes(t) {
       const at = (c) => [ALONG[0] * a + ACROSS[0] * c * side, ALONG[1] * a + ACROSS[1] * c * side]
       for (; c < 170; c += 1) { const h = heightAt(old, ...at(c)); if (h == null || h > water + 1) break }
       if (c >= 170 || heightAt(old, ...at(c)) == null) continue
-      const [x, z] = at(c - 1.5) // just off the wall, its foot in the water
-      out.push({ x, y: water, z, yaw: Math.atan2(-side * Math.cos(AXIS), -side * Math.sin(AXIS)) })
+      // only on a wall: the ground reaches quay level (water + 2 m) within 6 m; a sloping foreshore is mud, no crane
+      let top = c
+      while (top < c + 6 && heightAt(old, ...at(top)) < water + 2) top += 0.5
+      if (heightAt(old, ...at(top)) < water + 2) continue
+      const [x, z] = at(top + 1.5) // on the quay just behind the wall edge, the jib reaching out over the water
+      out.push({ x, y: heightAt(old, x, z), z, yaw: Math.atan2(-side * Math.cos(AXIS), -side * Math.sin(AXIS)) })
     }
   }
   return out

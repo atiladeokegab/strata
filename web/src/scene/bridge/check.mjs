@@ -124,7 +124,8 @@ assert.equal(resolveYears([{ year: 1900, title: 'river foundations begin', sourc
   const t = decodeHeights(readFileSync(new URL('../../../public/terrain/tower-bridge/bare.png', import.meta.url)), meta)
   assert.ok(Math.abs(heightAt(t, 0, 0) - (-13.17)) < 0.1, 'bare.png decodes to the river bed under the bridge')
   const real = layout(riverWet(t, heightAt))
-  assert.ok(real.every((m) => Math.abs(m.c) - 2.8 > 40), 'moored hulls clear of the fairway')
+  assert.ok(real.every((m) => samples({ ...m, a: 0 }).every(([, c]) => Math.abs(c) > 35)), 'moored hulls (plus PAD) clear of the 30 m fairway')
+  assert.ok(real.some((m) => Math.abs(m.jitter) > 0.1), 'lighters jittered off the grid (±8°)')
   // engineroom's 1920/1940 stills: no lighter over the foreshore lip, none touching its neighbour
   const wet = riverWet(t, heightAt)
   for (const m of real) assert.ok(samples(m).every(([a, c]) => wet(a, c)), `hull at a ${m.a} c ${m.c} overhangs the foreshore`)

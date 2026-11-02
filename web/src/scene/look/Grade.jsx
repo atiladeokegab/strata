@@ -3,17 +3,21 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Bloom, EffectComposer, N8AO, SMAA, ToneMapping } from '@react-three/postprocessing'
-import { BrightnessContrastEffect, HueSaturationEffect, SepiaEffect, ToneMappingMode, VignetteEffect } from 'postprocessing'
+import { BlendFunction, BrightnessContrastEffect, Effect, HueSaturationEffect, SepiaEffect, ToneMappingMode, VignetteEffect } from 'postprocessing'
 import * as THREE from 'three'
 import { useStore } from '../../store'
 import { periodGrade } from './sun'
 import { LITE } from './tier'
 
 const AO = 1.6
+const CLAMP_GLSL = 'void mainImage(const in vec4 c,const in vec2 uv,out vec4 o){o=vec4(max(c.rgb,0.0),c.a);}'
 // Lite (phones) keeps only the grade: no AO, bloom or SMAA, so the post stack is 2 passes, not ~20.
 export default function Grade({ low }) {
   const fx = useMemo(() => ({
     sat: new HueSaturationEffect(),
+    // Saturation > 0 pushes a 0 channel below 0, and the sRGB pow() ahead of brightness/contrast turns it into
+    // NaN on real GPUs; sepia then spreads it to exact black (the black bus rears). Merged into the same pass.
+    clamp: new Effect('ClampZero', CLAMP_GLSL, { blendFunction: BlendFunction.SRC }),
     bc: new BrightnessContrastEffect(),
     sepia: new SepiaEffect({ intensity: 0 }),
     vig: new VignetteEffect({ offset: 0.3, darkness: 0.38 }),
@@ -43,6 +47,7 @@ export default function Grade({ low }) {
       {!LITE && <Bloom mipmapBlur levels={5} intensity={0.3} luminanceThreshold={1} luminanceSmoothing={0.2} />}
       <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
       <primitive object={fx.sat} dispose={null} />
+      <primitive object={fx.clamp} dispose={null} />
       <primitive object={fx.bc} dispose={null} />
       <primitive object={fx.sepia} dispose={null} />
       <primitive object={fx.vig} dispose={null} />

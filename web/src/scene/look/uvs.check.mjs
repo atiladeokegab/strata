@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict'
 import * as THREE from 'three'
 import { worldUVs } from './uvs.js'
+import './grade.check.mjs' // check-web runs this file; the grade check rides along
 
 // The engine-house chimney shape: a smooth 4-sided tapering column turned 45 deg, so its vertex normals are diagonal.
 const mesh = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.75, 30, 4, 1).rotateY(Math.PI / 4))

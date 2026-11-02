@@ -14,7 +14,7 @@ export const useGoogleShown = google?.useGoogleShown ?? (() => false)
 const BASE = '/terrain/tower-bridge/'
 const MAPS = ['color.jpg', 'color-1890s.jpg'] // today's aerial, the OS 1893-96 sheet
 const texture = (url) => new THREE.TextureLoader().loadAsync(url)
-let metaCache, lowCache, cache, fullCache, nearCache
+let metaCache, lowCache, cache, fullCache, nearCache, mirrorCache
 const loadMeta = () => (metaCache ??= fetch(BASE + 'meta.json').then((r) => r.json()))
 
 // Decodes a height.png (RGB 16-bit, see scripts/terrain/build.py) to metres OD.
@@ -40,7 +40,7 @@ async function decodeHeights(url, meta) {
 const withOld = (meta, { heights, w, h }) =>
   ({ meta, heights, w, h, old: keepApproaches(bareEarth(heights, w, h, Math.round((30 * w) / (meta.bbox_osgb[2] - meta.bbox_osgb[0]))), heights, w, meta) })
 
-const BUDGET = { low: 150_000, full: LITE ? 150_000 : 250_000, near: 250_000 }
+const BUDGET = { low: 150_000, full: LITE ? 150_000 : 250_000, near: 250_000, mirror: 30_000 }
 
 export function loadLow() {
   lowCache ??= (async () => {
@@ -64,6 +64,13 @@ function loadFull() {
   fullCache ??= loadLow().then(() => Promise.all([loadTerrain().then(mesh), ...MAPS.map((f) => texture(BASE + f))]))
     .then(([t, ...maps]) => ({ ...t, maps }))
   return fullCache
+}
+
+// The water mirror's ground (Water.jsx): the first-load tile again, coarse and whole (no near-field hole), drawn only
+// in the reflection, so the mirror pass stays near the lead's 250k-triangle cap (the bridge alone is ~213k).
+function loadMirror() {
+  mirrorCache ??= loadLow().then(async (t) => ({ ...t, mesh: await meshOf(t, BUDGET.mirror) }))
+  return mirrorCache
 }
 
 function loadNear() {
@@ -363,7 +370,7 @@ function chunked({ meta, mesh }, hole) {
   })
 }
 
-function TerrainMesh({ t, hole, name = 'terrain' }) {
+function TerrainMesh({ t, hole, name = 'terrain', visible = true }) {
   const gl = useThree((s) => s.gl)
   const chunks = useMemo(() => chunked(t, hole), [t, hole])
   const old = useStore((s) => s.year < 1950) // before 1950 the ground is the OS 1893-96 London Town Plan (NLS)
@@ -385,7 +392,7 @@ function TerrainMesh({ t, hole, name = 'terrain' }) {
   useEffect(() => () => material.dispose(), [material])
   // no castShadow: bare earth casts next to nothing, and the shadow pass would redraw all of it
   return (
-    <group name={name}>
+    <group name={name} visible={visible}>
       {chunks.map((c, k) => <mesh key={k} geometry={c} material={material} raycast={noRaycast} receiveShadow />)}
     </group>
   )
@@ -481,6 +488,7 @@ function Tiles({ lidar, step }) {
   const low = use(loadLow())
   const full = useLoaded(loadFull)
   const near = useLoaded(loadNear, !LITE && !!full)
+  const mirror = useLoaded(loadMirror, !LITE)
   if (lidar) return (
     <>
       <LidarPoints t={full ?? low} step={full ? step : 1} hole={near?.meta.bbox_osgb} />
@@ -492,6 +500,7 @@ function Tiles({ lidar, step }) {
       <TerrainMesh t={full ?? low} hole={near?.meta.bbox_osgb} />
       <Skirt t={full ?? low} />
       {near && <TerrainMesh t={near} name="terrain-near" />}
+      {mirror && <TerrainMesh t={mirror} name="terrain-mirror" visible={false} />}
     </>
   )
 }

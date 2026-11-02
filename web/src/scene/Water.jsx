@@ -7,6 +7,19 @@ import { useGoogleShown, useTerrainMeta } from './Terrain.jsx'
 import { SUN_COLOR, SUN_DIR } from './look/sun.js'
 import { LITE } from './look/tier'
 
+// The mirror reflects the bridge, its traffic and craft, the sky and a coarse ground (Terrain.jsx 'terrain-mirror',
+// hidden from every other pass). Skipped: both full terrain tiles and the city, whose warped bank reflections nobody
+// misses (they were ~40% of a desktop frame). Not descended into: the bridge. Each flipped object is flipped back after.
+const MIRROR_SKIP = new Set(['terrain', 'terrain-near', 'osm-buildings', 'landmarks'])
+function flipForMirror(o, out) {
+  for (const c of o.children) {
+    if (MIRROR_SKIP.has(c.name)) { if (c.visible) { c.visible = false; out.push(c) } }
+    else if (c.name === 'terrain-mirror') { if (!c.visible) { c.visible = true; out.push(c) } }
+    else if (c.name !== 'tower-bridge') flipForMirror(c, out)
+  }
+  return out
+}
+
 function Surface({ sun }) {
   const meta = useTerrainMeta()
   const fog = useThree((s) => s.scene.fog)
@@ -28,8 +41,8 @@ function Surface({ sun }) {
       t.wrapS = t.wrapT = THREE.RepeatWrapping
     })
     const w = new WaterSurface(geom, {
-      textureWidth: 1024,
-      textureHeight: 1024,
+      textureWidth: 512, // a rippled, dimmed reflection: half resolution reads the same
+      textureHeight: 512,
       waterNormals: normals,
       sunColor: SUN_COLOR,
       waterColor: 0x2c3b34, // the Thames is a muddy green-grey, not a pool blue
@@ -44,9 +57,14 @@ function Surface({ sun }) {
       .replace('reflectionSample * 0.9', 'reflectionSample * 0.4')
       .replace('noise.xzy * vec3( 1.5, 1.0, 1.5 )', 'noise.xzy * vec3( 0.35, 1.0, 0.35 )') // calm water: flatten the summed normals
     // three's Water re-renders the whole scene into its mirror before every render call that draws it (each
-    // post-processing pass is one), so one frame cost ~22 passes; render the mirror once a frame, on the first call
+    // post-processing pass is one), so one frame cost ~22 passes; render the mirror on the first call of every 2nd frame
     const mirror = w.onBeforeRender
-    w.onBeforeRender = function (...a) { if (this.userData.armed) { this.userData.armed = false; mirror.apply(this, a) } }
+    w.onBeforeRender = function (renderer, scene, ...a) {
+      if (!this.userData.armed) return
+      this.userData.armed = false
+      const flipped = flipForMirror(scene, [])
+      try { mirror.call(this, renderer, scene, ...a) } finally { for (const o of flipped) o.visible = !o.visible }
+    }
     return at(w)
   }, [meta, fog])
   useEffect(() => { water.material.uniforms?.sunDirection.value.set(...sun).normalize() }, [water, sun[0], sun[1], sun[2]]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -54,7 +72,7 @@ function Surface({ sun }) {
   useFrame((_, dt) => {
     if (!water.material.uniforms) return
     water.material.uniforms.time.value += dt * 0.35
-    water.userData.armed = true
+    water.userData.armed = (water.userData.frame = (water.userData.frame ?? 0) + 1) % 2 === 1
   })
   return <primitive object={water} />
 }

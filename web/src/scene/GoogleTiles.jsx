@@ -11,7 +11,7 @@ import * as THREE from 'three'
 import { useStore } from '../store'
 import { useGoogle, useGoogleShown, useGoogleWanted } from './google/state'
 import { LITE } from './look/tier'
-import { FRAME_ROTATION_Y, ORIGIN, cutGap } from './google/frame'
+import { FRAME_ROTATION_Y, ORIGIN, cutGap, inGap } from './google/frame'
 
 const draco = new DRACOLoader().setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/')
 const rad = THREE.MathUtils.degToRad
@@ -79,7 +79,21 @@ export function GoogleTiles() {
     t.addEventListener('tile-visibility-change', credit)
     t.addEventListener('tile-visibility-change', ready)
     t.addEventListener('load-error', failed)
-    if (import.meta.env.DEV || new URLSearchParams(location.search).has('capture')) window.__strataTiles = t // the tiles budget test counts its meshes
+    if (import.meta.env.DEV || new URLSearchParams(location.search).has('capture')) {
+      window.__strataTiles = t // the tiles budget test counts its meshes
+      // which drawn tile a ray from `from` toward `to` (our frame, metres) meets first, skipping what GAP discards:
+      // a coarse ancestor still drawn because its children are missing shows as a low depth with few loaded children
+      window.__strataTileHit = (from, to) => {
+        const o = new THREE.Vector3(...from), hits = new THREE.Raycaster(o, new THREE.Vector3(...to).sub(o).normalize()).intersectObject(t.group, true)
+        const hit = hits.find((h) => !inGap(h.point.x, h.point.y, h.point.z))
+        if (!hit) return null
+        let tile = null
+        t.forEachLoadedModel((scene, tl) => scene.traverse((m) => { if (m === hit.object) tile = tl }))
+        return { point: hit.point.toArray().map((v) => +v.toFixed(1)), distance: +hit.distance.toFixed(1), depth: tile?.internal?.depth,
+          geometricError: tile?.geometricError, children: tile?.children.length, childrenLoaded: tile?.children.filter((c) => c.engineData?.scene).length,
+          gapHitsBefore: hits.indexOf(hit), lru: [t.lruCache.itemSet.size, t.lruCache.maxSize] }
+      }
+    }
     if (import.meta.env.DEV) { // dev probe: ellipsoid/frame calibration from the browser console
       window.__strataProbe = (x, z) => new THREE.Raycaster(new THREE.Vector3(x, 600, z), new THREE.Vector3(0, -1, 0)).intersectObject(t.group, true)[0]?.point.y
     }

@@ -702,12 +702,15 @@ console.log('geom materials untextured, all kinded ok')
       }
     // nothing stands proud of the tower arch's jambs (next20 h3: the frame's inner columns showed as a grey pole;
     // the corner turrets' octagon edges and their stairs stood 0.8 m into the passage)
-    if (year === 2026)
+    if (year === 2026) {
       for (const x of [-9.47, 9.47])
-        for (const sz of [-1, 1]) {
-          const h = cast(root, [x, 6, sz * 35.6], [0, 0, sz], 19.8)[0]
-          assert.ok(!h, `${year}: ${h?.object.userData.from} stands in the tower arch at x ${x}, z ${h?.point.z.toFixed(1)}`)
-        }
+        for (const y of [1, 6])
+          for (const sz of [-1, 1]) {
+            const h = cast(root, [x, y, sz * 35.6], [0, 0, sz], 19.8)[0]
+            assert.ok(!h, `${year}: ${h?.object.userData.from} stands in the tower arch at x ${x}, y ${y}, z ${h?.point.z.toFixed(1)}`)
+          }
+      console.log('arch guard ok: both jambs (x ±9.47) clear at y 1 and 6 through both towers, z ±35.6..±55.4 (all four portals), no skips')
+    }
     // and there is road (paint counts as road) under every 2 m of it, so walk mode never falls through
     if (year >= 1894)
       for (const x of [-7, 0, 7])

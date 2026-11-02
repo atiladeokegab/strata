@@ -9,7 +9,6 @@ import * as THREE from 'three'
 import { beam, box, merge, M } from './geom.js'
 import { L, leafParts } from './structures.jsx'
 import { LITE } from '../look/tier.js'
-import { worldUVs } from '../look/uvs.js'
 
 const LEN = -L.pivotZ
 const TOP = -L.pivotY // deck top
@@ -20,7 +19,6 @@ const bottom = (z) => TOP - 0.06 - 4.4 + (3.4 * Math.max(0, z)) / LEN
 
 // The shared kinded materials; Look.jsx textures them, and Part tints the 'steel' fascia by year.
 // The soffit has its own riveted-plate relief instead (plateMaterial), so it does not read as flat card.
-const mats = () => ({ soffit: plateMaterial(), fascia: M.steel, iron: M.iron })
 
 // Lapped, slightly dished soffit plates 1.5 m x 1 m, each lap 2 cm proud of the next, with double rivet rows along every
 // seam: a normal and roughness map in metres (world UVs), PLATE_M per repeat. Kind 'plate' is not one
@@ -167,13 +165,15 @@ function build() {
   return { soffit, fascia, iron, bolts, tailBars } // geometry lists, merged by the callers
 }
 
-// lite: every static piece of the leaf (this file's and BasculeLeaf's) as kit lists; BasculeDetails
+// every static piece of the leaf (this file's and leafParts') as kit lists; BasculeDetails
 // (details.jsx) draws them with its own lamps and footways, one mesh per material.
-// The soffit plate rides the dark iron mesh here, so phones match the desktop's near-black plate.
+// Desktop keeps the soffit on its own key (plateMaterial, metre UVs); on lite the plate rides the dark iron mesh.
 // shortcut: no plate relief maps on lite (rivets are sub-pixel at phone size); give it its own key if needed.
 export function leafKit() {
   const { soffit, fascia, iron } = build(), p = leafParts()
-  return { white: p.white, steel: [...fascia, ...p.steel], iron: [...iron, ...soffit, ...p.iron], road: p.road }
+  const kit = { white: p.white, steel: [...fascia, ...p.steel], iron: [...iron, ...p.iron], road: p.road }
+  if (LITE) return { ...kit, iron: [...kit.iron, ...soffit] }
+  return { ...kit, soffit } // Meshes gives the 'plate' kind metre UVs
 }
 
 const BOLT_DRAW = 0.6 // m the nose bolts withdraw
@@ -181,14 +181,10 @@ const TAIL_HINGE = [0, bottom(0) + 0.6, -14 + 0.4]
 
 // sim.bolts (hydraulics.js stepBolts): 1 = nose bolts shot and tail bars engaged, 0 = clear.
 export function BasculeLeafDetail({ sim }) {
-  const { bolts, tailBars, ...fixed } = useMemo(() => {
-    const { bolts, tailBars, ...rest } = build()
-    const all = LITE ? { bolts, tailBars } : { ...rest, bolts, tailBars } // lite: the static rest is in leafKit()
-    const out = Object.fromEntries(Object.entries(all).map(([k, gs]) => [k, merge(gs)]))
-    if (out.soffit) { const m = new THREE.Mesh(out.soffit); worldUVs(m); out.soffit = m.geometry } // metre UVs for the plate maps
-    return out
+  const { bolts, tailBars } = useMemo(() => {
+    const { bolts, tailBars } = build()
+    return { bolts: merge(bolts), tailBars: merge(tailBars) } // the static rest is in leafKit()
   }, [])
-  const m = mats()
   const boltRef = useRef(), tailRef = useRef()
   useFrame(() => {
     boltRef.current.position.z = (sim.bolts - 1) * BOLT_DRAW
@@ -196,9 +192,8 @@ export function BasculeLeafDetail({ sim }) {
   })
   return (
     <>
-      {Object.entries(fixed).map(([k, geo]) => <mesh key={k} geometry={geo} material={m[k]} castShadow receiveShadow />)}
-      <mesh ref={boltRef} geometry={bolts} material={m.iron} castShadow />
-      <mesh ref={tailRef} geometry={tailBars} material={m.iron} position={TAIL_HINGE} castShadow />
+      <mesh ref={boltRef} geometry={bolts} material={M.iron} castShadow />
+      <mesh ref={tailRef} geometry={tailBars} material={M.iron} position={TAIL_HINGE} castShadow />
     </>
   )
 }

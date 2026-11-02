@@ -62,13 +62,19 @@ function Half({ side, rt, st, towerTop, era, maxAngle, disc }) {
       {st.stage >= 5 && <Cabin side={side} rt={rt} />}
       {shown('abutment', st.stage) && (
         <Part id={id('abutment')} rt={rt} explode={[0, 0, -28]} clipY={rising(st, 0, S.L.hw - 1, towerTop)}>
-          {LITE && approachWorks(st).road ? (
-            // phones, once the ramp is finished: abutment and ramp furniture as one mesh per material, with the bank,
-            // granite trim and kerbs folded into the stone and the lamp crowns into the column steel
+          {approachWorks(st).road ? (
+            // once the ramp is finished: abutment and ramp furniture as one mesh per material. Phones also fold the
+            // bank, granite trim and kerbs into the stone and the lamp crowns into the column steel, and drop the gilt
             <D.Meshes
-              deps={[side, disc, era.blackout, era.gasLamps, era.woodBlocks]}
+              deps={[side, disc, era.blackout, era.gasLamps, era.woodBlocks, era.lamps]}
               materials={D.lanternFor(era)}
+              receive={['stone', 'granite', 'road']}
+              noCast={['road', 'gold']}
               build={() => {
+                if (!LITE) {
+                  const { bank, ...k } = D.join(S.abutmentKit(side, disc), A.rampKit(side, era, disc))
+                  return { ...k, stone: [...k.stone, ...bank] } // the finished bank is plain stone
+                }
                 const abut = { ...S.abutmentKit(side, disc), gold: [] } // LITE drops the gilt finials, as Abutment does
                 const { bank, granite, gold, ...k } = D.join(abut, A.rampKit(side, era, disc))
                 return { ...k, stone: [...k.stone, ...bank, ...granite], steel: [...(k.steel ?? []), ...gold] }
@@ -109,22 +115,16 @@ function Half({ side, rt, st, towerTop, era, maxAngle, disc }) {
       {/* cladding rises over the finished frame without clipping the steel */}
       {shown('cladding', st.stage) && (
         <Part id={towerId} rt={rt} explode={[0, 30, -14]} xray clipY={rising(st, 4, S.L.pierTop, towerTop + 2)}>
-          {LITE ? (
-            // phones: cladding, details, floodlights and (once open) the deck markings as one mesh per material.
-            // shortcut: on LITE the open bridge's kerbs ride the cladding's explode and x-ray, and the 1939-45 band
-            // white also brightens the tower shields; split them back out if phones get the exploded view.
-            <D.Meshes
-              deps={[towerTop, era.nightLighting, era.blackout, era.woodBlocks, st.stage >= 5]}
-              materials={D.lanternFor(era)}
-              build={() => D.join(S.claddingKit(towerTop), D.towerDetailsKit(), era.nightLighting ? H.towerLightsKit() : {}, st.stage >= 5 ? D.deckMarkingsKit(era) : {})}
-            />
-          ) : (
-            <>
-              <S.TowerCladding topY={towerTop} />
-              <D.TowerDetails />
-              {era.nightLighting && <H.TowerLights />}
-            </>
-          )}
+          {/* cladding, details and floodlights as one mesh per material. Phones also join the open bridge's deck
+              markings. shortcut: on LITE those kerbs ride the cladding's explode and x-ray, and the 1939-45 band
+              white also brightens the tower shields; split them back out if phones get the exploded view. */}
+          <D.Meshes
+            deps={[towerTop, era.nightLighting, era.blackout, era.woodBlocks, st.stage >= 5]}
+            materials={LITE ? D.lanternFor(era) : undefined}
+            receive={['stone']}
+            noCast={['gold', 'glass']}
+            build={() => D.join(S.claddingKit(towerTop), D.towerDetailsKit(), era.nightLighting ? H.towerLightsKit() : {}, LITE && st.stage >= 5 ? D.deckMarkingsKit(era) : {})}
+          />
         </Part>
       )}
       {shown('bascule', st.stage) && (
@@ -132,7 +132,6 @@ function Half({ side, rt, st, towerTop, era, maxAngle, disc }) {
           <Part id={n ? 'bascule-north' : 'bascule-south'} rt={rt} explode={[0, 10, 6]}>
             <BasculeDrive sim={sim} side={side} maxAngle={maxAngle}>
               <S.PivotFrame sim={sim}>
-                <S.BasculeLeaf />
                 <D.BasculeDetails era={era} />
                 <BasculeLeafDetail sim={sim} />
               </S.PivotFrame>
@@ -249,18 +248,14 @@ export function TowerBridge(props) {
             clipY={rising(st, 3, S.L.walkY - 0.5, S.L.walkY + S.L.walkH + 0.5)}
             dim={st.stage >= 5 && !era.walkwayOpen ? 0.7 : 0}
           >
-            {LITE ? (
-              // phones: the walkway and its details as one mesh per material, and no visitors
-              <D.Meshes
-                deps={[side, era.glazed, era.glassFloor]}
-                build={() => D.join(S.walkwayKit(side === 'east' ? S.L.walkX : -S.L.walkX, era.glazed, era.glassFloor), D.walkwayDetailsKit(side === 'east' ? S.L.walkX : -S.L.walkX))}
-              />
-            ) : (
-              <>
-                <S.Walkway x={side === 'east' ? S.L.walkX : -S.L.walkX} glazed={era.glazed} glassFloor={era.glassFloor} />
-                <D.WalkwayDetails x={side === 'east' ? S.L.walkX : -S.L.walkX} era={era} />
-              </>
-            )}
+            {/* the walkway and its details as one mesh per material (phones: no visitors, below) */}
+            <D.Meshes
+              deps={[side, era.glazed, era.glassFloor, era.gasLamps, era.blackout]}
+              materials={D.lanternFor(era)}
+              receive={['timber']}
+              noCast={['timber', 'pane', 'gold']}
+              build={() => D.join(S.walkwayKit(side === 'east' ? S.L.walkX : -S.L.walkX, era.glazed, era.glassFloor), D.walkwayDetailsKit(side === 'east' ? S.L.walkX : -S.L.walkX, !!era.gasLamps))}
+            />
             {!LITE && st.stage >= 5 && era.walkwayOpen && <H.WalkwayPeople x={side === 'east' ? S.L.walkX : -S.L.walkX} />}
             {era.olympics && side === 'east' && <H.OlympicRings x={side === 'east' ? S.L.walkX : -S.L.walkX} />}
           </Part>

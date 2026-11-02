@@ -7,17 +7,27 @@ import { L } from './structures.jsx'
 import { KERB_X, KERB_W, FOOTWAY_H, FOOTWAY_OUT } from './roadway.js'
 import { balustrade, BAL_X, BAL_Y } from './balustrade.js'
 import { LITE } from '../look/tier.js'
-import { leafKit } from './basculeDetail.jsx'
+import { worldUVs } from '../look/uvs.js'
+import { leafKit, plateMaterial } from './basculeDetail.jsx'
 import { walkwayKnees, walkwayLamps } from './walkway.js'
 import { POST_X, POST_Z } from './trafficSim.js'
 import { sandbagWalls, sack } from './sandbags.js'
 
 // Renders { materialKey: [geometries] } as one merged mesh per material.
 // materials: optional {key: material} overriding M for some keys (e.g. lantern glass by era)
-export function Meshes({ build, deps = [], materials }) {
+// receive / noCast: material keys that take shadows / cast none (default: every key casts, none receives)
+// the riveted soffit plate (basculeDetail.jsx) samples its maps in metres, not box-projected UVs
+const plateUVs = (mat, geo) => {
+  if (mat?.userData.kind !== 'plate') return geo
+  const m = new THREE.Mesh(geo)
+  worldUVs(m)
+  return m.geometry
+}
+
+export function Meshes({ build, deps = [], materials, receive = [], noCast = [] }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const g = useMemo(() => Object.entries(build()).filter(([, gs]) => gs.length).map(([k, gs]) => [k, merge(gs)]), deps)
-  return g.map(([k, geo]) => <mesh key={`${k}-${materials?.[k]?.uuid ?? ''}`} geometry={geo} material={materials?.[k] ?? M[k]} castShadow />)
+  const g = useMemo(() => Object.entries(build()).filter(([, gs]) => gs.length).map(([k, gs]) => [k, plateUVs(materials?.[k], merge(gs))]), deps)
+  return g.map(([k, geo]) => <mesh key={`${k}-${materials?.[k]?.uuid ?? ''}`} geometry={geo} material={materials?.[k] ?? M[k]} castShadow={!noCast.includes(k)} receiveShadow={receive.includes(k)} />)
 }
 
 const cyl = (rt, rb, h, seg, x, y, z) => new THREE.CylinderGeometry(rt, rb, h, seg).translate(x, y, z)
@@ -257,15 +267,17 @@ export function BasculeDetails({ era }) {
   return (
     <Meshes
       deps={[era?.blackout, era?.woodBlocks, era?.gasLamps, era?.lamps]}
-      materials={lanternFor(era)}
+      materials={{ ...lanternFor(era), leafWhite: M.white, ...(LITE ? {} : { soffit: plateMaterial() }) }}
+      receive={['road', 'iron', 'white', 'leafWhite', 'steel', 'soffit']}
       build={() => {
         const o = kit()
         // no lamps on the leaf: raised to 86 deg, a 6 m post on the deck points into its own tower's face
         if (!era?.woodBlocks) dashes(o, L.pivotZ + 0.5, -0.5, era)
         footways(o, L.pierZ + L.towerHalfZ, 0, era)
         for (const gs of Object.values(o)) gs.forEach((g) => g.translate(0, -L.pivotY, -L.pivotZ))
-        if (!LITE) return o
-        return join(o, leafKit()) // lite: the leaf's static structure joins these meshes; in 1940 its white rides the near-white band paint
+        if (LITE) return join(o, leafKit()) // lite: in 1940 the leaf's white rides the near-white band paint
+        const { white, ...leaf } = leafKit()
+        return join(o, leaf, { leafWhite: white }) // the leaf's static structure joins these meshes, its white kept off the band paint
       }}
     />
   )

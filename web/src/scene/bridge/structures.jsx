@@ -221,8 +221,8 @@ export function PivotFrame({ sim, children }) {
   )
 }
 
-// Leaf girders, deck, rails and racks as unmerged geometry lists per material. BasculeLeaf merges them;
-// on the lite tier basculeDetail.jsx folds them into its own per-material meshes instead.
+// Leaf girders, deck, rails and racks as unmerged geometry lists per material; leafKit() (basculeDetail.jsx)
+// folds them into BasculeDetails' per-material meshes.
 export function leafParts() {
   {
     const len = -L.pivotZ // pivot to centre line
@@ -247,22 +247,6 @@ export function leafParts() {
     const spokes = [-5, 5].flatMap((x) => [beam([x, 0, 0], [x, -L.rackR, 0], 0.25), beam([x, 0, 0], [x, 0, -L.rackR], 0.25)])
     return { steel: girders, road: [deck], white: rails, iron: [...racks, ...spokes] }
   }
-}
-
-export function BasculeLeaf() {
-  const g = useMemo(() => {
-    const p = leafParts()
-    return { girders: merge(p.steel), deck: p.road[0], rails: merge(p.white), racks: merge(p.iron) }
-  }, [])
-  if (LITE) return null // basculeDetail.jsx draws these on lite
-  return (
-    <>
-      <mesh geometry={g.girders} material={M.steel} castShadow />
-      <mesh geometry={g.deck} material={M.road} castShadow receiveShadow />
-      <mesh geometry={g.rails} material={M.white} />
-      <mesh geometry={g.racks} material={M.iron} castShadow />
-    </>
-  )
 }
 
 export function Counterweight() {

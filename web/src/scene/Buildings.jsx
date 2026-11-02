@@ -54,8 +54,8 @@ const FACADES = {
   w: () => facade((g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#2f2b28'; g.fillRect(8, 22, 14, 20); g.fillStyle = '#4a3020'; g.fillRect(40, 12, 18, 40); g.fillStyle = '#e4d8c4'; g.fillRect(0, 58, 64, 3) }, 5.0, 3.4),
   // curtain wall: floor slabs and mullions over glass
   g: () => facade((g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#4f5b63'; g.fillRect(0, 54, 64, 10); g.fillStyle = '#c9d2d8'; g.fillRect(0, 0, 3, 64) }, 1.6, 3.8),
-  // Kentish ragstone (the Tower of London): rough courses, a narrow window or slit now and then
-  k: () => facade((g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#e2ddd3'; for (let y = 6; y < 64; y += 14) g.fillRect(0, y, 64, 2); g.fillStyle = '#34322f'; g.fillRect(29, 20, 7, 24) }, 4.5, 4.5),
+  // Kentish ragstone (the Tower of London): rough courses and, one bay in four, a narrow slit; a wall, not a terrace
+  k: () => facade((g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#e4e0d8'; for (let y = 3; y < 64; y += 8) g.fillRect(0, y, 64, 1); g.fillStyle = '#3a3835'; g.fillRect(30, 26, 4, 12) }, 16, 9),
 }
 
 const LOOK = {
@@ -63,7 +63,7 @@ const LOOK = {
   b: { color: '#b39270', roughness: 0.92 },
   g: { color: '#8ea2b0', roughness: 0.14, metalness: 0.55, envMapIntensity: 1.4 },
   w: { color: '#7f7464', roughness: 0.95 }, // sooted London stock brick: dull grey-yellow, not orange
-  k: { color: '#a39886', roughness: 0.97 }, // Kentish ragstone, grey-buff
+  k: { color: '#8c8476', roughness: 0.97 }, // Kentish ragstone, grey-brown
   roof: { color: '#6b6862', roughness: 0.95 },
   slate: { color: '#4d5258', roughness: 0.8 }, // Welsh slate
   r: { color: '#8b6f58', roughness: 1 }, // Blitz rubble: brick dust and charred timber, 1940-1950
@@ -75,7 +75,8 @@ const TALL_GUESS = 1950 // bake.py's start for an undated building over 40 m
 const WHITE_TOWER = 'w369135772' // OSM way, as in modern_dates.py
 
 // The White Tower's four corner turrets over its footprint's bounds, each with a lead cupola; the north-east one is
-// round (wiki-tower-of-london). Sizes are illustrative: about 7 m across, 7 m above the parapet, a 5 m cupola.
+// round (wiki-tower-of-london). Sizes are illustrative: about 7 m across, 7 m above the parapet, a 5 m ogee cupola.
+const OGEE = [[1, 0], [1.02, 0.12], [0.92, 0.3], [0.7, 0.48], [0.42, 0.64], [0.22, 0.8], [0.1, 0.92], [0, 1]] // (radius, height) fractions
 function turrets(bd) {
   const xs = bd.o.filter((_, i) => i % 2 === 0), zs = bd.o.filter((_, i) => i % 2 === 1)
   const [x0, x1, z0, z1] = [Math.min(...xs), Math.max(...xs), Math.min(...zs), Math.max(...zs)]
@@ -85,7 +86,8 @@ function turrets(bd) {
     const round = x === x1 && z === z0 // grid z runs south: z0 is the north side
     const w = round ? new THREE.CylinderGeometry(4, 4, 11, 12, 1, true) : new THREE.BoxGeometry(7, 11, 7)
     walls.push(w.toNonIndexed().translate(cx, bd.t + 1.5, cz))
-    caps.push(new THREE.ConeGeometry(round ? 4.4 : 5, 5, 8).toNonIndexed().translate(cx, bd.t + 9.5, cz))
+    const r = round ? 4.4 : 5
+    caps.push(new THREE.LatheGeometry(OGEE.map(([a, b]) => new THREE.Vector2(a * r, b * 5)), 12).toNonIndexed().translate(cx, bd.t + 7, cz))
     w.dispose()
   }
   return { walls, caps }
@@ -175,7 +177,7 @@ const ERA_SHOWN = { o: () => true, p: (y) => y < HISTORIC_BEFORE, m: (y) => y >=
 // multipliers on the facade colour, soot-darkened: yellow London stock, grey soot, dull red brick, dirty stucco (houses only), dark stock
 const TINTS = {
   w: [[1, 1, 1], [0.85, 0.86, 0.9], [1.1, 0.85, 0.8], [0.92, 0.9, 0.88], [1.08, 1.05, 1.0]],
-  b: [[0.84, 0.95, 1.0], [0.64, 0.75, 0.93], [0.78, 0.6, 0.64], [1.1, 1.29, 1.52], [0.72, 0.81, 0.89]],
+  b: [[0.84, 0.95, 1.0], [0.7, 0.72, 0.76], [0.78, 0.6, 0.64], [1.1, 1.29, 1.52], [0.72, 0.81, 0.89]],
 }
 const SLATE = [[1, 1, 1], [0.86, 0.88, 0.92], [1.12, 1.06, 1.0]]
 const WHITE = [1, 1, 1]

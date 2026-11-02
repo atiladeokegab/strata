@@ -2,6 +2,7 @@
 // there were 1,400 balloons, a third over the London area" (wiki-barrage-balloon). The balloon is the standard
 // low-zone type, about 19 m long and 7.6 m across with three tail fins. Where each one flies and how high are
 // illustrative (inferred): the real sites are not in our sources. Grid-aligned frame (x east, z south), like Terrain.
+// No tether: a steel cable is invisible at this range, and drawn it read as a scratch on the frame.
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
@@ -21,26 +22,24 @@ function balloonGeometry() {
 }
 
 export function Barrage({ terrain }) {
-  const balloons = useRef(), cables = useRef()
-  const geo = useMemo(() => ({ balloon: balloonGeometry(), cable: new THREE.CylinderGeometry(0.06, 0.06, 1, 4).translate(0, 0.5, 0) }), [])
+  const balloons = useRef()
+  const geo = useMemo(() => ({ balloon: balloonGeometry() }), [])
   const mats = useMemo(() => ({
     balloon: new THREE.MeshStandardMaterial({ color: '#c3c6c7', roughness: 0.55, metalness: 0.15 }),
-    cable: new THREE.MeshBasicMaterial({ color: '#2a2b2c' }),
   }), [])
   useLayoutEffect(() => {
     const m = new THREE.Matrix4(), q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, WIND, 0)), one = new THREE.Vector3(1, 1, 1)
     SITES.forEach(([x, z, up], i) => {
       const g = heightAt({ ...terrain, heights: terrain.old }, x, z) ?? 0
       balloons.current.setMatrixAt(i, m.compose(new THREE.Vector3(x, g + up, z), q, one))
-      cables.current.setMatrixAt(i, m.compose(new THREE.Vector3(x, g, z), new THREE.Quaternion(), new THREE.Vector3(1, up - 3.8, 1)))
     })
-    for (const r of [balloons, cables]) { r.current.instanceMatrix.needsUpdate = true; r.current.computeBoundingSphere() }
+    balloons.current.instanceMatrix.needsUpdate = true
+    balloons.current.computeBoundingSphere()
   }, [terrain])
   useLayoutEffect(() => () => { Object.values(geo).forEach((g) => g.dispose()); Object.values(mats).forEach((m) => m.dispose()) }, [geo, mats])
   return (
     <group name="barrage-balloons">
       <instancedMesh ref={balloons} args={[geo.balloon, mats.balloon, SITES.length]} castShadow />
-      <instancedMesh ref={cables} args={[geo.cable, mats.cable, SITES.length]} />
     </group>
   )
 }

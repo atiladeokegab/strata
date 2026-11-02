@@ -29,17 +29,21 @@ export function towerLightsKit() {
   return { iron, glass }
 }
 
-// A few visitors standing along an open walkway.
+// A few visitors at the walkway windows, in ones and twos against the glazing so the aisle stays
+// clear: legs, a coat that flares to the knee, shoulders and a head, so they read as people.
+export const WALK_PEOPLE = [[-26, 1], [-25.3, 1], [-15, -1], [2.4, -1], [3.1, -1], [13.5, 1], [24, -1], [24.6, -1]] // [z, side]
 export function WalkwayPeople({ x }) {
   return (
     <Meshes
       deps={[x]}
       build={() => {
         const coat = [], face = [], y = L.walkY + 0.28
-        for (let i = 0; i < 9; i++) {
-          const z = -30 + i * 7.4 + Math.sin(i * 12.9) * 2, dx = Math.sin(i * 4.7) * 0.8
-          coat.push(new THREE.CylinderGeometry(0.2, 0.26, 1.35, 8).translate(x + dx, y + 0.68, z))
-          face.push(new THREE.SphereGeometry(0.14, 8, 6).translate(x + dx, y + 1.5, z))
+        for (const [z, side] of WALK_PEOPLE) {
+          const px = x + side * 1.05
+          for (const lz of [-0.09, 0.09]) coat.push(new THREE.CylinderGeometry(0.06, 0.06, 0.5, 6).translate(px, y + 0.25, z + lz))
+          coat.push(new THREE.CylinderGeometry(0.17, 0.25, 0.85, 8).translate(px, y + 0.9, z))
+          coat.push(new THREE.SphereGeometry(0.17, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.5, 1.25).translate(px, y + 1.32, z))
+          face.push(new THREE.SphereGeometry(0.11, 8, 6).translate(px, y + 1.52, z))
         }
         return { iron: coat, stone: face }
       }}

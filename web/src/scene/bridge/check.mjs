@@ -546,14 +546,14 @@ console.log('geom materials untextured, all kinded ok')
   const out = join(tmpdir(), `bridge-corridor-${process.pid}.mjs`)
   const resolveDir = fileURLToPath(new URL('.', import.meta.url))
   // three is bundled too, so the scene and the components share one copy
-  await bundle({ stdin: { contents: `export { TowerBridge } from './TowerBridge.jsx'; export { BODIES, BODY, bodyGeo } from './traffic.jsx'; export { useStore } from '../../store.js'; export { Fragment } from 'react/jsx-runtime'; export { setLite } from '../look/tier.js'; export * as T from 'three'`, resolveDir, loader: 'js' }, bundle: true, format: 'esm', platform: 'node', jsx: 'automatic', plugins: [stubs], outfile: out, logLevel: 'error' })
+  await bundle({ stdin: { contents: `export { TowerBridge } from './TowerBridge.jsx'; export { BODIES, BODY, bodyGeo, GLASS } from './traffic.jsx'; export { useStore } from '../../store.js'; export { Fragment } from 'react/jsx-runtime'; export { setLite } from '../look/tier.js'; export * as T from 'three'`, resolveDir, loader: 'js' }, bundle: true, format: 'esm', platform: 'node', jsx: 'automatic', plugins: [stubs], outfile: out, logLevel: 'error' })
   const noop = new Proxy(() => noop, { get: () => noop }) // canvas textures draw into a no-op 2D context
   globalThis.document ??= { createElement: () => ({ getContext: () => noop }) }
   globalThis.location ??= { search: '' } // store.js reads ?embed= at import
-  const { TowerBridge, BODIES, BODY, bodyGeo, useStore, Fragment, T, setLite } = await import(out)
+  const { TowerBridge, BODIES, BODY, bodyGeo, GLASS, useStore, Fragment, T, setLite } = await import(out)
   unlinkSync(out)
   // bus rears went black in shade: the paint carries its own bounce term into the standard shader
-  const sh = { fragmentShader: T.ShaderLib.standard.fragmentShader }
+  const sh = { uniforms: {}, fragmentShader: T.ShaderLib.standard.fragmentShader }
   BODY.onBeforeCompile(sh)
   assert.match(sh.fragmentShader, /#include <emissivemap_fragment>\n\ttotalEmissiveRadiance \+= vColor\.rgb \* 0\.12;/, 'traffic paint keeps a bounce term in shade')
 
@@ -592,6 +592,17 @@ console.log('geom materials untextured, all kinded ok')
         bodies++
       }
     console.log(`body lengths ok (${bodies} bodies within TYPES.len)`)
+  }
+  // next21 bus windows read flat black: the glass paint is lifted off black and the BODY shader makes it glossy
+  {
+    const g = new T.Color(GLASS), col = bodyGeo('bus', 'modern').attributes.color
+    let n = 0
+    for (let i = 0; i < col.count; i++) if (Math.hypot(col.getX(i) - g.r, col.getY(i) - g.g, col.getZ(i) - g.b) < 1e-4) n++
+    assert.ok(n > 0 && g.getHSL({}, T.SRGBColorSpace).l > 0.2, `bus glass painted (${n} verts) and lifted off black`)
+    const sh = { uniforms: {}, fragmentShader: T.ShaderLib.standard.fragmentShader }
+    BODY.onBeforeCompile(sh)
+    assert.ok(sh.uniforms.glass && /<common>\nuniform vec3 glass;/.test(sh.fragmentShader) && /roughnessFactor = 0\.12/.test(sh.fragmentShader) && /vColor\.rgb \* 0\.12/.test(sh.fragmentShader), 'BODY shader keys glass and keeps the bounce')
+    console.log(`bus glass ok (${n} glossy verts)`)
   }
   const SKIP = new Set(['Traffic', 'Ship']) // moving road and river users, not structure
   const from = []

@@ -17,6 +17,9 @@ import { FOOTWAY_H } from './roadway.js'
 import { lift, stepLift, liftSpeed, gatesClosed, substep } from './liftSequence.js'
 import { shipState } from './ship.jsx'
 
+// Dark window glass: the BODY shader keys on this exact paint to make it glossy, so it mirrors the sky
+export const GLASS = '#323c47'
+
 // ---- low-poly bodies: origin at the centre, ground at y=0, facing +z ----
 const paint = (g, hex) => {
   const c = new THREE.Color(hex)
@@ -65,8 +68,8 @@ export const BODIES = {
   ],
   bus: () => [
     paint(box(2.5, 4.1, 8.4, 0, 2.45, 0), '#c8102e'),
-    paint(box(2.54, 0.9, 8.44, 0, 1.9, 0), '#2a2f36'), // full length, so the ends show glass too, not a blank red slab
-    paint(box(2.54, 0.9, 8.44, 0, 3.6, 0), '#2a2f36'),
+    paint(box(2.54, 0.9, 8.44, 0, 1.9, 0), GLASS), // full length, so the ends show glass too, not a blank red slab
+    paint(box(2.54, 0.9, 8.44, 0, 3.6, 0), GLASS),
     paint(box(2.56, 0.18, 8.42, 0, 2.75, 0), '#f1e9d2'),
     ...wheels(0.5, 1.15, [-2.6, 2.8]),
   ],
@@ -101,8 +104,13 @@ const PEOPLE = new Set(['ped', 'lady'])
 export const BODY = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, metalness: 0.1 }) // paint: higher metalness mirrored the dark lower sky on flat ends
 // Bounce light: an end in shade sees only the bluish sky, which saturated red paint (G, B ~ 0) barely reflects,
 // so the grade crushed bus rears to black. A little of the paint's own colour keeps every shaded end in hue.
+// Glass (vColor == GLASS) gets low roughness and some metalness in the same draw: env and sun specular, not flat black.
 BODY.onBeforeCompile = (s) => {
-  s.fragmentShader = s.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n\ttotalEmissiveRadiance += vColor.rgb * 0.12;')
+  s.uniforms.glass = { value: new THREE.Color(GLASS) }
+  s.fragmentShader = s.fragmentShader
+    .replace('#include <common>', '#include <common>\nuniform vec3 glass;')
+    .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n\ttotalEmissiveRadiance += vColor.rgb * 0.12;')
+    .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\n\tif (distance(vColor.rgb, glass) < 0.004) { roughnessFactor = 0.12; metalnessFactor = 0.6; }')
 }
 
 const o = new THREE.Object3D()

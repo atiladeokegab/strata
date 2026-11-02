@@ -25,6 +25,7 @@ export const useStore = create((set) => ({
   view: 'orbit', // orbit | top | walk
   cameraTo: null, // [x,y,z] fly request; CameraRig flies there, looking at the bridge, then clears it
   flyTo: (pos) => set({ cameraTo: pos, view: 'orbit' }),
+  frameShift: null, // [x, y] px from the canvas centre: the guided tour's clear spot beside its card; CameraRig aims its flights there
   setView: (view) => set({ view }),
   year: THIS_YEAR, // FIRST_YEAR..THIS_YEAR
   setYear: (year) => set({ year }),

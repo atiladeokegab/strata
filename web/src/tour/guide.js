@@ -46,7 +46,7 @@ const DEFAULT = { year: THIS_YEAR, exploded: false, lidar: false, view: 'orbit',
 export const STEPS = [
   { id: 'orbit', title: 'Look around', cam: [170, 75, 190],
     text: 'Tower Bridge, rebuilt on real LiDAR ground. Drag to orbit, pinch or scroll to zoom.' },
-  { id: 'time', title: 'Scrub through time', spot: '.dock .timeline', cam: [260, 95, 300],
+  { id: 'time', title: 'Scrub through time', spot: '.dock .timeline', cam: [300, 40, 40], // down the river from the east: no roofs between the camera and the piers
     text: 'The year slider rebuilds the bridge and the area around it.',
     stops: [
       yearStop(1886, 'Construction starts on the river piers.'),
@@ -56,7 +56,7 @@ export const STEPS = [
     ] },
   { id: 'exploded', title: 'Take it apart', spot: '.toggles button:first-child', cam: [150, 60, 175], state: { exploded: true },
     text: 'Exploded view pulls every part away from the others, so you can see how it fits together.' },
-  { id: 'bascules', title: 'Watch it work', spot: '.dock .bascule', cam: [190, 24, 40],
+  { id: 'bascules', title: 'Watch it work', spot: '.dock .bascule', cam: [-160, 28, 75], // oblique, upstream: end-on the raised leaves vanish
     text: 'Signals to red, the bascules rise on simulated hydraulics, and a ship comes through. Drag the Bascules slider to work them yourself.',
     run: () => { stopTour(); s().setBascule(0); liftForShip({ fast: true }) } }, // nothing else may drive the camera or the lever during the lift
   { id: 'part', title: 'Tap any part', spot: '.panel', state: { selected: 'counterweight-north', sheet: true },
@@ -85,20 +85,38 @@ export const STEPS = [
     last: true },
 ]
 
+// The middle of the stage the card and panels leave clear, as a pixel shift from the canvas centre (CameraRig pans there).
+// Before the card is up its top is estimated from its usual height.
+export function frameShift(W = innerWidth, H = innerHeight, doc = document) {
+  const rect = (q) => doc.querySelector(q)?.getBoundingClientRect()
+  const n = narrow() // phones: the controls run across the top and the dock above the card; desktop: the panel on the left, the toggles on the right
+  const dock = n ? rect('.dock') : null
+  const top = Math.min(rect('.guide-card')?.top ?? H - (n ? 330 : 360), dock?.height ? dock.top : H)
+  const l = n ? 0 : rect('.panel')?.right ?? 0, r = n ? W : rect('.toggles')?.left ?? W, t = n ? rect('.controls')?.bottom ?? 0 : 0
+  return [Math.round((l + r - W) / 2), Math.round((t + Math.max(top, t + H * 0.2)) / 2 - H / 2)]
+}
+
 // Make the app show step `step`: its state over the defaults, its camera, its action.
 export function applyStep(step) {
   const want = { ...DEFAULT, ...step.state }
   const st = s()
-  if (want.view !== 'orbit') st.setView(want.view)
-  else if (step.cam) st.flyTo(step.cam) // also returns the view to orbit, flying from wherever it was
-  else if (st.view !== 'orbit') st.setView('orbit')
   if (step.stops) step.stops[0].run()
   else if (st.year !== want.year) st.setYear(want.year)
   if (st.exploded !== want.exploded) st.setExploded(want.exploded)
   if (st.lidar !== want.lidar) st.setLidar(want.lidar)
-  if (st.selected !== want.selected) st.select(want.selected)
   st.setSheet(want.sheet && narrow())
-  step.run?.()
+  // camera moves wait a frame, so this step's card and sheet are laid out and frameShift measures them
+  requestAnimationFrame(() => {
+    const g = useGuide.getState()
+    if (!g.active || g.steps[g.i] !== step) return // skipped or moved on
+    useStore.setState({ frameShift: frameShift() })
+    const st = s()
+    if (want.view !== 'orbit') st.setView(want.view)
+    else if (step.cam) st.flyTo(step.cam) // also returns the view to orbit, flying from wherever it was
+    else if (st.view !== 'orbit') st.setView('orbit')
+    if (st.selected !== want.selected) st.select(want.selected)
+    step.run?.()
+  })
 }
 
 const SEEN = 'strata.guide.seen'
@@ -121,12 +139,12 @@ export function startGuide({ auto = false } = {}) {
     applyStep(steps[0])
   }
   // wait on the scene, not a timer: sceneSettled (the loading card has lifted; a slow phone takes 4-5 s), or no WebGL at all;
-  // then give the lazy photo tools up to 2 s more so their optional steps are counted
+  // then give the lazy photo tools up to 1 s more so their optional steps are counted
   let lit = 0
   const wait = () => {
     const ready = s().place && (s().sceneSettled || document.querySelector('.no-webgl'))
     if (ready) lit ||= performance.now()
-    if (ready && (document.querySelector('.id-open') || performance.now() - lit > 2000)) go()
+    if (ready && (document.querySelector('.id-open') || performance.now() - lit > 1000)) go()
     else setTimeout(wait, 150)
   }
   wait()
@@ -145,6 +163,7 @@ export function stopGuide() {
   if (!active) return
   steps[i]?.leave?.()
   useGuide.setState({ active: false })
+  useStore.setState({ frameShift: null })
   markSeen()
   const st = s() // hand back a clean app, keeping the camera where it is
   if (st.view === 'walk') st.setView('orbit')

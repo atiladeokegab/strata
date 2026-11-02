@@ -1,5 +1,5 @@
 /* The guided tour card and spotlight (Guide.jsx). Desktop: centred over the stage, above the time bar.
-   Phones: above the dock, or just above the sheet when the sheet is open (the dock hides then). */
+   Phones: at the bottom over the dock, above it when the step points into it, or just above the sheet when the sheet is open. */
 .guide-card { position: absolute; z-index: 7; left: calc(50% + var(--panel-w) / 2 + var(--gap) / 2); bottom: calc(var(--gap) + 96px);
   transform: translateX(-50%); width: min(440px, calc(100% - 32px)); padding: var(--s5) var(--s5) var(--s4); border-radius: var(--r-lg);
   box-shadow: var(--shadow); animation: guide-in .45s cubic-bezier(.2, .8, .2, 1) both; }
@@ -37,6 +37,7 @@
 
 @media (max-width: 900px) {
   .guide-card { left: 8px; right: 8px; width: auto; transform: none; bottom: calc(var(--sheet) + 112px); padding: var(--s4); animation-name: guide-in-m; }
+  .guide-card.guide-low { bottom: calc(8px + env(safe-area-inset-bottom, 0px)); } /* over the dock unless the step is about it: more stage clear */
   .app.sheet-open .guide-card { bottom: calc(var(--sheet) + 8px); }
   .guide-card h2 { font-size: var(--t3); margin-bottom: var(--s1); }
   .guide-skip { top: var(--s4); right: var(--s4); }

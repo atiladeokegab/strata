@@ -13,6 +13,20 @@ const PRESETS = {
   top: { pos: [0, 700, 0.01], target: [0, 0, 0] },
   walk: { pos: [0, EYE, 105], target: [0, EYE, 0] }, // south approach, clear of the towers even when exploded, looking north along the deck
 }
+// Aim a flight's end away from its subject (the camera stays put, so it never sinks into the roofs) until the subject
+// lands about frameShift px off centre, where the guided tour's card and the panel leave the stage clear.
+const UP = new Vector3(0, 1, 0)
+function framed(f, camera) {
+  const shift = useStore.getState().frameShift
+  if (!shift) return f
+  const fwd = f.toTarget.clone().sub(f.to), d = fwd.length()
+  const right = fwd.clone().cross(UP).normalize(), up = right.clone().cross(fwd).normalize()
+  const k = (2 * d * Math.tan(MathUtils.degToRad(camera.fov) / 2)) / innerHeight // metres per pixel at the target (the app's canvas fills the window)
+  const v = right.multiplyScalar(-shift[0] * k).add(up.multiplyScalar(shift[1] * k))
+  f.toTarget.add(v)
+  if (useStore.getState().view === 'top') f.to.add(v) // straight down, orbit's polar limit drags the camera over the target: pan, or the map spins
+  return f
+}
 const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2)
 
 export function CameraRig() {
@@ -32,7 +46,8 @@ export function CameraRig() {
     const p = PRESETS[view]
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
     const fromTarget = controls.current?.target.clone() ?? camera.getWorldDirection(new Vector3()).multiplyScalar(50).add(camera.position)
-    fly.current = { t: reduce ? 1 : 0, from: camera.position.clone(), to: new Vector3(...p.pos), fromTarget, toTarget: new Vector3(...p.target) }
+    const f = { t: reduce ? 1 : 0, from: camera.position.clone(), to: new Vector3(...p.pos), fromTarget, toTarget: new Vector3(...p.target) }
+    fly.current = view === 'walk' ? f : framed(f, camera)
   }, [view, camera])
 
   const cameraTo = useStore((s) => s.cameraTo)
@@ -42,7 +57,7 @@ export function CameraRig() {
     // look at the bridge, but low enough that orbit's polar limit does not lift the camera
     const toTarget = new Vector3(0, to.y - 0.1 * Math.hypot(to.x, to.z), 0)
     const fromTarget = controls.current?.target.clone() ?? new Vector3(0, 18, 0)
-    fly.current = { t: matchMedia('(prefers-reduced-motion: reduce)').matches ? 1 : 0, from: camera.position.clone(), to, fromTarget, toTarget }
+    fly.current = framed({ t: matchMedia('(prefers-reduced-motion: reduce)').matches ? 1 : 0, from: camera.position.clone(), to, fromTarget, toTarget }, camera)
     useStore.setState({ cameraTo: null })
   }, [cameraTo, camera])
 
@@ -60,7 +75,7 @@ export function CameraRig() {
       ? new Vector3(centre.x, Math.max(radius * 3, 120), centre.z + 0.01)
       : centre.clone().add(dir.multiplyScalar(MathUtils.clamp(radius * 3.2, 60, 900)))
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
-    fly.current = { t: reduce ? 1 : 0, from: camera.position.clone(), to, fromTarget, toTarget: centre }
+    fly.current = framed({ t: reduce ? 1 : 0, from: camera.position.clone(), to, fromTarget, toTarget: centre }, camera)
   }, [selected]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useFrame((_, dt) => {

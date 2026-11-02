@@ -550,11 +550,14 @@ console.log('geom materials untextured, all kinded ok')
   const out = join(tmpdir(), `bridge-corridor-${process.pid}.mjs`)
   const resolveDir = fileURLToPath(new URL('.', import.meta.url))
   // three is bundled too, so the scene and the components share one copy
-  await bundle({ stdin: { contents: `export { TowerBridge } from './TowerBridge.jsx'; export { BODIES, BODY, bodyGeo, GLASS } from './traffic.jsx'; export { useStore } from '../../store.js'; export { Fragment } from 'react/jsx-runtime'; export { setLite } from '../look/tier.js'; export * as T from 'three'`, resolveDir, loader: 'js' }, bundle: true, format: 'esm', platform: 'node', jsx: 'automatic', plugins: [stubs], outfile: out, logLevel: 'error' })
+  await bundle({ stdin: { contents: `export { TowerBridge } from './TowerBridge.jsx'; export { BODIES, BODY, bodyGeo, GLASS } from './traffic.jsx'; export { centringGeo } from './construction.jsx'; export { useStore } from '../../store.js'; export { Fragment } from 'react/jsx-runtime'; export { setLite } from '../look/tier.js'; export * as T from 'three'`, resolveDir, loader: 'js' }, bundle: true, format: 'esm', platform: 'node', jsx: 'automatic', plugins: [stubs], outfile: out, logLevel: 'error' })
   const noop = new Proxy(() => noop, { get: () => noop }) // canvas textures draw into a no-op 2D context
   globalThis.document ??= { createElement: () => ({ getContext: () => noop }) }
   globalThis.location ??= { search: '' } // store.js reads ?embed= at import
-  const { TowerBridge, BODIES, BODY, bodyGeo, GLASS, useStore, Fragment, T, setLite } = await import(out)
+  const { TowerBridge, BODIES, BODY, bodyGeo, GLASS, useStore, Fragment, T, setLite, centringGeo } = await import(out)
+  // no-float: in-river construction timber reaches below the drawn river (WATER_Y), not just high water
+  const cg = centringGeo(); cg.computeBoundingBox()
+  assert.ok(cg.boundingBox.min.y < WATER_Y, `centring trestle feet at ${cg.boundingBox.min.y.toFixed(2)} float over the river at ${WATER_Y.toFixed(2)}`)
   unlinkSync(out)
   // bus rears went black in shade: the paint carries its own bounce term into the standard shader
   const sh = { uniforms: {}, fragmentShader: T.ShaderLib.standard.fragmentShader }

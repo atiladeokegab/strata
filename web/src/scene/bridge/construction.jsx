@@ -128,17 +128,19 @@ function Scaffold({ top }) {
   return <mesh geometry={geo} material={M.timber} castShadow receiveShadow />
 }
 
-// stage 2: timber centring under the bascule leaf while it is assembled
+// stage 2: timber centring under the bascule leaf while it is assembled.
+// Trestles stand on the river bed: from L.hw their feet hung 2.2 m over the drawn river (WATER_Y).
+export function centringGeo() {
+  const gs = []
+  for (let z = L.pivotZ + 3; z < -1; z += 4) {
+    const top = -1 - 3.4 * (-z / -L.pivotZ) - 0.2
+    for (const x of [-7, 0, 7]) trestle(gs, x, z, 1.2, L.bed, top, 0.16)
+    gs.push(box(18, 0.3, 2.6, 0, top - 0.15, z))
+  }
+  return merge(gs)
+}
 function Centring() {
-  const geo = useMemo(() => {
-    const gs = []
-    for (let z = L.pivotZ + 3; z < -1; z += 4) {
-      const top = -1 - 3.4 * (-z / -L.pivotZ) - 0.2
-      for (const x of [-7, 0, 7]) trestle(gs, x, z, 1.2, L.hw, top, 0.16)
-      gs.push(box(18, 0.3, 2.6, 0, top - 0.15, z))
-    }
-    return merge(gs)
-  }, [])
+  const geo = useMemo(centringGeo, [])
   return <mesh geometry={geo} material={M.timber} castShadow />
 }
 

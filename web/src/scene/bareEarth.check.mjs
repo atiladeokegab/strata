@@ -50,6 +50,23 @@ import assert from 'node:assert/strict'
   console.log('approach streets ok')
 }
 
+// before the opening: the ramps' footprints sink to their foot, the DTM elsewhere stays as surveyed
+{
+  const { rampFloor, STREETS, RAMP_FLOOR } = await import('./bareEarth.js')
+  const n = 801, meta = { bbox_osgb: [0, 0, n, n], origin_osgb: [400.5, 400.5], origin_h: 10, bridge_axis_deg: 0 }
+  const heights = rampFloor({ meta, heights: new Float32Array(n * n).fill(10), w: n, h: n }) // a viaduct at deck level
+  const at = (x, z) => heights[(z + 400) * n + (x + 400)] - meta.origin_h
+  const near = (a, b, m) => assert(Math.abs(a - b) < 1e-3, `${m}: ${a} vs ${b}`)
+  near(at(0, -160), STREETS.north[0] - RAMP_FLOOR.below, 'under the north ramp: just below its foot')
+  near(at(9, 170), STREETS.south[0] - RAMP_FLOOR.below, 'under the south ramp, out to its parapet')
+  near(at(0, 200), 0, 'past the ramp end: as surveyed')
+  near(at(20, 160), 0, 'beside the ramp: as surveyed')
+  near(at(0, 100), 0, 'under the bridge: as surveyed')
+  const low = rampFloor({ meta, heights: new Float32Array(n * n).fill(0), w: n, h: n })
+  assert.equal(low[(160 + 400) * n + 400], 0, 'ground already below the foot stays')
+  console.log('ramp floor ok')
+}
+
 // the river's shelves: low ground joined to the river within reach sinks to the bed; banks, far shelves and pits stay
 {
   const { sinkShelves, SHELVES } = await import('./bareEarth.js')

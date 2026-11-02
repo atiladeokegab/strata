@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { useStore } from '../store'
 import { GOOGLE_FROM } from './google/state'
-import { APPROACH, STREETS, levelStreets, sinkShelves } from './bareEarth.js'
+import { APPROACH, STREETS, levelStreets, rampFloor, sinkShelves } from './bareEarth.js'
 import { eraFor } from './bridge/stages.js'
 import { KERB_X, FOOTWAY_H } from './bridge/roadway.js'
 import { GAP } from './google/frame.js'
@@ -41,11 +41,15 @@ async function decodeHeights(url, meta) {
 // Each stage's mesh is built off the main thread (rtin below) and capped at BUDGET triangles: the lead's cap is
 // ~500k on desktop (250k outer + 250k near) and ~150k on phones and for the first-load tile.
 // The ground is bare.png in every era: the EA LiDAR DTM with the approach viaducts kept (scripts/terrain/build.py).
-// `old` (the shader's aOld) is the same ground; height.png, the DSM with roofs and trees, is only the LiDAR point view.
-const tile = (meta, { heights, w, h }) => ({ meta, heights, old: heights, w, h })
+// `old` is the same ground; height.png, the DSM with roofs and trees, is only the LiDAR point view. `pre` (the shader's
+// aOld) is the ground before the bridge opened in 1894.
+const tile = (meta, { heights, w, h, pre = heights }) => ({ meta, heights, old: heights, pre, w, h })
 // The ground: bare.png with the approach streets brought up to the deck ends and the river's shelves sunk (bareEarth.js);
-// never the DSM.
-const ground = (meta, px) => tile(meta, { ...px, heights: sinkShelves({ meta, ...px, heights: levelStreets({ meta, ...px }) }) })
+// never the DSM. Before 1894 there were no streets at deck level: the DTM as surveyed, the ramps' footprints at their foot.
+const ground = (meta, px) => {
+  const pre = sinkShelves({ meta, ...px, heights: rampFloor({ meta, ...px, heights: Float32Array.from(px.heights) }) })
+  return tile(meta, { ...px, pre, heights: sinkShelves({ meta, ...px, heights: levelStreets({ meta, ...px }) }) })
+}
 
 const BUDGET = { low: 150_000, full: LITE ? 150_000 : 250_000, near: 250_000, mirror: 30_000 }
 
@@ -103,11 +107,14 @@ function loadNear() {
     // the ground resampled from the outer 1 m DTM onto the 0.5 m grid (the DTM stops at 1 m), so both meshes meet;
     // the near tier's gain is its 0.15 m drapes
     const [w, h] = t.meta.near.size_px, res = (meta.bbox_osgb[2] - meta.bbox_osgb[0]) / w
-    const [minE, , , maxN] = meta.bbox_osgb, [oE, oN] = meta.origin_osgb, heights = new Float32Array(w * h)
+    const [minE, , , maxN] = meta.bbox_osgb, [oE, oN] = meta.origin_osgb, heights = new Float32Array(w * h), pre = new Float32Array(w * h)
+    const tPre = { ...t, heights: t.pre }
     for (let i = 0; i < h; i++) for (let j = 0; j < w; j++) {
-      heights[i * w + j] = heightAt(t, minE + (j + 0.5) * res - oE, oN - (maxN - (i + 0.5) * res)) + meta.origin_h
+      const x = minE + (j + 0.5) * res - oE, z = oN - (maxN - (i + 0.5) * res)
+      heights[i * w + j] = heightAt(t, x, z) + meta.origin_h
+      pre[i * w + j] = heightAt(tPre, x, z) + meta.origin_h
     }
-    const g = tile(meta, { heights, w, h })
+    const g = tile(meta, { heights, pre, w, h })
     return { ...g, maps, mesh: await meshOf(g, BUDGET.near) }
   })()
   return nearCache
@@ -207,9 +214,11 @@ function Ground() {
 // warmer still to offset the blue sky fill, measured on a still) and its ink as dark brown, with a
 // little of the sheet's own hue kept (blue water, tinted blocks). The tone runs on gamma-encoded colour
 // because the map sample is linear here; ERA_GAIN sets how bright the paper sits under the scene light.
-// ERA is 1 while the old map is draped. BARE is 1 before Google's tiles (GOOGLE_FROM): the ground is bare earth
-// (aOld), flat-lit. aOld now equals the position (the mesh is the DTM in every era), so BARE moves nothing.
-export const ERA = { value: 0 }, BARE = { value: 0 }
+// ERA is 1 while the old map is draped. BARE is 1 before Google's tiles (GOOGLE_FROM): the ground is bare earth (and the haze closes in).
+// PRE is 1 before the bridge opened (OPENED): the mesh moves to the ground of that time (aOld, with its own normals,
+// aOldN) and the approach streets take no road colour.
+export const ERA = { value: 0 }, BARE = { value: 0 }, PRE = { value: 0 }
+const OPENED = 1894 // bridge/stages.js, stage 5
 // The old map has no approach road, so the ramps would dead-end in cream paper, and the 1950s-2011 photo smears the
 // real, curving road and its roofs over the levelled street (and with the tiles off, today's photo too): the approach streets (bareEarth.js
 // STREETS, in the bridge frame) take a road colour between the deck's kerb lines, at a constant width, and pale York
@@ -251,7 +260,7 @@ const ROAD_TINT = `
       // LiDAR's slope down to the marina, which smears; there the stone runs on at full strength to the dock's quay
       float tNE = step(0.0, vRoadW.x) * step(vRoadW.z, 0.0) * uBare * (1.0 - uEra);
       float tRoad = (smoothstep(${f1(APPROACH.from - 1.25)}, ${f1(APPROACH.from + 1.25)}, tAlong) - smoothstep(${f1(APPROACH.to)}, ${f1(APPROACH.to + 60)}, tAlong))
-        * (1.0 - smoothstep(mix(${f1(STREETS.half)}, ${f1(STREETS.edge)}, tNE), ${f1(STREETS.edge + 20)}, tAcross));
+        * (1.0 - smoothstep(mix(${f1(STREETS.half)}, ${f1(STREETS.edge)}, tNE), ${f1(STREETS.edge + 20)}, tAcross)) * (1.0 - uPre);
       // metres per pixel across and along: the kerb edge sharpens near the camera and softens far off, and the setts'
       // joints and the kerb fade out before they would alias
       float tFx = fwidth(vRoadW.x), tFz = fwidth(vRoadW.z), tSoft = clamp(2.0 * tFx, 0.05, 0.75);
@@ -309,17 +318,18 @@ const ERA_GRADE = `
 function facades(shader) {
   shader.uniforms.uEra = ERA
   shader.uniforms.uBare = BARE
+  shader.uniforms.uPre = PRE
   shader.uniforms.uRoad = ROAD
   Object.assign(shader.uniforms, { uSurf: SURF, uSurfT: SURF_T, uSurfS: SURF_S, uDocks: DOCKS })
   shader.vertexShader = shader.vertexShader
-    .replace('#include <common>', '#include <common>\nvarying float vUp;\nvarying vec3 vRoadW;\nuniform float uBare;\nattribute float aOld;')
-    .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\nif (uBare > 0.5 && position.y - aOld > 0.3) objectNormal = vec3(0.0, 1.0, 0.0);\nvUp = objectNormal.y;')
+    .replace('#include <common>', '#include <common>\nvarying float vUp;\nvarying vec3 vRoadW;\nuniform float uPre;\nattribute float aOld;\nattribute vec3 aOldN;')
+    .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\nobjectNormal = normalize(mix(objectNormal, aOldN, uPre));\nvUp = objectNormal.y;')
     .replace('#include <begin_vertex>', `#include <begin_vertex>
-transformed.y = mix(transformed.y, aOld, uBare);
+transformed.y = mix(transformed.y, aOld, uPre);
 vRoadW = (modelMatrix * vec4(transformed, 1.0)).xyz;
 ${UNDER_BRIDGE}`)
   shader.fragmentShader = shader.fragmentShader
-    .replace('#include <common>', `#include <common>\nvarying float vUp;\nvarying vec3 vRoadW;\nuniform float uEra;\nuniform float uBare;\nuniform vec3 uRoad;\nuniform sampler2D uSurf;\nuniform vec4 uSurfT;\nuniform float uSurfS;\nuniform float uDocks;${ERA_GRADE}`)
+    .replace('#include <common>', `#include <common>\nvarying float vUp;\nvarying vec3 vRoadW;\nuniform float uEra;\nuniform float uBare;\nuniform float uPre;\nuniform vec3 uRoad;\nuniform sampler2D uSurf;\nuniform vec4 uSurfT;\nuniform float uSurfS;\nuniform float uDocks;${ERA_GRADE}`)
     .replace(
       '#include <map_fragment>',
       `#include <map_fragment>
@@ -347,7 +357,7 @@ const inside = (p, k, r) => r && p[k * 3] >= r[0] && p[k * 3] <= r[2] && p[k * 3
 // parents, so neighbours always agree on shared edges: no cracks. maxError is searched to fit `budget` triangles.
 // The mesh is the bare earth (bareEarth.js) in every year: it only shows when OSM buildings (Buildings.jsx) stand
 // on it, and the DSM's own roofs and tree crowns drew as curtains and spikes beside them. The LiDAR look keeps the DSM.
-function rtin({ meta, old, w, h }, budget, seam) {
+function rtin({ meta, old, pre, w, h }, budget, seam) {
   const size = Math.min(1025, 2 ** Math.ceil(Math.log2(Math.max(w, h) - 1)) + 1), max = size - 1
   const sx = (w - 1) / max, sy = (h - 1) / max // source pixels per grid step
   const sample = (src) => {
@@ -361,7 +371,7 @@ function rtin({ meta, old, w, h }, budget, seam) {
     }
     return out
   }
-  const O = sample(old)
+  const O = sample(old), P = pre === old ? O : sample(pre)
   const errors = new Float32Array(size * size)
   // keep full detail along seams: the tile's own border, and on the outer tile the near tile's border
   const lock = (x0, y0, x1, y1) => {
@@ -388,7 +398,7 @@ function rtin({ meta, old, w, h }, budget, seam) {
   for (let t = n - 1; t >= 0; t--) {
     const k = t * 4, ax = coords[k], ay = coords[k + 1], bx = coords[k + 2], by = coords[k + 3]
     const mx = (ax + bx) >> 1, my = (ay + by) >> 1, cx = mx + my - ay, cy = my + ax - mx, m = my * size + mx
-    let e = Math.abs((O[ay * size + ax] + O[by * size + bx]) / 2 - O[m])
+    let e = Math.max(Math.abs((O[ay * size + ax] + O[by * size + bx]) / 2 - O[m]), Math.abs((P[ay * size + ax] + P[by * size + bx]) / 2 - P[m]))
     if (t < parents) e = Math.max(e, errors[((ay + cy) >> 1) * size + ((ax + cx) >> 1)], errors[((by + cy) >> 1) * size + ((bx + cx) >> 1)])
     if (e > errors[m]) errors[m] = e
   }
@@ -425,14 +435,14 @@ function rtin({ meta, old, w, h }, budget, seam) {
     pos[v * 3 + 2] = oN - (maxN - (i + 0.5) * res)
     uv[v * 2] = (j + 0.5) / w
     uv[v * 2 + 1] = 1 - (i + 0.5) / h
-    low[v] = O[g] - meta.origin_h
+    low[v] = P[g] - meta.origin_h
   }
   return { pos, uv, low, index: new Uint32Array(tris), maxError: hi }
 }
 
 // Runs rtin in a worker (its source is self-contained), so a 1025² tile never stalls a frame; inline if workers fail.
 function meshOf(t, budget, seam) {
-  const args = [{ meta: t.meta, old: t.old, w: t.w, h: t.h }, budget, seam]
+  const args = [{ meta: t.meta, old: t.old, pre: t.pre, w: t.w, h: t.h }, budget, seam]
   return new Promise((resolve, reject) => {
     const src = `onmessage = (e) => { const r = (${rtin})(...e.data); postMessage(r, [r.pos.buffer, r.uv.buffer, r.low.buffer, r.index.buffer]) }`
     const url = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }))
@@ -454,6 +464,11 @@ function chunked({ meta, mesh }, hole) {
   g.setIndex(new THREE.BufferAttribute(mesh.index, 1))
   g.computeVertexNormals()
   const pos = mesh.pos, nor = g.attributes.normal.array, idx = mesh.index
+  const gPre = new THREE.BufferGeometry() // the same mesh on the 1894 ground (aOld), for its own shading
+  gPre.setAttribute('position', new THREE.BufferAttribute(pos.map((v, k) => (k % 3 === 1 ? mesh.low[(k - 1) / 3] : v)), 3))
+  gPre.setIndex(g.index)
+  gPre.computeVertexNormals()
+  const norPre = gPre.attributes.normal.array
   const [x0, z0, x1, z1] = rect(meta, meta.bbox_osgb), r = hole && rect(meta, hole)
   const lists = Array.from({ length: CHUNKS * CHUNKS }, () => [])
   for (let q = 0; q < idx.length; q += 3) {
@@ -467,10 +482,10 @@ function chunked({ meta, mesh }, hole) {
   return lists.filter((l) => l.length).map((l) => {
     const verts = []
     const index = Uint32Array.from(l, (v) => (remap[v] < 0 ? (remap[v] = verts.push(v) - 1) : remap[v]))
-    const n = verts.length, P = new Float32Array(n * 3), N = new Float32Array(n * 3), U = new Float32Array(n * 2), L = new Float32Array(n)
+    const n = verts.length, P = new Float32Array(n * 3), N = new Float32Array(n * 3), NO = new Float32Array(n * 3), U = new Float32Array(n * 2), L = new Float32Array(n)
     verts.forEach((v, k) => {
       remap[v] = -1 // ready for the next chunk
-      for (let d = 0; d < 3; d++) { P[k * 3 + d] = pos[v * 3 + d]; N[k * 3 + d] = nor[v * 3 + d] }
+      for (let d = 0; d < 3; d++) { P[k * 3 + d] = pos[v * 3 + d]; N[k * 3 + d] = nor[v * 3 + d]; NO[k * 3 + d] = norPre[v * 3 + d] }
       U[k * 2] = mesh.uv[v * 2]; U[k * 2 + 1] = mesh.uv[v * 2 + 1]
       L[k] = mesh.low[v]
     })
@@ -479,6 +494,7 @@ function chunked({ meta, mesh }, hole) {
     c.setAttribute('normal', new THREE.BufferAttribute(N, 3))
     c.setAttribute('uv', new THREE.BufferAttribute(U, 2))
     c.setAttribute('aOld', new THREE.BufferAttribute(L, 1))
+    c.setAttribute('aOldN', new THREE.BufferAttribute(NO, 3))
     c.setIndex(new THREE.BufferAttribute(index, 1))
     c.computeBoundingSphere()
     return c
@@ -505,6 +521,8 @@ function TerrainMesh({ t, hole, name = 'terrain', visible = true }) {
   useEffect(() => { ERA.value = old ? 1 : 0 }, [old])
   useEffect(() => { ROAD.value.copy(wood ? WOOD : ASPHALT) }, [wood])
   useEffect(() => { BARE.value = bare ? 1 : 0 }, [bare])
+  const pre = useStore((s) => s.year < OPENED)
+  useEffect(() => { PRE.value = pre ? 1 : 0 }, [pre])
   const docks = useStore((s) => s.year < DOCKS_UNTIL)
   useEffect(() => { DOCKS.value = docks ? 1 : 0 }, [docks])
   useEffect(() => () => chunks.forEach((c) => c.dispose()), [chunks])

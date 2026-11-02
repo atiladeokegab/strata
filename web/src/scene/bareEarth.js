@@ -35,6 +35,31 @@ export function levelStreets({ meta, heights, w, h }) {
   return heights
 }
 
+// Before the bridge opened (1894) there was no street at the deck ends: the ground there is the DTM as surveyed, except
+// under each ramp (Abutment's bank, z 148.5 to 183.5, |x| to ROAD_HALF and its parapets), which goes just below the
+// ramp's foot (the streets' deck-end level): the bank scales up out of that level while it is built, and the finished
+// viaduct the DTM surveyed there would cut through it.
+export const RAMP_FLOOR = { from: 140, to: STREETS.deckEnd, blend: 2.5, half: 10, blendX: 2, below: 0.15 }
+
+/** The ground before the bridge opened: bare earth ({ meta, heights, w, h }, m OD) with the ramps' footprints no higher
+ * than their foot. Mutates and returns heights. */
+export function rampFloor({ meta, heights, w, h }) {
+  const t = (meta.bridge_axis_deg * Math.PI) / 180, c = Math.cos(t), s = Math.sin(t)
+  const [minE, , maxE, maxN] = meta.bbox_osgb, [oE, oN] = meta.origin_osgb, res = (maxE - minE) / w, R = RAMP_FLOOR
+  for (let i = 0; i < h; i++) {
+    const gz = oN - (maxN - (i + 0.5) * res)
+    for (let j = 0; j < w; j++) {
+      const gx = minE + (j + 0.5) * res - oE
+      const x = gx * c + gz * s, z = -gx * s + gz * c, a = Math.abs(z) // grid to bridge frame, as levelStreets
+      const k = smooth(R.from - R.blend, R.from, a) * (1 - smooth(R.to, R.to + R.blend, a)) * (1 - smooth(R.half, R.half + R.blendX, Math.abs(x)))
+      if (k <= 0) continue
+      const top = meta.origin_h + (z < 0 ? STREETS.north : STREETS.south)[0] - R.below, g = i * w + j
+      if (heights[g] > top) heights[g] += (top - heights[g]) * k
+    }
+  }
+  return heights
+}
+
 // The river's shelves. Moored barges, houseboats and foreshore read in the LiDAR as flat ground a little above the
 // water (build.py only carves the flat, open river), and a sheet draped there stood in the river as a tan island.
 // Ground under `shelf` m above the water, joined to the river under the deck and within `reach` m of open water, goes

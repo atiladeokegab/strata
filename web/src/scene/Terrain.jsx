@@ -204,7 +204,8 @@ function heightfieldRaycast(t) {
 // Invisible stand-in that answers raycasts for both looks (a Points cloud is not a mesh to walk on).
 function Ground() {
   const t = useLoaded(loadTerrain) ?? use(loadLow()) // the ground, not tree crowns, in every look
-  const raycast = useMemo(() => heightfieldRaycast(t), [t])
+  const pre = useStore((s) => s.year < OPENED) // walk on the ground of the year
+  const raycast = useMemo(() => heightfieldRaycast(pre ? { ...t, heights: t.pre } : t), [t, pre])
   return <mesh name="terrain-ground" raycast={raycast} frustumCulled={false}><bufferGeometry /></mesh>
 }
 

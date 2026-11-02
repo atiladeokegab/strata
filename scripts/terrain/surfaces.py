@@ -10,6 +10,9 @@
   B  every OSM building footprint in web/public/buildings/tower-bridge.json, so one hidden by its date shows paving, not
      the aerial photo's roof
 
+and docks.json beside it: R's outlines as rings of [x, z] in the scene frame (m from meta.origin_osgb, x east, z south),
+which Terrain.jsx runs the granite coping along.
+
 uv run scripts/terrain/surfaces.py <overpass.json>
 
 Overpass query used (the same inner box as scripts/buildings/bake.py):
@@ -43,22 +46,28 @@ def main():
     px = lambda E, N: ((E - minE) / res * SS, (maxN - N) / res * SS)
     layers = [Image.new("L", (w * SS, h * SS)) for _ in range(3)]
     found = {k: 0 for k in ("docks", "moat")}
+    oE, oN = meta["origin_osgb"]
+    rings = []
     for el in osm["elements"]:
         layer, key = (0, "docks") if el["id"] in DOCKS else (1, "moat") if el["id"] in MOAT else (None, None)
         if layer is None or el["type"] != "way":
             continue
-        ring = [px(*to_osgb.transform(p["lon"], p["lat"])) for p in el["geometry"]]
+        osgb = [to_osgb.transform(p["lon"], p["lat"]) for p in el["geometry"]]
+        ring = [px(*p) for p in osgb]
+        if layer == 0:
+            rings.append([round(v, 2) for E, N in osgb for v in (E - oE, oN - N)])
         ImageDraw.Draw(layers[layer]).polygon(ring, fill=255)
         found[key] += 1
     assert found == {"docks": len(DOCKS), "moat": len(MOAT)}, f"missing OSM ways: {found}"
     data = json.loads(BUILDINGS.read_text())
-    oE, oN = data["frame"]["origin_osgb"]
+    bE, bN = data["frame"]["origin_osgb"]
     draw = ImageDraw.Draw(layers[2])
     for b in data["buildings"]:
         o = b["o"]
-        draw.polygon([px(oE + o[i], oN - o[i + 1]) for i in range(0, len(o), 2)], fill=255)
+        draw.polygon([px(bE + o[i], bN - o[i + 1]) for i in range(0, len(o), 2)], fill=255)
     out = Image.merge("RGB", [l.resize((w, h), Image.BOX) for l in layers])
     out.save(TERRAIN / "surfaces.png", optimize=True)
+    (TERRAIN / "docks.json").write_text(json.dumps({"rings": sorted(rings)}, separators=(",", ":")) + "\n")
     print(f"surfaces.png {w}x{h}: {found}, {len(data['buildings'])} footprints")
 
 

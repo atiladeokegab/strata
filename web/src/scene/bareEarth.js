@@ -156,8 +156,10 @@ export function sinkShelves({ meta, heights, w, h }) {
 // edge places it between cells), and the ground within `reach` m outside brought up to the quay around it (the highest
 // ground within `look` m among cells `from`-`reach` m out, and never under `rise` m above the basin: the east basin's
 // DTM is low for 25 m out, under seven blocks that should stand on the quay), tapering back to the DTM from `taper` m. Run after sinkShelves, so the river's sunk
-// foreshore at the lock is bed and stays.
-export const DOCK_EDGE = { reach: 20, taper: 12, from: 3, look: 6, rise: 2 }
+// foreshore at the lock is bed and stays. The channels between basins (outside the outline, with a basin within `gap` m on
+// two opposite sides, under `water` m above the basin, in a sheet of `pool` m² or more) are water: flat at the basin's level, never raised; so is any sliver
+// under `sliver` m each side of which is a basin, whatever its height (the DTM keeps a footbridge's deck).
+export const DOCK_EDGE = { reach: 20, taper: 12, from: 3, look: 6, rise: 2, gap: 20, water: 1, pool: 40, sliver: 2 }
 
 /** Snaps the docks in a tile's bare earth ({ meta, heights, w, h }, m OD) to their outline (mask: { data, w, h }, R of
  * surfaces.png, 4 bytes a pixel, over the same bbox). Mutates and returns heights. */
@@ -190,8 +192,37 @@ export function snapDocks({ meta, heights, w, h }, mask) {
   for (let q = 0; q < tail; q++) { const k = queue[q]; if (dist[k] >= E.from && heights[k] >= bed) src[k] = heights[k] }
   for (let q = 0; q < tail; q++) { const k = queue[q], j = k % w; if (src[k] > -Infinity) for (let t = Math.max(0, j - L); t <= Math.min(w - 1, j + L); t++) row[k - j + t] = Math.max(row[k - j + t], src[k]) }
   const quay = (k) => { const i = Math.floor(k / w); let v = -Infinity; for (let t = Math.max(0, i - L); t <= Math.min(h - 1, i + L); t++) v = Math.max(v, row[k + (t - i) * w]); return v }
+  // cells between two basins: metres to the nearest dock cell each way along the row and the column
+  const G = Math.round(E.gap / res), run = (start, step, count, back) => { // fills back[] with cells since the last dock, capped
+    let c = G + 1
+    for (let t = 0; t < count; t++) { const k = start + t * step; c = r[k] >= 0.5 ? 0 : Math.min(G + 1, c + 1); back[k] = c }
+  }
+  const a = new Uint8Array(n), b = new Uint8Array(n), c = new Uint8Array(n), e = new Uint8Array(n)
+  for (let i = 0; i < h; i++) { run(i * w, 1, w, a); run(i * w + w - 1, -1, w, b) }
+  for (let j = 0; j < w; j++) { run(j, w, h, c); run((h - 1) * w + j, -w, h, e) }
+  const wet = new Uint8Array(n) // 1 a candidate, 2 kept: only a sheet of `pool` m² or more, never the fringe's odd low cell
+  const T = Math.max(1, Math.round(E.sliver / res))
+  for (let q = 0; q < tail; q++) {
+    const k = queue[q]
+    if (basin === null || r[k] >= 0.5) continue
+    if ((a[k] <= T && b[k] <= T) || (c[k] <= T && e[k] <= T)) wet[k] = 2 // a sliver between two outlines (a footbridge's deck the DTM kept): water
+    else if (heights[k] < basin + E.water && ((a[k] <= G && b[k] <= G) || (c[k] <= G && e[k] <= G))) wet[k] = 1
+  }
+  const part = new Int32Array(n)
+  for (let q = 0; q < tail; q++) {
+    if (wet[queue[q]] !== 1) continue
+    let size = 0
+    part[size++] = queue[q]; wet[queue[q]] = 3
+    for (let p = 0; p < size; p++) {
+      const k = part[p], i = Math.floor(k / w), j = k % w
+      for (const m of [i > 0 ? k - w : -1, i < h - 1 ? k + w : -1, j > 0 ? k - 1 : -1, j < w - 1 ? k + 1 : -1]) if (m >= 0 && wet[m] === 1) { wet[m] = 3; part[size++] = m }
+    }
+    const keep = size * res * res >= E.pool ? 2 : 4
+    for (let p = 0; p < size; p++) wet[part[p]] = keep
+  }
   const out = new Float32Array(tail)
   for (let q = 0; q < tail; q++) {
+    if (wet[queue[q]] === 2) { out[q] = basin; continue }
     const k = queue[q], top = Math.max(quay(k), basin === null ? -Infinity : basin + E.rise), d = dist[k]
     let y = heights[k]
     if (top > -Infinity && y >= bed) y += (Math.max(y, top) - y) * (1 - smooth(E.taper, E.reach, d))
@@ -199,6 +230,90 @@ export function snapDocks({ meta, heights, w, h }, mask) {
   }
   for (let q = 0; q < tail; q++) heights[queue[q]] = out[q]
   return heights
+}
+
+// The docks' granite coping: a strip `width` m wide along each outline (docks.json, scripts/terrain/surfaces.py), from
+// `inset` m inside it, its top `proud` m above the quay snapDocks made (sampled `quay` m out), its back down into the
+// quay, and the wall under it battered out to `batter` m inside the outline, past the basin: the 1 m DTM's drop between
+// a quay cell and a basin cell spans up to 1.4 m, so a plumb face left its sawtooth standing in front. None where the
+// other side is another basin (their shared edges), a channel's water or the river (the lock's mouth).
+export const COPING = { width: 0.6, inset: 0.35, proud: 0.3, quay: 2, piece: 2, below: 0.5, smooth: 3, batter: 2 }
+
+/** The coping's triangles (positions, scene frame, flat: one normal a face) for docks.json `rings` over a tile's
+ * snapped ground ({ meta, heights, w, h }, m OD) and surfaces.png's pixels (`mask`, R the docks). */
+export function dockCoping(rings, { meta, heights, w, h }, mask) {
+  const C = COPING, [minE, , maxE, maxN] = meta.bbox_osgb, [oE, oN] = meta.origin_osgb, span = maxE - minE
+  const ground = (x, z) => { // m OD, bilinear, clamped to the tile
+    const j = Math.min(w - 1.001, Math.max(0, ((x + oE - minE) * w) / span - 0.5)), i = Math.min(h - 1.001, Math.max(0, ((z - oN + maxN) * h) / span - 0.5))
+    const j0 = Math.floor(j), i0 = Math.floor(i), fj = j - j0, fi = i - i0, k = i0 * w + j0
+    return (heights[k] * (1 - fj) + heights[k + 1] * fj) * (1 - fi) + (heights[k + w] * (1 - fj) + heights[k + w + 1] * fj) * fi
+  }
+  const dock = (x, z) => { const j = Math.floor(((x + oE - minE) * mask.w) / span), i = Math.floor(((z - oN + maxN) * mask.h) / span); return i >= 0 && j >= 0 && i < mask.h && j < mask.w ? mask.data[(i * mask.w + j) * 4] / 255 : 0 }
+  const out = []
+  let flip = false // a ring's winding turns its pieces, so their quads turn with it
+  const quad = (a, b, c, d) => (flip ? out.push(...a, ...c, ...b, ...a, ...d, ...c) : out.push(...a, ...b, ...c, ...a, ...c, ...d))
+  const tri = (a, b, c) => (flip ? out.push(...a, ...c, ...b) : out.push(...a, ...b, ...c))
+  for (const flat of rings) {
+    let p = []
+    for (let q = 0; q < flat.length; q += 2) p.push([flat[q], flat[q + 1]])
+    if (p.length > 2 && p[0][0] === p.at(-1)[0] && p[0][1] === p.at(-1)[1]) p.pop()
+    let area = 0
+    p.forEach(([x, z], q) => { const [x1, z1] = p[(q + 1) % p.length]; area += x * z1 - x1 * z })
+    const sign = area > 0 ? 1 : -1
+    flip = sign > 0
+    // the ring cut into pieces of at most `piece` m, each with its outward normal and whether it gets coping
+    const pts = [], nrm = []
+    p.forEach(([x0, z0], q) => {
+      const [x1, z1] = p[(q + 1) % p.length], len = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.ceil(len / C.piece))
+      if (!len) return
+      for (let t = 0; t < n; t++) { pts.push([x0 + ((x1 - x0) * t) / n, z0 + ((z1 - z0) * t) / n]); nrm.push([(sign * (z1 - z0)) / len, (-sign * (x1 - x0)) / len]) }
+    })
+    const N = pts.length, at = (q) => pts[(q + N) % N]
+    // each point: the mitred outward normal of its two pieces, and the quay's level there, smoothed along the ring
+    const miter = pts.map((_, q) => {
+      const a = nrm[(q - 1 + N) % N], b = nrm[q], m = [a[0] + b[0], a[1] + b[1]], l = Math.hypot(...m) || 1, cos = Math.max(0.5, (m[0] * b[0] + m[1] * b[1]) / l)
+      return [m[0] / l / cos, m[1] / l / cos]
+    })
+    const basin = [...pts.map(([x, z], q) => ground(x - miter[q][0] * 3, z - miter[q][1] * 3))].sort((a, b) => a - b)[N >> 1]
+    const on = nrm.map((n, q) => {
+      const [x0, z0] = at(q), [x1, z1] = at(q + 1), mx = (x0 + x1) / 2 + n[0] * C.quay, mz = (z0 + z1) / 2 + n[1] * C.quay
+      return dock(mx, mz) < 0.5 && ground(mx, mz) > Math.max(meta.water_h, basin + 0.5)
+    })
+    const quay = pts.map(([x, z], q) => ground(x + miter[q][0] * C.quay, z + miter[q][1] * C.quay))
+    const top = quay.map((y, q) => { // the mean over the coped pieces near, so a channel's water never pulls it down
+      let v = 0, c = 0
+      for (let d = -C.smooth; d <= C.smooth; d++) if (on[(q + d + N) % N]) { v += quay[(q + d + N) % N]; c++ }
+      return (c ? v / c : y) + C.proud
+    })
+    // the batter's foot, held back at a corner it turns into so it never folds over (each end eats at most 0.45 of a piece)
+    const foot = pts.map((_, q) => {
+      let b = C.batter
+      for (const s of [q - 1, q]) {
+        const [x0, z0] = at(s), [x1, z1] = at(s + 1), len = Math.hypot(x1 - x0, z1 - z0), dot = (miter[q][0] * (x1 - x0) + miter[q][1] * (z1 - z0)) / len
+        const rate = s === q ? -dot : dot // how fast pushing this point in shortens that piece's foot
+        if (rate > 1e-6) b = Math.min(b, (0.45 * len) / rate)
+      }
+      return Math.max(C.inset, b) // plumb at worst, never leaning over the water
+    })
+    const y0 = meta.origin_h, V = (q, d, y) => [at(q)[0] + miter[(q + N) % N][0] * d, y - y0, at(q)[1] + miter[(q + N) % N][1] * d]
+    const inn = -C.inset, outr = C.width - C.inset
+    for (let q = 0; q < N; q++) {
+      if (!on[q]) continue
+      const r = (q + 1) % N, tq = top[q], tr = top[r]
+      quad(V(q, inn, tq), V(q, outr, tq), V(r, outr, tr), V(r, inn, tr)) // the top
+      quad(V(q, -foot[q], basin - C.below), V(q, inn, tq), V(r, inn, tr), V(r, -foot[r], basin - C.below)) // the wall, battered out past the water
+      quad(V(q, outr, tq), V(q, outr, quay[q] - C.below), V(r, outr, quay[r] - C.below), V(r, outr, tr)) // the back, into the quay
+      if (!on[(q - 1 + N) % N]) { // ends where it stops: the block's, then the batter's triangle
+        quad(V(q, outr, tq), V(q, inn, tq), V(q, inn, basin - C.below), V(q, outr, quay[q] - C.below))
+        tri(V(q, inn, tq), V(q, -foot[q], basin - C.below), V(q, inn, basin - C.below))
+      }
+      if (!on[r]) {
+        quad(V(r, inn, tr), V(r, outr, tr), V(r, outr, quay[r] - C.below), V(r, inn, basin - C.below))
+        tri(V(r, inn, tr), V(r, inn, basin - C.below), V(r, -foot[r], basin - C.below))
+      }
+    }
+  }
+  return new Float32Array(out)
 }
 
 // The bridge's own ground, in the scene frame (u downstream, v along the bridge, south +): the towers, piers and side

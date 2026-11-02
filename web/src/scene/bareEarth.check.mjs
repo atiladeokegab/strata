@@ -122,5 +122,41 @@ import assert from 'node:assert/strict'
   assert(heights[dip] > 5 && heights[dip] < 7, `the taper: ${heights[dip]}`)
   assert.equal(heights[5 * n + 5], 7, 'far ground stays')
   assert.equal(snapDocks({ meta, heights: Float32Array.of(1, 2, 3, 4), w: 2, h: 2 }, { data: new Uint8Array(16), w: 2, h: 2 })[2], 3, 'no docks: untouched')
+  // a channel: two basins 8 m apart, the water between them at the basin's level, stays water; a quay between stays quay
+  const ch = new Float32Array(n * n).fill(7), cd = new Uint8Array(n * n * 4)
+  for (let i = 20; i < 40; i++) for (let j = 20; j < 60; j++) if (j < 36 || j >= 44) { cd[(i * n + j) * 4] = 255; ch[i * n + j] = 4 }
+  for (let i = 20; i < 40; i++) for (let j = 36; j < 44; j++) ch[i * n + j] = i < 33 ? 4.2 : 6.5 // the north 104 m² water, the south a quay
+  ch[37 * n + 38] = 4.2 // a lone low cell in that quay: the fringe, not water
+  for (let i = 10; i < 20; i++) cd[(i * n + 30) * 4] = cd[(i * n + 32) * 4] = 255 // two outlines 1 m apart, a deck between
+  snapDocks({ meta, heights: ch, w: n, h: n }, { data: cd, w: n, h: n })
+  assert.equal(ch[25 * n + 40], 4, `the channel is water at the basin's level: ${ch[25 * n + 40]}`)
+  assert(ch[37 * n + 40] >= 6.5, `the quay between basins stays: ${ch[37 * n + 40]}`)
+  assert.equal(ch[15 * n + 31], 4, `a sliver between two outlines is water: ${ch[15 * n + 31]}`)
+  assert(ch[37 * n + 38] > 5, `a lone low cell is raised, not left a pit: ${ch[37 * n + 38]}`)
   console.log('dock edge ok')
+}
+
+// the coping: along the outline, top `proud` over the quay facing up, none on an edge shared with another basin
+{
+  const { dockCoping, COPING } = await import('./bareEarth.js')
+  const n = 80, heights = new Float32Array(n * n).fill(6), data = new Uint8Array(n * n * 4)
+  for (let i = 20; i < 40; i++) for (let j = 20; j < 60; j++) { data[(i * n + j) * 4] = 255; heights[i * n + j] = 4 } // two basins side by side
+  const meta = { bbox_osgb: [0, 0, n, n], origin_osgb: [0, n], origin_h: 0, water_h: 2.3 }
+  const square = (x0) => [x0, 20, x0 + 20, 20, x0 + 20, 40, x0, 40, x0, 20]
+  const reverse = (r) => r.flatMap((_, q) => (q % 2 ? [] : [r[r.length - 2 - q], r[r.length - 1 - q]]))
+  for (const ring of [square(20), reverse(square(20))]) { // either winding
+    const pos = dockCoping([ring, square(40)], { meta, heights, w: n, h: n }, { data, w: n, h: n })
+    const tops = [], walls = []
+    for (let q = 0; q < pos.length; q += 9) {
+      const [ax, ay, az, bx, by, bz, cx, cy, cz] = pos.slice(q, q + 9), u = [bx - ax, by - ay, bz - az], v = [cx - ax, cy - ay, cz - az]
+      const nx = u[1] * v[2] - u[2] * v[1], ny = u[2] * v[0] - u[0] * v[2], nz = u[0] * v[1] - u[1] * v[0], l = Math.hypot(nx, ny, nz)
+      if (ny / l > 0.99) tops.push((ay + by + cy) / 3)
+      else if (Math.abs(nz / l) < 0.01 && Math.abs(nx / l) > 0.3) walls.push([(ax + bx + cx) / 3, nx / l]) // faces looking along x
+      assert(ny / l > -0.01, 'no face looks down')
+    }
+    assert(tops.length && tops.every((y) => Math.abs(y - 6 - COPING.proud) < 1e-4), `the top is proud of the quay: ${tops.slice(0, 3)}`)
+    assert(!walls.some(([x]) => Math.abs(x - 40) < 1), 'none on the shared edge (x 40)')
+    assert(walls.some(([x, nx]) => x > 20 + COPING.inset && x < 20 + COPING.batter && nx > 0), 'the west wall is battered into the basin')
+  }
+  console.log('dock coping ok')
 }

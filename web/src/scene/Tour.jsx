@@ -65,6 +65,7 @@ export default function Tour() {
   useFrame((state) => {
     const r = run.current
     if (!useTour.getState().playing || !r) return
+    if (!useStore.getState().sceneSettled) return void useTour.setState({ startedAt: performance.now() }) // Home's story button: hold at 0 s until the loading card lifts, or the opening card plays behind it
     const t = Math.min(DURATION, (performance.now() - useTour.getState().startedAt) / 1000)
     if (card.current) card.current.style.opacity = Math.max(0, cardOpacity(t))
     runTracks(r.prev, t, r.ctx)

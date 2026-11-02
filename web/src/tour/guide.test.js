@@ -46,8 +46,18 @@ test('Back after the answer arrived asks again', async () => {
 test('the camera aims at the stage the card and panels leave clear', () => {
   const at = (rects) => ({ querySelector: (q) => rects[q] && { getBoundingClientRect: () => rects[q] } })
   globalThis.matchMedia = () => ({ matches: false }) // desktop: panel on the left, toggles on the right, card at the bottom
-  assert.deepEqual(frameShift(1280, 800, at({ '.panel': { right: 396 }, '.toggles': { left: 1032 }, '.guide-card': { top: 468 } })), [74, -166])
+  assert.deepEqual(frameShift(1280, 800, at({ '.panel': { right: 396 }, '.toggles': { left: 1032 }, '.guide-card': { top: 468 } })), [74, -166, 1])
   globalThis.matchMedia = () => ({ matches: true }) // phone: full width, above the card
-  assert.deepEqual(frameShift(390, 844, at({ '.panel': { right: 390 }, '.controls': { bottom: 200 }, '.guide-card': { top: 500 } })), [0, -72])
-  assert.deepEqual(frameShift(390, 844, at({ '.controls': { bottom: 200 }, '.dock': { top: 540, height: 120 }, '.guide-card': { top: 640 } })), [0, -52])
+  assert.deepEqual(frameShift(390, 844, at({ '.panel': { right: 390 }, '.controls': { bottom: 200 }, '.guide-card': { top: 500 } })), [0, -72, 1.55])
+  assert.deepEqual(frameShift(390, 844, at({ '.controls': { bottom: 200 }, '.dock': { top: 540, height: 120 }, '.guide-card': { top: 640 } })), [0, -52, 1.37])
+    assert.deepEqual(frameShift(390, 844, at({ '.controls': { bottom: 200 }, '.dock': { top: 585, height: 259 }, '.guide-card': { top: 8, bottom: 300 } })), [0, 21, 1.63])
+})
+
+test('starting the 60 s story ends the guide, so their cards never show at once', async () => {
+  const { useGuide } = await import('./guide.js')
+  const { startTour, stopTour } = await import('./tour.js')
+  useGuide.setState({ active: true, i: 0, steps: [] })
+  startTour()
+  assert.equal(useGuide.getState().active, false)
+  stopTour()
 })

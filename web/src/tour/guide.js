@@ -4,7 +4,7 @@
 // flies there smoothly) and a few shell inputs it fills in like a visitor would.
 import { create } from 'zustand'
 import { useStore, THIS_YEAR } from '../store.js'
-import { stopTour, isTourPlaying } from './tour.js'
+import { useTour, stopTour, isTourPlaying } from './tour.js'
 import { liftForShip } from '../scene/bridge/liftSequence.js'
 
 export const useGuide = create(() => ({ active: false, i: 0, steps: [] }))
@@ -72,7 +72,7 @@ export const STEPS = [
   { id: 'top', title: 'Top-down', spot: '.seg', state: { view: 'top' },
     text: 'The topography straight from above, with the parts labelled.' },
   { id: 'walk', title: 'Walk it', spot: '.seg', state: { view: 'walk' },
-    text: 'Stand on the deck. W A S D or the arrow keys to walk, drag to look; on a phone, the arrow pad.' },
+    text: 'Stand on the deck and drag to look around. With a keyboard, W A S D or the arrow keys walk.' },
   { id: 'identify', title: 'Identify a photo', spot: '.id-open', when: () => !!document.querySelector('.id-open'),
     text: 'Upload a photo of the real bridge: Strata names the parts it can see, boxes them, and flies to where you stood.' },
   { id: 'reimagine', title: 'See it in another year', spot: '.rm-open:not(.id-open)', when: () => !!document.querySelector('.rm-open:not(.id-open)'),
@@ -86,14 +86,18 @@ export const STEPS = [
 ]
 
 // The middle of the stage the card and panels leave clear, as a pixel shift from the canvas centre (CameraRig pans there).
-// Before the card is up its top is estimated from its usual height.
+// Before the card is up its top is estimated from its usual height. The third value pulls the camera back when the clear band
+// is short (phones), so the subject fits in it rather than running under the strip and the card.
 export function frameShift(W = innerWidth, H = innerHeight, doc = document) {
   const rect = (q) => doc.querySelector(q)?.getBoundingClientRect()
-  const n = narrow() // phones: the controls run across the top and the dock above the card; desktop: the panel on the left, the toggles on the right
-  const dock = n ? rect('.dock') : null
-  const top = Math.min(rect('.guide-card')?.top ?? H - (n ? 330 : 360), dock?.height ? dock.top : H)
-  const l = n ? 0 : rect('.panel')?.right ?? 0, r = n ? W : rect('.toggles')?.left ?? W, t = n ? rect('.controls')?.bottom ?? 0 : 0
-  return [Math.round((l + r - W) / 2), Math.round((t + Math.max(top, t + H * 0.2)) / 2 - H / 2)]
+  const n = narrow() // phones: the controls run across the top and the dock along the bottom; desktop: the panel on the left, the toggles on the right
+  const dock = n ? rect('.dock') : null, card = rect('.guide-card')
+  const high = n && card && card.top < H / 2 // phones: a step about the dock puts its card at the top, over the controls
+  const top = Math.min(high ? H : card?.top ?? H - (n ? 330 : 360), dock?.height ? dock.top : H)
+  const l = n ? 0 : rect('.panel')?.right ?? 0, r = n ? W : rect('.toggles')?.left ?? W
+  const t = n ? Math.max(rect('.controls')?.bottom ?? 0, high ? card.bottom : 0) : 0
+  const bottom = Math.max(top, t + H * 0.2)
+  return [Math.round((l + r - W) / 2), Math.round((t + bottom) / 2 - H / 2), Math.round(100 * Math.min(1.8, Math.max(1, (0.55 * H) / (bottom - t)))) / 100]
 }
 
 // Make the app show step `step`: its state over the defaults, its camera, its action.
@@ -169,3 +173,4 @@ export function stopGuide() {
   if (st.view === 'walk') st.setView('orbit')
   st.setExploded(false); st.setLidar(false); st.setYear(THIS_YEAR); st.setSheet(false)
 }
+useTour.subscribe((t) => t.playing && stopGuide()) // starting the 60 s story (Help, Home) ends the guide: their cards never show at once

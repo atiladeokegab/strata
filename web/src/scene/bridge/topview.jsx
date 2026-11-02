@@ -90,23 +90,23 @@ function Callouts({ stage, select }) {
   )
 }
 
-// 50 m bar in 10 m black and white blocks, a north arrow (north is -z in the bridge frame)
+// 50 m bar in 10 m black and white blocks, a north arrow (north is -z in the bridge frame); on the water, clear of the Shad Thames label
 function MapMarks() {
   const g = useMemo(() => {
     const black = [], white = []
-    for (let i = 0; i < 5; i++) (i % 2 ? white : black).push(box(10, 0.2, 2, 55 + i * 10, WATER, 70))
+    for (let i = 0; i < 5; i++) (i % 2 ? white : black).push(box(10, 0.2, 2, 55 + i * 10, WATER, 50))
     const arrow = new THREE.Shape([new THREE.Vector2(0, -12), new THREE.Vector2(4, 0), new THREE.Vector2(0, -3), new THREE.Vector2(-4, 0)])
-    const tip = new THREE.ShapeGeometry(arrow).rotateX(Math.PI / 2).translate(105, WATER + 0.1, 40)
+    const tip = new THREE.ShapeGeometry(arrow).rotateX(Math.PI / 2).translate(105, WATER + 0.1, 20)
     return { black: merge([...black, tip]), white: merge(white) }
   }, [])
   return (
     <>
       <mesh geometry={g.black} material={INK} />
       <mesh geometry={g.white} material={PAPER} />
-      <Html position={[80, WATER, 75]} center style={{ pointerEvents: 'none' }}>
+      <Html position={[80, WATER, 55]} center style={{ pointerEvents: 'none' }}>
         <div ref={fix} style={TAG}>50 m</div>
       </Html>
-      <Html position={[105, WATER, 24]} center style={{ pointerEvents: 'none' }}>
+      <Html position={[105, WATER, 4]} center style={{ pointerEvents: 'none' }}>
         <div ref={fix} style={{ ...TAG, fontWeight: 700 }}>N</div>
       </Html>
     </>

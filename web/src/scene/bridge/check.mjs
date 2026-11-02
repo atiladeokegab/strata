@@ -645,6 +645,14 @@ console.log('geom materials untextured, all kinded ok')
         const h = cast(root, [x, y, -180], [0, 0, 1], 360)[0]
         assert.ok(!h, `${year}: road blocked at x ${x}, y ${y}, z ${h?.point.z.toFixed(1)} by ${h?.object.userData.from}`)
       }
+    // nothing stands proud of the tower arch's jambs (next20 h3: the frame's inner columns showed as a grey pole)
+    if (year === 2026)
+      for (const x of [-9.47, 9.47])
+        for (const sz of [-1, 1]) {
+          // shortcut: the corner turrets (and the stairs inside them) still poke 0.8 m into the passage, so both are skipped; drop the filter if they move
+          const h = cast(root, [x, 6, sz * 35.6], [0, 0, sz], 19.8).find((h) => !/TowerCladding|Stairs/.test(h.object.userData.from))
+          assert.ok(!h, `${year}: ${h?.object.userData.from} stands in the tower arch at x ${x}, z ${h?.point.z.toFixed(1)}`)
+        }
     // and there is road (paint counts as road) under every 2 m of it, so walk mode never falls through
     if (year >= 1894)
       for (const x of [-7, 0, 7])
@@ -909,7 +917,7 @@ console.log('geom materials untextured, all kinded ok')
 {
   const src = readFileSync(new URL('structures.jsx', import.meta.url), 'utf8')
   const arch = Number(src.match(/archHalf: ([\d.]+)/)[1]), pierZ = Number(src.match(/pierZ: (-?[\d.]+)/)[1])
-  const colZ = pierZ + 9 // inner arch column nearest the river, 1 m square at x = ±archHalf
+  const colZ = pierZ + 9 // inner arch column nearest the river, 1 m square just inside the jamb at x = ±archHalf
   const sig = { x0: POST_X - 0.6, x1: POST_X + 0.125 } // signal head (0.6 wide at POST_X - 0.3) and its 0.25 post
   assert.ok(POST_X + POST_W / 2 < arch && sig.x1 < arch, `gate post and signal inside the road arch (${POST_X + POST_W / 2}, ${sig.x1} < ${arch})`)
   assert.ok(createTraffic(2026).lanes.every((l) => Math.abs(l.x) + 0.25 < POST_X - POST_W / 2), 'gate post clear of the walkers')
@@ -1019,6 +1027,13 @@ console.log('geom materials untextured, all kinded ok')
     const anchor = new THREE.Box3()
     o.iron.forEach((g) => (g.computeBoundingBox(), anchor.union(g.boundingBox)))
     for (const y of [15, 16.8]) assert.ok(anchor.containsPoint(new THREE.Vector3(sx * walkX, y, spanEnd)), `chain end at y=${y} lands on the anchorage`)
+    // the dormer's face stands out of the roof slope at its full height (set back, the slope swallowed it but
+    // for a stone sliver at the top: next20 h8)
+    const roof = [...o.stone, ...o.slate].map((g) => new THREE.Mesh(g, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide })))
+    for (const y of [21, 21.7]) {
+      const h = new THREE.Raycaster(new THREE.Vector3(sx * 20, y, z), new THREE.Vector3(-sx, 0, 0)).intersectObjects(roof)[0]
+      assert.ok(Math.abs(h.point.x) > 15.8, `dormer face at y ${y} is at |x| ${Math.abs(h.point.x).toFixed(2)}, inside the roof`)
+    }
     // the south accumulator tower (world x 16.1+, z 141..146 = local x < -16, z -146..-141) butts the east face
     if (sx < 0)
       for (const g of [...o.stone, ...o.granite, ...o.windows])

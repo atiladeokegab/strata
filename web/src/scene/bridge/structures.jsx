@@ -84,8 +84,9 @@ export function TowerFrame() {
     const cx = 12, cz = 9, z0 = L.pierZ
     const pts = corners.map(([sx, sz]) => [sx * cx, sz * cz + z0])
     for (const [x, z] of pts) gs.push(box(1.4, L.bodyTop + 1, 1.4, x, (L.bodyTop - 1) / 2, z))
-    // inner columns either side of the road arch
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) gs.push(box(1, L.bodyTop + 1, 1, sx * L.archHalf, (L.bodyTop - 1) / 2, sz * cz + z0))
+    // inner columns either side of the road arch, inside its stone jambs (centred on the jamb face, half
+    // of each stood in the road as a grey pole: next20 h3)
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) gs.push(box(1, L.bodyTop + 1, 1, sx * (L.archHalf + 0.55), (L.bodyTop - 1) / 2, sz * cz + z0))
     for (let y = 5; y <= L.bodyTop; y += 6) {
       for (let i = 0; i < 4; i++) {
         const [ax, az] = pts[i], [bx, bz] = pts[(i + 1) % 4]

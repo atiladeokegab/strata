@@ -43,10 +43,11 @@ export function abutmentTower(sx, z, o, { hw, walkX }, { blind = false, lite = L
   o.stone.push(new THREE.CylinderGeometry(0.55, 0.65, 1.4, 8).translate(xc, ABUT_TOP + 8.2, z))
   o.slate.push(new THREE.ConeGeometry(0.7, 2.6, 8).translate(xc, ABUT_TOP + 10.2, z))
   o.gold.push(new THREE.SphereGeometry(0.22, 8, 6).translate(xc, ABUT_TOP + 11.6, z))
-  // dormer gablet on the outer roof face
-  o.stone.push(box(0.8, 2.2, 2.2, outer - sx * 1.2, ABUT_TOP + 1.7, z))
-  o.slate.push(new THREE.ConeGeometry(1.5, 1.8, 4).rotateY(Math.PI / 4).scale(0.6, 1, 1).translate(outer - sx * 1.2, ABUT_TOP + 3.7, z))
-  o.windows.push(opening(0.9, 1.6, outer - sx * 0.95, ABUT_TOP + 0.9, z, 'x', sx))
+  // dormer gablet on the outer roof face, its front 0.1 behind the wall face (set further back, the roof
+  // swallowed it but for a sliver of its top: next20 h8's stroke above the roof)
+  o.stone.push(box(0.8, 2.2, 2.2, outer - sx * 0.5, ABUT_TOP + 1.7, z))
+  o.slate.push(new THREE.ConeGeometry(1.5, 1.8, 4).rotateY(Math.PI / 4).scale(0.6, 1, 1).translate(outer - sx * 0.5, ABUT_TOP + 3.7, z))
+  o.windows.push(opening(0.9, 1.6, outer - sx * 0.25, ABUT_TOP + 0.9, z, 'x', sx))
   // corner turrets on the outer corners; the inner side is the arch over the road
   const turret = (x, zz, y0) => {
     o.stone.push(new THREE.CylinderGeometry(1.05, 1.05, ABUT_TOP + 3 - y0, 8).translate(x, (ABUT_TOP + 3 + y0) / 2, zz))

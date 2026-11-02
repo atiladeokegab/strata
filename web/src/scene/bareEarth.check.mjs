@@ -46,7 +46,8 @@ import assert from 'node:assert/strict'
   near(at(10, 320), STREETS.south[1], 'it falls to the city level at APPROACH.to')
   near(at(0, 100), -9, 'under the bridge: untouched')
   near(at(STREETS.edge + 5, -250), -9, 'beyond the edge: untouched')
-  near(at(0, APPROACH.to + 30), -9, 'past the fade: untouched')
+  near(at(0, APPROACH.to + 30), -9, 'past the south fade: untouched')
+  near(at(0, -360), STREETS.north[1], 'the north street carries on level over the hollow')
   console.log('approach streets ok')
 }
 

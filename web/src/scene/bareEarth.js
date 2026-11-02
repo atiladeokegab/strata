@@ -7,11 +7,14 @@ export const APPROACH = { from: 133, to: 320, half: 20, road: 6 } // m along / e
 // stood over a step. Here the ground either side of the axis comes up to a street at the deck end's level (y, m from
 // the deck: structures.jsx STREET_DROP, north 2.6, south 4.0), falling evenly to where each approach meets the city at
 // APPROACH.to, and blends back into the ground from `half` to `edge` across (a slope of 1 in 10 or gentler, so the
-// street never stands on a plateau) and from APPROACH.to to `fade` along. The
+// street never stands on a plateau) and along over `fade`. The
 // city's buildings beside it keep their bases on the old ground, so the street buries their lowest storey, as the
 // viaducts' own walls did.
 // It starts under the ramp's last metres (`from`), where the ground is already at road level, so the ends meet.
-export const STREETS = { half: 30, edge: 90, from: 172, deckEnd: 183.5, fade: 345, north: [-2.6, -3.3], south: [-4.0, -7.4] }
+// It hands back to the ground over `fade` (along, m) on each side: the south at the city's level; the north goes on
+// level past APPROACH.to, over the DTM's 4 m hollow at 330-380 m (in the 1971 end-out the street ended at its lip in a
+// ragged crest), to where the ground comes back up to it.
+export const STREETS = { half: 30, edge: 90, from: 172, deckEnd: 183.5, fade: { north: [385, 420], south: [APPROACH.to, 345] }, north: [-2.6, -3.3], south: [-4.0, -7.4] }
 
 const smooth = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t) }
 
@@ -25,7 +28,7 @@ export function levelStreets({ meta, heights, w, h }) {
     for (let j = 0; j < w; j++) {
       const gx = minE + (j + 0.5) * res - oE
       const x = gx * c + gz * s, z = -gx * s + gz * c // grid to bridge frame, as three.js rotation-y turns it
-      const a = Math.abs(z), k = smooth(S.from, S.deckEnd, a) * (1 - smooth(APPROACH.to, S.fade, a)) * (1 - smooth(S.half, S.edge, Math.abs(x)))
+      const a = Math.abs(z), k = smooth(S.from, S.deckEnd, a) * (1 - smooth(...S.fade[z < 0 ? 'north' : 'south'], a)) * (1 - smooth(S.half, S.edge, Math.abs(x)))
       if (k <= 0) continue
       const [y0, y1] = z < 0 ? S.north : S.south
       const y = meta.origin_h + y0 + (y1 - y0) * Math.min(1, Math.max(0, (a - S.deckEnd) / span))

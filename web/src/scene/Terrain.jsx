@@ -5,6 +5,7 @@ import { useStore } from '../store'
 import { GOOGLE_FROM } from './google/state'
 import { APPROACH } from './bareEarth.js'
 import { eraFor } from './bridge/stages.js'
+import { KERB_X } from './bridge/roadway.js'
 import { LITE } from './look/tier'
 import { GroundStandIn } from '../ui/StandIns'
 
@@ -204,14 +205,17 @@ function Ground() {
 // (aOld), flat-lit. aOld now equals the position (the mesh is the DTM in every era), so BARE moves nothing.
 const ERA = { value: 0 }, BARE = { value: 0 }
 // The old map has no approach road, so the ramps would dead-end in cream paper: while it is draped, the approach
-// corridor (bareEarth.js APPROACH, in the bridge frame) takes the deck's road colour (bridge/roadway.js SURFACES).
+// corridor (bareEarth.js APPROACH, in the bridge frame) takes the deck's road colour (bridge/roadway.js SURFACES)
+// between the kerbs, and pale York stone pavements either side.
 const ROAD = { value: new THREE.Color() }, WOOD = new THREE.Color('#7a6450'), ASPHALT = new THREE.Color('#3f3f3f')
+const STONE = new THREE.Color('#9a9184')
 const f1 = (v) => v.toFixed(1)
 const ROAD_TINT = `
       float tAlong = abs(vRoadW.z), tAcross = abs(vRoadW.x);
       float tRoad = (smoothstep(${f1(APPROACH.from - 1.25)}, ${f1(APPROACH.from + 1.25)}, tAlong) - smoothstep(${f1(APPROACH.to - 1.25)}, ${f1(APPROACH.to + 1.25)}, tAlong))
         * (1.0 - smoothstep(${f1(APPROACH.half - 1.25)}, ${f1(APPROACH.half + 1.25)}, tAcross));
-      diffuseColor.rgb = mix(diffuseColor.rgb, uRoad, tRoad * uEra);`
+      vec3 tCol = mix(uRoad, vec3(${STONE.toArray().map((c) => c.toFixed(3)).join(', ')}), smoothstep(${f1(KERB_X - 0.25)}, ${f1(KERB_X + 0.25)}, tAcross));
+      diffuseColor.rgb = mix(diffuseColor.rgb, tCol, tRoad * uEra);`
 const ERA_GAIN = '1.0'
 const ERA_GRADE = `
   vec3 eraGrade(vec3 c) {

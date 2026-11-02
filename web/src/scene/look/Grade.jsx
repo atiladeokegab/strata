@@ -11,14 +11,16 @@ import { LITE } from './tier'
 
 const AO = 1.6
 // The period grade, luma-weighted: full desaturation and sepia on mid and dark tones, eased on bright ones
-// (sepia lifts pale portland stone to cream), which instead take a brown soot tint. hi uses sqrt(luma), ~sRGB lightness.
+// (sepia lifts pale portland stone to cream), which instead take a brown soot tint; darks get a small lift so
+// slate roofs don't sink to black beside the darker stone. hi uses sqrt(luma), ~sRGB lightness.
 // The max(0) matters: saturation > 0 pushes a 0 channel below 0, and the sRGB pow() ahead of
 // brightness/contrast turns it into NaN on real GPUs (the exact-black bus rears).
 const SAT_GLSL = `uniform float sat;uniform float soot;
 void mainImage(const in vec4 c,const in vec2 uv,out vec4 o){
   float l=dot(c.rgb,vec3(0.2126,0.7152,0.0722));float hi=smoothstep(0.4,0.8,sqrt(max(l,0.0)));
   vec3 x=mix(vec3(l),c.rgb,1.0+sat*(sat<0.0?1.0-0.5*hi:1.0));
-  o=vec4(max(x,0.0)*mix(vec3(1.0),vec3(0.76,0.72,0.66),soot*hi),c.a);}`
+  x=max(x,0.0)*mix(vec3(1.0),vec3(0.72,0.68,0.62),soot*hi);
+  o=vec4(x+soot*0.025*(1.0-smoothstep(0.0,0.4,sqrt(max(l,0.0)))),c.a);}`
 const SEPIA_GLSL = `uniform float amount;
 void mainImage(const in vec4 c,const in vec2 uv,out vec4 o){
   vec3 s=vec3(dot(c.rgb,vec3(0.393,0.769,0.189)),dot(c.rgb,vec3(0.349,0.686,0.168)),dot(c.rgb,vec3(0.272,0.534,0.131)));

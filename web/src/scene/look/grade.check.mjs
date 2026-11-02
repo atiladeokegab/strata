@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs'
 const src = readFileSync(new URL('./Grade.jsx', import.meta.url), 'utf8')
 const at = (s) => src.indexOf(`<primitive object={fx.${s}}`)
 assert.ok(at('sat') >= 0 && at('sat') < at('bc'), 'the saturation effect (with its clamp) must run before fx.bc')
-assert.match(src, /o=vec4\(max\(x,0\.0\)\*/, 'PeriodSaturation must clamp its output at 0')
+assert.match(src, /x=max\(x,0\.0\)\*/, 'PeriodSaturation must clamp its output at 0')
 
 // PeriodSaturation (Grade.jsx SAT_GLSL), today's grade: sat > 0, soot 0
 const sat = (c, s, clamp) => {

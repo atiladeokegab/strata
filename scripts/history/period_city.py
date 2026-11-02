@@ -7,7 +7,8 @@ Footprints: the town plan shades every building (solid grey on the Southwark she
 Shaded land is traced into blocks, split along a 22 m grid turned to the bridge axis so long terraces read as
 separate houses, and extruded. Buildings dated to 1894 or earlier (OSM start_date, or modern_dates.py: the Tower of
 London precinct) are cut out:
-Buildings.jsx already draws those from OSM, so nothing overlaps.
+Buildings.jsx already draws those from OSM, so nothing overlaps. A plot under an OSM building dated 1895-1949 stands
+until that year, when Buildings.jsx shows the new one.
 Heights (status inferred): there are no surveyed 1890s heights, so each block gets a period height by use:
 riverside and dock warehouses (within 70 m of the water) 15-22 m, one lot in ten of a large inland block (breweries,
 works) 13-17 m, terraced houses and shops 9-14 m (3-4 storeys). Ground: the bare-earth surface Terrain.jsx draws before 1950, so walls meet it.
@@ -107,8 +108,11 @@ def main():
     dates = json.loads(DATES.read_text())["dates"]
     keep = Image.new("1", (W, H), 0)
     d = ImageDraw.Draw(keep)
+    later = []  # OSM buildings dated 1895-1949 (Adelaide House, 1925): Buildings.jsx shows them from that year
     for b in osm["buildings"]:
         s = dates.get(b["id"].split("-")[0], {}).get("s", b.get("s"))
+        if s is not None and BUILT_BY < s < MODERN:
+            later.append((Polygon(list(zip(b["o"][0::2], b["o"][1::2]))).buffer(0), s))
         if s is not None and s <= BUILT_BY:
             o = b["o"]
             d.polygon([((o[i] + oE - minE) / PX, (maxN - (oN - o[i + 1])) / PX) for i in range(0, len(o), 2)], fill=1)
@@ -181,6 +185,9 @@ def main():
             b = {"b": round(base, 1), "t": round(top, 1), "k": kind, "o": o}
             if poly.intersection(road).area > 0.25 * poly.area:
                 b["e"] = BUILT_BY  # cleared for the new road
+            for shape, year in later:  # the plot it was built on stands until then
+                if poly.intersection(shape).area > 0.25 * poly.area:
+                    b["e"] = min(b.get("e", MODERN), year)
             rect = poly.minimum_rotated_rectangle
             if poly.centroid.distance(ORIGIN) < ROOFED and poly.area > 0.85 * rect.area:
                 b["p"] = [round(float(v), 1) for q in list(rect.exterior.coords)[:4] for v in q]

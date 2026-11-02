@@ -1,10 +1,11 @@
 // <Buildings />: the real buildings around Tower Bridge (Tower of London, City Hall, the Shard, Shad Thames,
 // St Katharine Docks, the City towers), OpenStreetMap footprints extruded to LiDAR heights. Baked by
 // scripts/buildings/bake.py. The always-works ground truth: shown whenever Google's photoreal tiles are not.
-// Era: before 1950 only buildings dated to 1894 or earlier show; from 1950 a building shows once its start year has
-// passed, until Google's tiles take over (GOOGLE_FROM). Dates: OSM start_date, else tower-bridge-dates.json (Wikidata,
-// the Tower of London precinct, HMS Belfast: scripts/history/modern_dates.py); an undated building over 40 m (bake.py's
-// 1950 guess) waits for the tiles. Hidden ones collapse in the vertex shader, so scrubbing costs nothing.
+// Era: a building with a real date before 1950 shows from that year (one by 1894 from the start); from 1950 the rest
+// show once their start year has passed, until Google's tiles take over (GOOGLE_FROM). Dates: OSM start_date, else
+// tower-bridge-dates.json (Wikidata, the Tower of London precinct, HMS Belfast: scripts/history/modern_dates.py); an
+// undated building over 40 m (bake.py's 1950 guess) waits for the tiles, as does undated glass (Tower Bridge House is
+// no 1971 building). Hidden ones collapse in the vertex shader, so scrubbing costs nothing.
 import { useEffect, useMemo, useState } from 'react'
 import * as THREE from 'three'
 import { useStore } from '../store'
@@ -67,7 +68,6 @@ const LOOK = {
 }
 const TERRAIN = '/terrain/tower-bridge/'
 const HISTORIC_BEFORE = 1950 // the timeline's historic years, as in google/state.js
-const BUILT_BY = 1894 // the bridge opened: a building dated after this has no place in the historic scene
 const TALL_GUESS = 1950 // bake.py's start for an undated building over 40 m
 
 // Era cut and contact shadow, injected into a stock material (and its shadow depth twin).
@@ -101,12 +101,15 @@ function build(data) {
     if (onBridgeGround(bd.o, axis)) continue // the bridge draws its own towers, abutments, approaches and engine house
     if (LITE && beyond(bd, NEAR.osm) && bd.t - bd.b < SKYLINE) continue
     const geo = extrude(bd)
-    // before 1950 only buildings with evidence of standing by 1894 show; the period city (below) carries the rest
+    // before 1950 only buildings with a real date show; the period city (below) carries the rest
     const dated = data.dates[bd.id.split('-')[0]]?.s
     const s = dated ?? bd.s
-    // shortcut: a real OSM start_date of exactly 1950 on a building over 40 m also waits; none is known here
-    const start = s != null && s <= BUILT_BY ? s : dated == null && s === TALL_GUESS && bd.t - bd.b > 40 ? GOOGLE_FROM : Math.max(s ?? HISTORIC_BEFORE, HISTORIC_BEFORE)
-    const out = sets[start <= BUILT_BY ? 'o' : 'm']
+    // shortcut: a real OSM start_date of exactly 1950 reads as bake.py's guess; none is known here
+    const guess = dated == null && (s == null || s === TALL_GUESS)
+    const start = !guess && s < HISTORIC_BEFORE ? s // the period city ends the plots under one built 1895-1949 (period_city.py)
+      : guess && (bd.k === 'g' || (s === TALL_GUESS && bd.t - bd.b > 40)) ? GOOGLE_FROM
+        : Math.max(s ?? HISTORIC_BEFORE, HISTORIC_BEFORE)
+    const out = sets[start < HISTORIC_BEFORE ? 'o' : 'm']
     for (const grp of geo.groups) {
       if (grp.materialIndex !== 0) push(out[bd.k] || out.b, geo, grp, start, bd.b)
       else if (bd.l) push(out.drape, geo, grp, start, bd.b, tileUv)

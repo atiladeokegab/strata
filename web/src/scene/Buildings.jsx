@@ -8,6 +8,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import * as THREE from 'three'
 import { useStore } from '../store'
+import { onBridgeGround } from './bareEarth.js'
 
 const URL = '/buildings/tower-bridge.json'
 // the 1890s riverside, traced from the OS Town Plan 1893-96 (scripts/history/period_city.py); shown before 1950
@@ -92,7 +93,9 @@ function build(data) {
   const [minE, minN, maxE, maxN] = data.frame.bbox_osgb
   const [oE, oN] = data.frame.origin_osgb
   const tileUv = (x, z) => [(x + oE - minE) / (maxE - minE), 1 - (z - oN + maxN) / (maxN - minN)]
+  const axis = data.frame.axis_deg
   for (const bd of data.buildings) {
+    if (onBridgeGround(bd.o, axis)) continue // the bridge draws its own towers, abutments, approaches and engine house
     const geo = extrude(bd)
     // before 1950 only buildings with evidence of standing by 1894 show; the period city (below) carries the rest
     const dated = data.dates[bd.id.split('-')[0]]?.s
@@ -109,6 +112,7 @@ function build(data) {
   // the 1890s riverside: from before the bridge until 1950, brick walls under slate; the Blitz ends some in 1940
   // and leaves rubble ("r") and roofless wall stubs on their plots (period_city.py)
   data.period?.buildings.forEach((bd, i) => {
+    if (onBridgeGround(bd.o, axis)) return
     const geo = extrude(bd)
     const tint = TINTS[bd.k === 'w' ? 'w' : 'b'][(i * 7919) % 5] // a stable mix of brick and stucco, house by house
     const from = bd.s ?? PERIOD_FROM, to = bd.e ?? HISTORIC_BEFORE

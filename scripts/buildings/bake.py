@@ -106,8 +106,8 @@ def kind(tags, height, start, osm_id):
 
 
 def in_bridge_cut(x, z):
-    u = x * math.cos(theta) - z * math.sin(theta)  # same turn as the scene: across the bridge
-    v = x * math.sin(theta) + z * math.cos(theta)  # along the bridge
+    u = x * math.cos(theta) + z * math.sin(theta)  # same turn as the scene (three.js rotation-y): along the river
+    v = -x * math.sin(theta) + z * math.cos(theta)  # along the bridge
     return abs(u) < meta["bridge_cut"]["width"] / 2 and abs(v) < meta["bridge_cut"]["length"] / 2
 
 

@@ -89,10 +89,12 @@ def main():
     X = (np.arange(W) + 0.5) * PX + minE - oE
     Z = oN - (maxN - (np.arange(H) + 0.5) * PX)
     XX, ZZ = np.meshgrid(X, Z)
-    u = XX * math.cos(theta) - ZZ * math.sin(theta)  # across the bridge (along the river)
-    v = XX * math.sin(theta) + ZZ * math.cos(theta)  # along the bridge
-    cut = (np.abs(u) < meta["bridge_cut"]["width"] / 2 + 4) & (np.abs(v) < meta["bridge_cut"]["length"] / 2 + 4)
-    cut |= (np.abs(u) < 9) & (np.abs(v) < 322)  # the approach roads (bareEarth.js keepApproaches: 6 m of roadway)
+    u = XX * math.cos(theta) + ZZ * math.sin(theta)  # along the river, as three.js rotation-y turns the grid
+    v = -XX * math.sin(theta) + ZZ * math.cos(theta)  # along the bridge, south +
+    # the bridge's own ground: bareEarth.js BRIDGE_GROUND (piers and spans, approach roadway, engine house), 1 m clear
+    cut = (np.abs(u) < 33) & (np.abs(v) < 146)
+    cut |= (np.abs(u) < 11) & (np.abs(v) < 321)
+    cut |= (u > 13) & (u < 50.5) & (v > 137.5) & (v < 172.5)
     shaded &= ~cut
 
     # OSM buildings already dated to the period are drawn from OSM: cut them out (1 m clear)

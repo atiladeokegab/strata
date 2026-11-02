@@ -269,7 +269,7 @@ export function BasculeDetails({ era }) {
   )
 }
 
-// ---- high walkways: pointed portal frames at the tower faces, finials on the roof ----
+// ---- high walkways: finials on the roof ridge, knee brackets, interior lamps ----
 export function WalkwayDetails({ x, era }) {
   const gas = !!era?.gasLamps
   return (
@@ -282,15 +282,9 @@ export function WalkwayDetails({ x, era }) {
 }
 
 export function walkwayDetailsKit(x, gas) {
-  const steel = [], gold = [], w = 1.6 + 0.35, y0 = L.walkY, y1 = L.walkY + L.walkH
+  const steel = [], gold = [], y0 = L.walkY, y1 = L.walkY + L.walkH
+  // no end portals: they sat 0.3 m inside the tower face and poked through it above the roof
   const ze = -(L.pierZ + L.towerHalfZ) - 0.3
-  for (const z of [-ze, ze]) {
-    for (const sx of [-w, w]) steel.push(box(0.5, L.walkH + 1.2, 0.5, x + sx, y0 + (L.walkH + 1.2) / 2 - 0.3, z))
-    steel.push(box(2 * w + 0.5, 0.4, 0.5, x, y1 + 0.7, z))
-    steel.push(beam([x - w, y1 + 0.85, z], [x, y1 + 2.1, z], 0.2, 4), beam([x + w, y1 + 0.85, z], [x, y1 + 2.1, z], 0.2, 4))
-    steel.push(beam([x, y1 + 0.9, z], [x, y1 + 2.1, z], 0.12, 4))
-    gold.push(new THREE.ConeGeometry(0.16, 0.9, 6).translate(x, y1 + 2.6, z))
-  }
   for (let z = ze + 5; z <= -ze - 5; z += 7.5) {
     steel.push(box(0.35, 0.3, 0.35, x, y1 + 0.5, z))
     gold.push(new THREE.ConeGeometry(0.12, 0.8, 6).translate(x, y1 + 1.05, z))

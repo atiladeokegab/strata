@@ -20,3 +20,12 @@ export const HAZE = new THREE.Color().setRGB(0.77, 0.86, 0.88, THREE.LinearSRGBC
 
 // 1 = full period grade (before 1950), 0 = neutral (today); eases across 1950-1990.
 export const periodGrade = (year) => THREE.MathUtils.clamp((1990 - year) / 40, 0, 1)
+
+// Weights of [coal smoke, wartime overcast, clear] by year, summing to 1: smoke to 1900 easing out by 1925,
+// overcast from 1938 to 1948, clear from 1960.
+export function eraWeights(y) {
+  const e = THREE.MathUtils.smoothstep
+  const smoke = 1 - e(y, 1900, 1925)
+  const war = e(y, 1925, 1938) * (1 - e(y, 1948, 1960))
+  return [smoke, war, 1 - smoke - war]
+}

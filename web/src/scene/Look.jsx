@@ -8,7 +8,7 @@ import { Environment, PerformanceMonitor, useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 import { Guard } from '../ui/slots'
 import { makeLowEnv } from './look/envLow'
-import { ENV_ROTATION, HAZE, HDRI, SKY_JPG, SUN_COLOR, SUN_DIR } from './look/sun'
+import { ENV_ROTATION, HAZE, HDRI, SKY_JPG, SUN_COLOR, SUN_DIR, eraWeights } from './look/sun'
 import { loadPhotos, pbr, warmMaterialTextures } from './look/textures'
 import { LITE } from './look/tier'
 import { useStore } from '../store'
@@ -16,6 +16,63 @@ import { worldUVs } from './look/uvs'
 
 const Grade = lazy(() => import('./look/Grade.jsx'))
 const ENV_INTENSITY = 0.6
+
+// Per-era air, blended by the (damped) year: coal smoke to ~1910, wartime overcast around 1940, clear from
+// ~1960. Fog, a haze dome over the sky, sun and sky light only, so no extra passes. Fog is FogExp2 from the
+// camera, eased off above 300 m so the top-down view still sees the ground: 1890 k 0.0013 (90% at 1.17 km,
+// 99% at 1.65 km), 1940 k 0.0014 (90% at 1.08 km, 99% at 1.53 km), today 0.00028.
+const lin = (r, g, b) => new THREE.Color().setRGB(r, g, b, THREE.LinearSRGBColorSpace)
+const ERAS = [ // fog density and colour (linear), haze over the sky 0..1, sun colour, sun and sky-light intensity
+  { fog: 0.0013, color: lin(0.6, 0.5, 0.37), haze: 0.85, sun: new THREE.Color('#ffa866'), sunI: 2.8, envI: 0.5 },
+  { fog: 0.0014, color: lin(0.52, 0.55, 0.58), haze: 0.95, sun: new THREE.Color('#dfe5ec'), sunI: 1.7, envI: 0.75 },
+  { fog: 0.00028, color: HAZE, haze: 0, sun: new THREE.Color(SUN_COLOR), sunI: 3.4, envI: ENV_INTENSITY },
+]
+const ease = THREE.MathUtils.smoothstep
+const air = { sun: new THREE.Color(SUN_COLOR), sunI: 3.4 } // written by Atmosphere, read by Sun
+const _t = new THREE.Color()
+
+function Atmosphere() {
+  const scene = useThree((s) => s.scene)
+  const y = useRef(useStore.getState().year)
+  const dome = useMemo(() => {
+    const g = new THREE.SphereGeometry(1, 32, 16)
+    const p = g.attributes.position, a = new Float32Array(p.count * 4)
+    for (let i = 0; i < p.count; i++) a.set([1, 1, 1, 1 - 0.55 * ease(p.getY(i), 0, 0.5)], i * 4) // thickest at the horizon
+    g.setAttribute('color', new THREE.BufferAttribute(a, 4))
+    const m = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: THREE.BackSide, fog: false })
+    const d = new THREE.Mesh(g, m)
+    Object.assign(d, { frustumCulled: false, renderOrder: -1, raycast: () => null })
+    d.scale.setScalar(4000)
+    d.userData.noShadow = true
+    return d
+  }, [])
+  useEffect(() => () => { dome.geometry.dispose(); dome.material.dispose() }, [dome])
+  useFrame(({ camera }, dt) => {
+    const w = eraWeights((y.current = THREE.MathUtils.damp(y.current, useStore.getState().year, 3, dt)))
+    const fog = scene.fog
+    if (!fog) return
+    let k = 0, haze = 0, env = 0
+    fog.color.setRGB(0, 0, 0)
+    air.sun.setRGB(0, 0, 0)
+    air.sunI = 0
+    ERAS.forEach((e, i) => {
+      k += w[i] * e.fog
+      haze += w[i] * e.haze
+      env += w[i] * e.envI
+      air.sunI += w[i] * e.sunI
+      fog.color.add(_t.copy(e.color).multiplyScalar(w[i]))
+      air.sun.add(_t.copy(e.sun).multiplyScalar(w[i]))
+    })
+    const today = ERAS[2].fog
+    fog.density = today + (k - today) * Math.min(1, 300 / Math.max(camera.position.y, 1))
+    scene.environmentIntensity = env
+    dome.visible = haze > 0.01
+    dome.material.color.copy(fog.color)
+    dome.material.opacity = haze
+    dome.position.copy(camera.position)
+  })
+  return <primitive object={dome} />
+}
 
 // First frame: a 32x16 copy of the HDRI (inlined, no fetch) lights and fills the sky at once, with the HDRI's
 // energy, so the bridge is never a black silhouette on a blank sky while the HDR, the sky JPG and the post
@@ -79,6 +136,8 @@ function Sun({ mapSize }) {
     // The shadow pass redraws every caster (the LiDAR DSM is millions of triangles), so it runs every
     // SHADOW_EVERY frames; the light moves only on those frames, so receivers never read a stale map.
     gl.shadowMap.autoUpdate = false
+    light.current.color.copy(air.sun)
+    light.current.intensity = air.sunI
     if (frame.current++ % SHADOW_EVERY) return
     gl.shadowMap.needsUpdate = true
     const l = light.current
@@ -236,6 +295,7 @@ export function Look() {
       <Later name="Look HDRI"><Environment files={HDRI} environmentIntensity={ENV_INTENSITY} environmentRotation={[0, ENV_ROTATION, 0]} /></Later>
       <Sun mapSize={low || !post ? 2048 : 4096} />
       <SceneUpgrades />
+      <Atmosphere />
       <FirstFrame />
       {post && <Later name="Look post"><Grade low={low} /></Later>}
     </>

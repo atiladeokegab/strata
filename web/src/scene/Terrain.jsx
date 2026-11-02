@@ -207,7 +207,7 @@ function Ground() {
 // because the map sample is linear here; ERA_GAIN sets how bright the paper sits under the scene light.
 // ERA is 1 while the old map is draped. BARE is 1 before Google's tiles (GOOGLE_FROM): the ground is bare earth
 // (aOld), flat-lit. aOld now equals the position (the mesh is the DTM in every era), so BARE moves nothing.
-const ERA = { value: 0 }, BARE = { value: 0 }
+export const ERA = { value: 0 }, BARE = { value: 0 }
 // The old map has no approach road, so the ramps would dead-end in cream paper, and the 1950s-2011 photo smears the
 // real, curving road and its roofs over the levelled street: before Google's tiles the approach streets (bareEarth.js
 // STREETS, in the bridge frame) take a road colour between the deck's kerb lines, at a constant width, and pale York
@@ -238,7 +238,10 @@ const STONE = new THREE.Color('#969386'), KERB = new THREE.Color('#b3ada3'), FAR
 // fog itself drew a bright void at the horizon
 const END_FEATHER = 12
 const HAZE_FROM = 450, HAZE_TO = 740, HAZE_PHOTO = 0.7
+// the haze as GLSL at a world xz (the river's surface takes it too, or it ends in a straight line against the skirt),
+// and the era uniforms it reads
 const f1 = (v) => v.toFixed(1), f2 = (v) => v.toFixed(2)
+export const hazeAt = (xz) => `gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor * mix(${f2(HAZE_PHOTO)}, 1.0, uEra), smoothstep(${f1(HAZE_FROM)}, ${f1(HAZE_TO)}, length(${xz})) * uBare);`
 const v3 = (c) => `vec3(${c.toArray().map((v) => v.toFixed(3)).join(', ')})`
 const ROAD_TINT = `
       float tAlong = abs(vRoadW.z), tAcross = abs(vRoadW.x);
@@ -326,7 +329,7 @@ ${UNDER_BRIDGE}`)
     )
     .replace('#include <fog_fragment>', `#include <fog_fragment>
       #ifdef USE_FOG
-      gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor * mix(${f2(HAZE_PHOTO)}, 1.0, uEra), smoothstep(${f1(HAZE_FROM)}, ${f1(HAZE_TO)}, length(vRoadW.xz)) * uBare);
+      ${hazeAt('vRoadW.xz')}
       #endif`)
 }
 
@@ -555,7 +558,10 @@ function Skirt({ t }) {
     for (let i = 0; i < h; i++) edge.push(O[i * w], O[i * w + w - 1])
     edge.sort((a, b) => a - b)
     const y = edge[edge.length >> 1] - meta.origin_h, [x0, z0, x1, z1] = rect(meta, meta.bbox_osgb), R = SKIRT
-    const pos = [x0, z0, x1, z0, x1, z1, x0, z1, -R, -R, R, -R, R, R, -R, R].flatMap((v, k, a) => (k % 2 ? [] : [v, y, a[k + 1]]))
+    // the inner ring sits no higher than the river, so where the Thames leaves the tile no sky shows between its
+    // surface and a skirt standing above it
+    const yIn = Math.min(y, meta.water_h - meta.origin_h)
+    const pos = [x0, z0, x1, z0, x1, z1, x0, z1, -R, -R, R, -R, R, R, -R, R].flatMap((v, k, a) => (k % 2 ? [] : [v, k < 8 ? yIn : y, a[k + 1]]))
     const index = []
     for (let i = 0; i < 4; i++) { const P = 4 + i, Q = 4 + ((i + 1) % 4), p = i, q = (i + 1) % 4; index.push(P, q, Q, P, p, q) } // faces up
     const g = new THREE.BufferGeometry()

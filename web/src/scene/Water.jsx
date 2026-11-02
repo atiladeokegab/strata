@@ -2,7 +2,7 @@ import { Suspense, use, useEffect, useMemo } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { Water as WaterSurface } from 'three/examples/jsm/objects/Water.js'
-import { loadLow } from './Terrain.jsx'
+import { BARE, ERA, hazeAt, loadLow } from './Terrain.jsx'
 import { riverFootprint } from './riverFootprint.js'
 import { SUN_COLOR, SUN_DIR } from './look/sun.js'
 import { LITE } from './look/tier'
@@ -66,6 +66,10 @@ function Surface({ sun }) {
       .replace('float rf0 = 0.3;', 'float rf0 = 0.04;')
       .replace('reflectionSample * 0.9', 'reflectionSample * 0.4')
       .replace('noise.xzy * vec3( 1.5, 1.0, 1.5 )', 'noise.xzy * vec3( 0.35, 1.0, 0.35 )') // calm water: flatten the summed normals
+      // the ground's haze, so the river fades into it with the land instead of ending in a line at the tile's edge
+      .replace('varying vec4 worldPosition;', 'varying vec4 worldPosition;\nuniform float uEra;\nuniform float uBare;')
+      .replace('#include <fog_fragment>', `#include <fog_fragment>\n#ifdef USE_FOG\n${hazeAt('worldPosition.xz')}\n#endif`)
+    Object.assign(w.material.uniforms, { uEra: ERA, uBare: BARE })
     // three's Water re-renders the whole scene into its mirror before every render call that draws it (each
     // post-processing pass is one), so one frame cost ~22 passes; render the mirror on the first call of every 2nd frame
     const mirror = w.onBeforeRender

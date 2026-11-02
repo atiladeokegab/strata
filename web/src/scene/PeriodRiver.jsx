@@ -1,9 +1,10 @@
 // Period life on the river before 1950: lighters moored in tiers along the Pool of London and the wharves,
 // with Thames sailing barges among them, steam tugs working the open channel and hand or hydraulic wharf cranes
 // on the river walls of the working Pool of London (wiki-pool-of-london); positions inferred, not surveyed.
-// Grid-aligned frame (x east, z south), like Terrain; moored only where the LiDAR says there is water. Low-poly and instanced: ten draw calls for the whole river.
-import { useLayoutEffect, useMemo, useRef } from 'react'
+// Grid-aligned frame (x east, z south), like Terrain; moored only where the LiDAR says there is water. Low-poly and baked into one mesh: one draw call for the whole river.
+import { useEffect, useMemo } from 'react'
 import * as THREE from 'three'
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { heightAt } from './Terrain.jsx'
 import { layout, rng, AXIS, at, riverWet } from './moorings.js'
 
@@ -52,21 +53,24 @@ function cranes(t) {
   return out
 }
 
-function Instanced({ items, geometry, color, at }) {
-  const ref = useRef()
-  const material = useMemo(() => new THREE.MeshStandardMaterial({ color, roughness: 0.9, side: THREE.DoubleSide }), [color])
-  useLayoutEffect(() => {
-    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), s = new THREE.Vector3(1, 1, 1)
-    items.forEach((it, i) => {
+// every craft part baked into one static mesh, coloured per vertex: one draw call for the whole river
+const MATERIAL = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, side: THREE.DoubleSide })
+function bake(parts) {
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), s = new THREE.Vector3(1, 1, 1), c = new THREE.Color()
+  const out = []
+  for (const [items, geometry, color, at] of parts) {
+    c.set(color) // linear, as the material colour was
+    for (const it of items) {
       q.setFromEuler(e.set(0, it.yaw, 0))
-      const local = new THREE.Vector3(...at).applyQuaternion(q)
-      ref.current.setMatrixAt(i, m.compose(new THREE.Vector3(it.x, it.y, it.z).add(local), q, s))
-    })
-    ref.current.instanceMatrix.needsUpdate = true
-    ref.current.computeBoundingSphere()
-  }, [items, at])
-  if (!items.length) return null
-  return <instancedMesh ref={ref} args={[geometry, material, items.length]} castShadow receiveShadow />
+      const g = geometry.clone().applyMatrix4(m.compose(new THREE.Vector3(...at).applyQuaternion(q).add(new THREE.Vector3(it.x, it.y, it.z)), q, s))
+      const n = g.attributes.position.count, rgb = new Float32Array(n * 3)
+      for (let i = 0; i < n; i++) rgb.set([c.r, c.g, c.b], i * 3)
+      out.push(g.setAttribute('color', new THREE.BufferAttribute(rgb, 3)))
+    }
+  }
+  const merged = out.length ? mergeGeometries(out) : null
+  out.forEach((g) => g.dispose())
+  return merged
 }
 
 const GEO = {
@@ -93,18 +97,22 @@ function River({ t }) {
   const lighters = all.filter((m) => !m.barge), barges = all.filter((m) => m.barge)
   const tg = useMemo(() => tugs().map((m) => ({ ...m, y: t.meta.water_h - t.meta.origin_h })), [t])
   const cr = useMemo(() => cranes(t), [t])
+  const geometry = useMemo(() => bake([
+    [lighters, GEO.lighter, '#1d1b19', AT.lighter],
+    [lighters, GEO.cargo, '#6b5a43', AT.cargo],
+    [barges, GEO.barge, '#2a2420', AT.barge],
+    [barges, GEO.mast, '#5a4632', AT.mast],
+    [barges, GEO.sail, '#74361f', AT.sail],
+    [tg, GEO.tugHull, '#161412', AT.tugHull],
+    [tg, GEO.tugHouse, '#6e5a44', AT.tugHouse],
+    [tg, GEO.funnel, '#1b1a19', AT.funnel],
+    [cr, GEO.cranePost, '#3b3026', AT.cranePost],
+    [cr, GEO.craneJib, '#3b3026', AT.craneJib],
+  ]), [all, tg, cr]) // eslint-disable-line react-hooks/exhaustive-deps -- lighters and barges derive from all
+  useEffect(() => () => geometry?.dispose(), [geometry])
   return (
     <group name="period-river">
-      <Instanced items={lighters} geometry={GEO.lighter} color="#1d1b19" at={AT.lighter} />
-      <Instanced items={lighters} geometry={GEO.cargo} color="#6b5a43" at={AT.cargo} />
-      <Instanced items={barges} geometry={GEO.barge} color="#2a2420" at={AT.barge} />
-      <Instanced items={barges} geometry={GEO.mast} color="#5a4632" at={AT.mast} />
-      <Instanced items={barges} geometry={GEO.sail} color="#74361f" at={AT.sail} />
-      <Instanced items={tg} geometry={GEO.tugHull} color="#161412" at={AT.tugHull} />
-      <Instanced items={tg} geometry={GEO.tugHouse} color="#6e5a44" at={AT.tugHouse} />
-      <Instanced items={tg} geometry={GEO.funnel} color="#1b1a19" at={AT.funnel} />
-      <Instanced items={cr} geometry={GEO.cranePost} color="#3b3026" at={AT.cranePost} />
-      <Instanced items={cr} geometry={GEO.craneJib} color="#3b3026" at={AT.craneJib} />
+      {geometry && <mesh geometry={geometry} material={MATERIAL} receiveShadow />}
     </group>
   )
 }

@@ -456,14 +456,14 @@
         "southwark-area"
       ],
       "osgb": [
-        533756.8,
-        180154.1
+        533781.5,
+        180132.5
       ],
       "years": [
         1873,
         null
       ],
-      "located": "inferred: map position converted from WGS84 to OSGB36"
+      "located": "inferred: label anchor placed inland on the wharf using the terrain DTM"
     },
     {
       "id": "pool-of-london",

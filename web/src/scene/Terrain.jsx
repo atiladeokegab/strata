@@ -322,9 +322,10 @@ function meshOf(t, budget, seam) {
   }).catch(() => rtin(...args))
 }
 
-// Cuts a tile's mesh into CHUNKS² pieces, each with its own vertices and bounds, so frustum culling drops what the
-// camera can't see; normals come from the whole mesh first, so the cuts don't shade. Triangles inside `hole` go.
-const CHUNKS = 8
+// A tile's mesh as CHUNKS² pieces (normals from the whole mesh, so cuts don't shade); triangles inside `hole` go.
+// One piece: the draw-call caps (155 lite, 300 desktop, and the water mirror redraws the terrain) outweigh what
+// culling would save at 150-500k triangles.
+const CHUNKS = 1
 function chunked({ meta, mesh }, hole) {
   const g = new THREE.BufferGeometry()
   g.setAttribute('position', new THREE.BufferAttribute(mesh.pos, 3))

@@ -7,8 +7,6 @@ export const useTour = create(() => ({ playing: false, startedAt: 0 }))
 export const startTour = () => useTour.setState({ playing: true, startedAt: performance.now() })
 export const stopTour = () => useTour.setState({ playing: false })
 export const isTourPlaying = () => useTour.getState().playing
-// sceneReady: the bridge is in the scene and has drawn a few frames (set by <Tour />); the guided tour waits on it
-export const useScene = create(() => ({ ready: false }))
 
 const OPENED = 1894
 

@@ -6,7 +6,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import { Box3, Sphere } from 'three'
 import { useStore, THIS_YEAR } from '../store.js'
-import { useTour, useScene, startTour, stopTour, DURATION, poseAt, runTracks, hydraulicsPart, CARD, cardOpacity, BEATS, DOCENT_Q, HANDOFF } from '../tour/tour.js'
+import { useTour, startTour, stopTour, DURATION, poseAt, runTracks, hydraulicsPart, CARD, cardOpacity, BEATS, DOCENT_Q, HANDOFF } from '../tour/tour.js'
 
 export default function Tour() {
   const playing = useTour((s) => s.playing)
@@ -60,13 +60,6 @@ export default function Tour() {
       ask.abort()
     }
   }, [playing, camera, gl, scene, controls])
-
-  // sceneReady: 20 frames after the bridge mesh appears, so the guide never opens on a blank or half-lit frame
-  const drawn = useRef(0)
-  useFrame(() => {
-    if (drawn.current > 20 || !scene.getObjectByName('tower-bridge')) return
-    if (++drawn.current > 20) useScene.setState({ ready: true })
-  })
 
   // Default priority: runs after drei controls (priority -1), so the tour owns the camera while it plays.
   useFrame((state) => {

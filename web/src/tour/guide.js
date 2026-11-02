@@ -4,7 +4,7 @@
 // flies there smoothly) and a few shell inputs it fills in like a visitor would.
 import { create } from 'zustand'
 import { useStore, THIS_YEAR } from '../store.js'
-import { stopTour, useScene, isTourPlaying } from './tour.js'
+import { stopTour, isTourPlaying } from './tour.js'
 import { liftForShip } from '../scene/bridge/liftSequence.js'
 
 export const useGuide = create(() => ({ active: false, i: 0, steps: [] }))
@@ -124,7 +124,7 @@ export function startGuide({ auto = false } = {}) {
   // then give the lazy photo tools up to 2 s more so their optional steps are counted
   let lit = 0
   const wait = () => {
-    const ready = s().place && (useScene.getState().ready || document.querySelector('.no-webgl'))
+    const ready = s().place && (s().sceneReady || document.querySelector('.no-webgl'))
     if (ready) lit ||= performance.now()
     if (ready && (document.querySelector('.id-open') || performance.now() - lit > 2000)) go()
     else setTimeout(wait, 150)

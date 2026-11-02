@@ -93,6 +93,7 @@ def main():
     cut = (np.abs(u) < 33) & (np.abs(v) < 146)
     cut |= (np.abs(u) < 11) & (np.abs(v) < 321)
     cut |= (u > 14.5) & (u < 42) & (v > 139.5) & (v < 167.5)
+    cut |= (u > 41) & (u < 45) & (v > 145) & (v < 151)  # the house's NE corner by the chimney, which BRIDGE_GROUND leaves to Anchor Brewhouse
     shaded &= ~cut
 
     # OSM buildings already dated to the period are drawn from OSM: cut them out (1 m clear)

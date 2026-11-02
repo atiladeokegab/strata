@@ -10,9 +10,9 @@ assert.match(src, /x=max\(x,0\.0\)\*/, 'PeriodSaturation must clamp its output a
 
 // PeriodSaturation (Grade.jsx SAT_GLSL), today's grade: sat > 0, soot 0
 const sat = (c, s, clamp) => {
-  const l = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2], avg = (c[0] + c[1] + c[2]) / 3
+  const avg = (c[0] + c[1] + c[2]) / 3
   return c.map((v) => {
-    const x = s < 0 ? l + (v - l) * (1 + s) : Math.min(v + (avg - v) * (1 - 1 / (1.001 - s)), 1)
+    const x = s < 0 ? avg + (v - avg) * (1 + s) : Math.min(v + (avg - v) * (1 - 1 / (1.001 - s)), 1)
     return clamp ? Math.max(x, 0) : x
   })
 }

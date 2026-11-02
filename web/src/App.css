@@ -223,7 +223,7 @@ input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 
   .credit { top: 8px; left: 8px; right: 8px; max-width: none; }
   .help { left: 8px; right: 8px; top: auto; bottom: calc(var(--sheet) + 180px); transform: none; width: auto; padding: var(--s4); }
   .help ol { gap: var(--s3); margin-bottom: var(--s4); }
-  .move-pad { right: 8px; bottom: calc(var(--sheet) + 150px); }
+  .move-pad { right: 8px; bottom: calc(var(--sheet) + 200px); } /* above the dock (its top sits about --sheet + 191px up), not over the timeline */
   .no-webgl { left: 8px; right: 8px; top: 120px; transform: none; width: auto; }
   .walk-hint { display: none; }
 }

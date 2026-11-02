@@ -6,6 +6,7 @@ import { useTour } from './tour.js'
 import './guide.css'
 
 const STOP_MS = 3200 // the year step plays its stops on its own until the visitor taps one
+const FIRST_STOP_MS = 6500 // the first stop (1886) also waits out the camera's flight, so it is on screen long enough to read
 
 function Spotlight({ selector }) {
   const ref = useRef(null)
@@ -38,7 +39,7 @@ export default function Guide() {
   useEffect(() => { setStop(0); setAuto(true) }, [step])
   useEffect(() => {
     if (!active || !step?.stops || !auto || stop >= step.stops.length - 1) return
-    const id = setTimeout(() => { step.stops[stop + 1].run(); setStop(stop + 1) }, STOP_MS)
+    const id = setTimeout(() => { step.stops[stop + 1].run(); setStop(stop + 1) }, stop ? STOP_MS : FIRST_STOP_MS)
     return () => clearTimeout(id)
   }, [active, step, stop, auto])
   useEffect(() => {

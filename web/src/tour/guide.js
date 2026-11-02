@@ -4,7 +4,7 @@
 // flies there smoothly) and a few shell inputs it fills in like a visitor would.
 import { create } from 'zustand'
 import { useStore, THIS_YEAR } from '../store.js'
-import { useTour, stopTour, isTourPlaying } from './tour.js'
+import { stopTour, isTourPlaying } from './tour.js'
 import { liftForShip } from '../scene/bridge/liftSequence.js'
 
 export const useGuide = create(() => ({ active: false, i: 0, steps: [] }))
@@ -32,12 +32,15 @@ const yearStop = (year, note) => ({
   },
 })
 
-// Asked again on every visit (Back included), but never while an answer is still coming or just sent: one request in flight.
+// Asked once: a visit (Back included) while the panel still shows the question, or its answer is coming, sends nothing.
+// Once the panel has dropped it (another part picked), the next visit asks again.
+const QUESTION = 'How do the counterweights help the bascules open?'
 let askedAt = -Infinity
 export function askDocent() {
   if (s().docentBusy || performance.now() - askedAt < 1500) return false
+  if ([...document.querySelectorAll('.msg.mine')].some((m) => m.textContent.includes(QUESTION))) return false
   askedAt = performance.now()
-  return type('form.ask input', 'How do the counterweights help the bascules open?', true)
+  return type('form.ask input', QUESTION, true)
 }
 
 // state: what the app should show for the step (anything left out returns to DEFAULT, so Back and Next are clean).
@@ -72,7 +75,7 @@ export const STEPS = [
   { id: 'top', title: 'Top-down', spot: '.seg', state: { view: 'top' },
     text: 'The topography straight from above, with the parts labelled.' },
   { id: 'walk', title: 'Walk it', spot: '.seg', state: { view: 'walk' },
-    text: 'Stand on the deck and drag to look around. With a keyboard, W A S D or the arrow keys walk.' },
+    text: 'Stand on the deck. W A S D or the arrow keys to walk, drag to look; on a phone, the arrow pad.' },
   { id: 'identify', title: 'Identify a photo', spot: '.id-open', when: () => !!document.querySelector('.id-open'),
     text: 'Upload a photo of the real bridge: Strata names the parts it can see, boxes them, and flies to where you stood.' },
   { id: 'reimagine', title: 'See it in another year', spot: '.rm-open:not(.id-open)', when: () => !!document.querySelector('.rm-open:not(.id-open)'),
@@ -80,7 +83,7 @@ export const STEPS = [
   { id: 'voice', title: 'Talk to the docent', spot: 'button[aria-label="Talk to the docent"]', state: { sheet: true },
     when: () => !!document.querySelector('button[aria-label="Talk to the docent"]'),
     text: 'Press the mic and ask out loud; the docent answers by voice, with a live transcript.' },
-  { id: 'next', title: 'Coming next', cam: [-230, 55, 200],
+  { id: 'next', title: 'Coming next', cam: [-200, 60, -220], // from over the Tower of London: south of the bridge, City Hall's drum stood in the way
     text: "Stonehenge, Hadrian's Wall and the Tower of London: the same LiDAR ground, sourced history and docent. Now you try: tap any part.",
     last: true },
 ]
@@ -173,4 +176,3 @@ export function stopGuide() {
   if (st.view === 'walk') st.setView('orbit')
   st.setExploded(false); st.setLidar(false); st.setYear(THIS_YEAR); st.setSheet(false)
 }
-useTour.subscribe((t) => t.playing && stopGuide()) // starting the 60 s story (Help, Home) ends the guide: their cards never show at once

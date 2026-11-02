@@ -1,4 +1,4 @@
-// The guided tour's docent step: going Back to it re-asks, but never while an answer is in flight, and never twice at once.
+// The guided tour's docent step: going Back to it never asks twice: not in flight, not while the panel shows the answer.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
@@ -7,7 +7,8 @@ Object.defineProperty(globalThis, 'performance', { value: { now: () => clock }, 
 let submits = 0
 globalThis.HTMLInputElement = class { set value(v) { this._v = v } get value() { return this._v } }
 const input = Object.assign(new globalThis.HTMLInputElement(), { dispatchEvent() {}, form: { requestSubmit: () => submits++ } })
-globalThis.document = { querySelector: (sel) => (sel === 'form.ask input' ? input : null) }
+let shown = [] // the panel's question bubbles
+globalThis.document = { querySelector: (sel) => (sel === 'form.ask input' ? input : null), querySelectorAll: (sel) => (sel === '.msg.mine' ? shown : []) }
 
 const { askDocent, frameShift } = await import('./guide.js')
 const { useStore } = await import('../store.js')
@@ -36,8 +37,16 @@ test('Back while the answer is still loading does not send again', async () => {
   assert.equal(submits, 1)
 })
 
-test('Back after the answer arrived asks again', async () => {
+test('Back after the answer arrived does not ask again while the panel shows it', async () => {
   busy(false)
+  shown = [{ textContent: 'How do the counterweights help the bascules open?' }]
+  assert.equal(askDocent(), false)
+  await settle()
+  assert.equal(submits, 1)
+})
+
+test('once the panel has dropped the question, the next visit asks again', async () => {
+  shown = []
   assert.equal(askDocent(), true)
   await settle()
   assert.equal(submits, 2)
@@ -50,14 +59,5 @@ test('the camera aims at the stage the card and panels leave clear', () => {
   globalThis.matchMedia = () => ({ matches: true }) // phone: full width, above the card
   assert.deepEqual(frameShift(390, 844, at({ '.panel': { right: 390 }, '.controls': { bottom: 200 }, '.guide-card': { top: 500 } })), [0, -72, 1.55])
   assert.deepEqual(frameShift(390, 844, at({ '.controls': { bottom: 200 }, '.dock': { top: 540, height: 120 }, '.guide-card': { top: 640 } })), [0, -52, 1.37])
-    assert.deepEqual(frameShift(390, 844, at({ '.controls': { bottom: 200 }, '.dock': { top: 585, height: 259 }, '.guide-card': { top: 8, bottom: 300 } })), [0, 21, 1.63])
-})
-
-test('starting the 60 s story ends the guide, so their cards never show at once', async () => {
-  const { useGuide } = await import('./guide.js')
-  const { startTour, stopTour } = await import('./tour.js')
-  useGuide.setState({ active: true, i: 0, steps: [] })
-  startTour()
-  assert.equal(useGuide.getState().active, false)
-  stopTour()
+  assert.deepEqual(frameShift(390, 844, at({ '.controls': { bottom: 200 }, '.dock': { top: 585, height: 259 }, '.guide-card': { top: 8, bottom: 300 } })), [0, 21, 1.63])
 })

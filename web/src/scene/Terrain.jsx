@@ -1,11 +1,13 @@
 import { Suspense, use, useEffect, useMemo, useState } from 'react'
 import { useThree } from '@react-three/fiber'
 import * as THREE from 'three'
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { useStore } from '../store'
 import { GOOGLE_FROM } from './google/state'
 import { APPROACH, STREETS, levelStreets, sinkShelves } from './bareEarth.js'
 import { eraFor } from './bridge/stages.js'
-import { KERB_X } from './bridge/roadway.js'
+import { KERB_X, FOOTWAY_H } from './bridge/roadway.js'
+import { GAP } from './google/frame.js'
 import { LITE } from './look/tier'
 import { GroundStandIn } from '../ui/StandIns'
 
@@ -209,7 +211,7 @@ function Ground() {
 // (aOld), flat-lit. aOld now equals the position (the mesh is the DTM in every era), so BARE moves nothing.
 export const ERA = { value: 0 }, BARE = { value: 0 }
 // The old map has no approach road, so the ramps would dead-end in cream paper, and the 1950s-2011 photo smears the
-// real, curving road and its roofs over the levelled street: before Google's tiles the approach streets (bareEarth.js
+// real, curving road and its roofs over the levelled street (and with the tiles off, today's photo too): the approach streets (bareEarth.js
 // STREETS, in the bridge frame) take a road colour between the deck's kerb lines, at a constant width, and pale York
 // stone, flagged by the road, over the whole levelled street, fading into the map or photo down its slopes, and
 // over 60 m where it meets the city. Before 1950 the carriageway is laid in setts (or wood blocks), and in every era a
@@ -277,7 +279,7 @@ const ROAD_TINT = `
       vec3 tStone = ${v3(STONE)} * (0.88 + 0.2 * tM) * (1.0 - 0.3 * fJoint * (1.0 - tEnd)) * (1.0 + 0.3 * tSouth * tEnd);
       vec3 tCol = mix(uRoad * (1.0 - 0.35 * tJoint * (1.0 - tEnd)) * (1.0 - 0.32 * (1.0 - tSouth) * tEnd), tStone, smoothstep(${f2(KERB_X)} - tSoft, ${f2(KERB_X)} + tSoft, tAcross));
       tCol = mix(tCol, vec3(${KERB.toArray().map((c) => c.toFixed(3)).join(', ')}), tKerb);
-      diffuseColor.rgb = mix(diffuseColor.rgb, tCol, tRoad * max(uEra, uBare));
+      diffuseColor.rgb = mix(diffuseColor.rgb, tCol, tRoad); // every era: with Google's tiles off today's photo smears its buses and lumps over the levelled street too
       diffuseColor.rgb = mix(diffuseColor.rgb, vec3(${FAR.toArray().map((c) => c.toFixed(3)).join(', ')}), smoothstep(${f1(FAR_FROM)}, ${f1(FAR_TO)}, length(vRoadW.xz)) * uEra);`
 const SURFACES = `
       // world (bridge frame) to the tile's grid (east, south from the origin), then to the mask's uv (v = 1 north)
@@ -291,7 +293,7 @@ const SURFACES = `
       diffuseColor.rgb = mix(diffuseColor.rgb, ${v3(DOCK)}, sDock);`
 // The DTM keeps the approach viaducts (build.py keep_approaches), so under the bridge's own ramps and abutments the
 // ground lay in the plane of their stone and z-fought it: there it drops a real 0.5 m (the bridge frame: rotation only).
-const UNDER_BRIDGE = `float tUnder = (1.0 - smoothstep(9.5, 10.5, abs(vRoadW.x))) * (1.0 - smoothstep(180.0, 186.0, abs(vRoadW.z)));
+const UNDER_BRIDGE = `float tUnder = (1.0 - smoothstep(9.5, 10.5, abs(vRoadW.x))) * (1.0 - smoothstep(182.5, 183.5, abs(vRoadW.z)));
 transformed.y -= 0.5 * tUnder;
 vRoadW.y -= 0.5 * tUnder;`
 const ERA_GAIN = '1.0'
@@ -633,12 +635,41 @@ function Tiles({ lidar, step }) {
   )
 }
 
+// With Google's tiles on, frame.js GAP cuts their ground out to |z| 186 (their ramp parapets and lamps would stand
+// beside ours) but our ramps end at STREETS.deckEnd, so a slot of sky showed at each end: this strip of street fills it,
+// asphalt between granite kerbs and stone footways FOOTWAY_H up, as on the ramp.
+const GAP_END = Math.max(...GAP.boxes.filter((b) => b.both).map((b) => b.box[3]))
+function GapStreet() {
+  const { meta } = use(loadLow())
+  const g = useMemo(() => {
+    const z0 = STREETS.deckEnd - 0.05, len = GAP_END + 1 - z0, half = GAP.boxes[0].box[1] + 1, out = { road: [], kerb: [], stone: [] }
+    for (const [sz, y] of [[-1, STREETS.north[0]], [1, STREETS.south[0]]]) {
+      const z = sz * (z0 + len / 2), at = (w, h, x, top) => new THREE.BoxGeometry(w, h, len).translate(x, y + top - h / 2, z)
+      out.road.push(at(2 * KERB_X, 1, 0, 0))
+      for (const sx of [-1, 1]) {
+        out.kerb.push(at(0.3, 1, sx * (KERB_X + 0.15), FOOTWAY_H))
+        out.stone.push(at(half - KERB_X - 0.3, 1, sx * (KERB_X + 0.3 + (half - KERB_X - 0.3) / 2), FOOTWAY_H))
+      }
+    }
+    return Object.fromEntries(Object.entries(out).map(([k, v]) => [k, mergeGeometries(v)]))
+  }, [])
+  useEffect(() => () => Object.values(g).forEach((x) => x.dispose()), [g])
+  return (
+    <group name="gap-street" rotation-y={(-meta.bridge_axis_deg * Math.PI) / 180}>{/* the bridge frame, inside the stage's turn */}
+      <mesh geometry={g.road} raycast={noRaycast} receiveShadow><meshStandardMaterial color={ASPHALT} roughness={0.95} /></mesh>
+      <mesh geometry={g.kerb} raycast={noRaycast} receiveShadow><meshStandardMaterial color={KERB} roughness={0.9} /></mesh>
+      <mesh geometry={g.stone} raycast={noRaycast} receiveShadow><meshStandardMaterial color={STONE} roughness={0.95} /></mesh>
+    </group>
+  )
+}
+
 /** Bare earth from the EA LiDAR DTM with aerial imagery draped. `lidar` swaps to the DSM as a height-coloured point cloud. */
 export default function Terrain({ lidar = false, step = LITE ? 2 : 1 }) {
   const google = useGoogleShown(lidar)
   return (
     <Suspense fallback={<GroundStandIn />}>
-      {(lidar || !google) && <Tiles lidar={lidar} step={step} />}{/* Ground stays: walk mode stands on it */}
+      {(lidar || !google) && <Tiles lidar={lidar} step={step} />}
+      {google && !lidar && <GapStreet />}{/* Ground stays: walk mode stands on it */}
       <Ground />
     </Suspense>
   )

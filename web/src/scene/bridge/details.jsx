@@ -259,7 +259,7 @@ export function BasculeDetails({ era }) {
       materials={lanternFor(era)}
       build={() => {
         const o = kit()
-        for (const z of [-31, -21, -11]) for (const x of [-9, 9]) lamp(o, x, 0.05, z, era)
+        // no lamps on the leaf: raised to 86 deg, a 6 m post on the deck points into its own tower's face
         if (!era?.woodBlocks) dashes(o, L.pivotZ + 0.5, -0.5, era)
         footways(o, L.pierZ + L.towerHalfZ, 0, era)
         for (const gs of Object.values(o)) gs.forEach((g) => g.translate(0, -L.pivotY, -L.pivotZ))

@@ -117,6 +117,11 @@ function build(data) {
       else push(out.slate, geo, grp, from, bd.b, null, to, SLATE[i % 3])
     }
     geo.dispose()
+    if (bd.p) {
+      const roof = hipRoof(bd.p, bd.t, bd.k === 'w' ? 0.35 : 0.7)
+      push(out.slate, roof, { start: 0, count: roof.attributes.position.count }, from, bd.b, null, to, SLATE[i % 3])
+      roof.dispose()
+    }
   })
   return Object.fromEntries(Object.entries(out).map(([k, b]) => [k, toGeometry(b)]))
 }
@@ -138,6 +143,27 @@ function extrude(bd) {
   geo.rotateX(-Math.PI / 2) // shape (x, -z) extruded along +y
   geo.translate(0, bd.b, 0)
   return geo
+}
+
+// A hipped roof over a footprint's minimum rectangle (corners [x0,z0, .. x3,z3]), ridge along the long side, rising
+// pitch x half the short side (0.7 is about 35 degrees, slate's usual; warehouses sit lower). The flat cap stays under it.
+function hipRoof(p, y, pitch) {
+  const c = [0, 2, 4, 6].map((k) => new THREE.Vector3(p[k], y, p[k + 1]))
+  if (c[0].distanceTo(c[1]) < c[1].distanceTo(c[2])) c.push(c.shift()) // c0-c1 is a long side
+  const long = c[0].distanceTo(c[1]), half = c[1].distanceTo(c[2]) / 2
+  const mid = c[0].clone().add(c[2]).multiplyScalar(0.5).setY(y + Math.min(half * pitch, 6))
+  const along = c[1].clone().sub(c[0]).normalize().multiplyScalar(Math.max(long / 2 - half, 0))
+  const r0 = mid.clone().sub(along), r1 = mid.clone().add(along)
+  const tris = [c[0], c[1], r1, c[0], r1, r0, c[1], c[2], r1, c[2], c[3], r0, c[2], r0, r1, c[3], c[0], r0]
+  const e1 = new THREE.Vector3(), e2 = new THREE.Vector3()
+  for (let i = 0; i < tris.length; i += 3) { // wind every face up (counter-clockwise from above), whichever way the corners run
+    if (e1.subVectors(tris[i + 1], tris[i]).cross(e2.subVectors(tris[i + 2], tris[i])).y < 0) [tris[i + 1], tris[i + 2]] = [tris[i + 2], tris[i + 1]]
+  }
+  const g = new THREE.BufferGeometry()
+  g.setAttribute('position', new THREE.Float32BufferAttribute(tris.flatMap((v) => [v.x, v.y, v.z]), 3))
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(tris.flatMap((v) => [v.x, v.z]), 2))
+  g.computeVertexNormals() // non-indexed: flat per face
+  return g
 }
 
 const newBucket = () => ({ pos: [], nor: [], uv: [], col: [], start: [], end: [], base: [] })

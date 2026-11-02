@@ -15,6 +15,9 @@ The Blitz (wiki-st-katharine-docks): "All the warehouses around the eastern basi
 occupied remained derelict until the 1960s." Buildings within 40 m of the east basin end in 1940 ("e") and leave, until
 1950 when the period city hands over to the modern one, a low rubble heap ("k": "r") with a few gutted wall stubs
 standing on their outline (where and how high is illustrative).
+Roofs: within ROOFED m of the bridge, a near-rectangular plot gets a hipped slate roof over its minimum rectangle
+("p": the four corners, ridge along the long side; Buildings.jsx builds it). Slate roofs on London stock brick are
+the period's common build (status inferred; the plan shows footprints only, not roof forms).
 """
 import json
 import math
@@ -24,7 +27,7 @@ import sys
 import numpy as np
 from PIL import Image, ImageDraw
 from scipy import ndimage as ndi
-from shapely.geometry import Polygon
+from shapely.geometry import Point, Polygon
 from shapely.ops import substring
 from skimage import measure
 
@@ -38,9 +41,11 @@ DATES = ROOT / "web/public/buildings/tower-bridge-dates.json"  # modern_dates.py
 OUT = ROOT / "web/public/buildings/tower-bridge-1890s.json"
 PX = 0.5  # m per pixel of the traced plan
 PLOT = 22.0  # m: party-wall grid
+ORIGIN = Point(0, 0)  # the bridge centre, in the scene frame
 BUILT_BY = 1894
 EAST_BASIN = (534060, 180470)  # a point inside St Katharine's east dock (OSGB)
 BLITZ, MODERN = 1940, 1950
+ROOFED = 650  # m from the bridge centre: pitched roofs where the camera usually is
 
 
 def bare_earth(meta):
@@ -166,7 +171,11 @@ def main():
                 out.append({"b": round(base, 1), "t": round(ground_y + rng.uniform(4, 0.8 * height), 1), "k": "w", "s": BLITZ,
                             "e": MODERN, "o": [round(float(v), 1) for q in zip(list(wx)[:-1], list(wz)[:-1]) for v in q]})
         else:
-            out.append({"b": round(base, 1), "t": round(top, 1), "k": kind, "o": o})
+            b = {"b": round(base, 1), "t": round(top, 1), "k": kind, "o": o}
+            rect = poly.minimum_rotated_rectangle
+            if poly.centroid.distance(ORIGIN) < ROOFED and poly.area > 0.85 * rect.area:
+                b["p"] = [round(float(v), 1) for q in list(rect.exterior.coords)[:4] for v in q]
+            out.append(b)
     frame = {"origin_osgb": meta["origin_osgb"], "origin_h": oH, "axis_deg": meta["bridge_axis_deg"], "bbox_osgb": meta["bbox_osgb"]}
     source = ("Footprints traced from the OS London Town Plan 1:1056, 1893-96, reproduced with the permission of the "
               "National Library of Scotland (CC-BY); heights inferred by use, see scripts/history/period_city.py")

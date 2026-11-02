@@ -23,6 +23,7 @@ mgr.itemEnd = (url) => { if (own(url)) { tex.pending--; tex.done++ } itemEnd(url
 let terrainIn = !terrainChunk
 const SETTLE = 0.5 // s of frames with everything in before the card lifts
 const LATE = 20000 // ms: then offer to show the scene as it is
+const CITY_WAIT = 8000 // ms: a Google view that has neither arrived nor failed by then (slow or stalled) settles without it
 
 // Never re-renders: loads start inside other components' renders (pbr() and friends), and a probe that
 // re-rendered on them restarted the suspended scene slots for ever. So it polls plain values each frame.
@@ -31,13 +32,15 @@ export function ReadyProbe() {
   const held = useRef(0)
   const last = useRef('')
   const bridge = useRef(false)
+  const start = useRef(0)
   useEffect(() => { terrainChunk?.().then((m) => m.loadTerrain()).finally(() => { terrainIn = true }) }, [])
   useFrame((_, dt) => {
     const st = useStore.getState()
     if (st.sceneSettled) return
     bridge.current ||= !!scene.getObjectByName('tower-bridge')
     const wanted = TILES && !!google && st.year >= google.GOOGLE_FROM && !st.lidar
-    const city = !wanted || google.useGoogle.getState().status !== 'loading'
+    start.current ||= performance.now()
+    const city = !wanted || google.useGoogle.getState().status !== 'loading' || performance.now() - start.current > CITY_WAIT
     const place = !!st.place, active = tex.pending > 0, total = tex.pending + tex.done
     const steps = [
       ['History', place], ['LiDAR ground', terrainIn], // textures before the bridge: it waits on them, and their count moves

@@ -72,7 +72,7 @@ function Shell({ steam }) {
       const x = x0 + i * bay
       for (const z of [z0, z1]) brick.push(box(0.7, wall - 1.1, t + 0.35, x, 1.1 + (wall - 1.1) / 2, z))
       if (i < bays) for (const z of [z0, z1]) archWindow(out, { depth: t }, atZ(x + bay / 2, z))
-      if (!LITE) for (const z of [z0, z1]) for (let k = 0; k < 2; k++) stone.push(box(0.25, 0.3, 0.3, x + bay * (0.25 + k * 0.5), wall - 0.45, z + Math.sign(z - cz) * 0.4)) // corbels
+      if (!LITE && i < bays) for (const z of [z0, z1]) for (let k = 0; k < 2; k++) stone.push(box(0.25, 0.3, 0.3, x + bay * (0.25 + k * 0.5), wall - 0.45, z + Math.sign(z - cz) * 0.4)) // corbels
     }
     // gable ends: brick triangle, stone coping on the rakes, kneelers, an oculus, three tall windows below
     for (const x of [x0, x1]) {
@@ -174,6 +174,7 @@ function Machinery({ sim, steam, third, museum }) {
       iron.push(beam([26, ENG_Y + 0.5, z], [31, ENG_Y + 0.5, z], 0.08), beam([26, ENG_Y - 0.5, z], [31, ENG_Y - 0.5, z], 0.08)) // guides
       iron.push(box(0.8, 2.2, 0.8, FLY_X, 1.1, z - 1.3), box(0.8, 2.2, 0.8, FLY_X, 1.1, z + 1.3)) // plummer blocks
       iron.push(new THREE.CylinderGeometry(0.4, 0.4, 2.6, 10).rotateX(Math.PI / 2).translate(37, ENG_Y, z)) // pump barrel
+      iron.push(box(0.3, ENG_Y - 0.6, 0.3, 37, (ENG_Y + 0.6) / 2, z)) // its saddle on the main
     }
     // two Lancashire boilers, brick-set, lengthwise in the east bay
     for (const x of [39.6, 42.2]) iron.push(new THREE.CylinderGeometry(1.25, 1.25, 9, 18).rotateX(Math.PI / 2).translate(x, 1.8, 161))
@@ -191,7 +192,7 @@ function Machinery({ sim, steam, third, museum }) {
     if (museum)
       [[23, 148], [27.5, 153], [31, 148.4], [35.5, 153.2], [24, 158], [30, 158.3], [36, 163], [33, 164.5]].forEach(([x, z], i) => {
         const h = 1.55 + 0.15 * Math.sin(i * 2.3)
-        iron.push(new THREE.CylinderGeometry(0.2, 0.27, h - 0.3, 8).translate(x, (h - 0.3) / 2, z), new THREE.SphereGeometry(0.14, 8, 6).translate(x, h - 0.12, z))
+        iron.push(new THREE.CylinderGeometry(0.2, 0.27, h - 0.3, 8).translate(x, (h - 0.3) / 2, z), new THREE.SphereGeometry(0.14, 8, 6).translate(x, h - 0.16, z))
       })
     // LITE: the flywheels stand still inside the iron mesh, at the instanced pose for crank 0
     if (LITE) engines.forEach((z, i) => iron.push(WHEEL.clone().rotateZ(i * Math.PI / 2).translate(FLY_X, ENG_Y, z)))

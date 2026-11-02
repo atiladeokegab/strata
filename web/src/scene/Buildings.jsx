@@ -97,6 +97,7 @@ function turrets(bd) {
 // west end is the pediment over the front on Tower Hill. Its span is where the footprint's mid-line crosses the walls;
 // 22 m wide and 4.5 m high are illustrative.
 const MINT = 'w53866192'
+const PLA = 'r1020011' // 10 Trinity Square, 1922: period_city.py landmarks()
 function pediment(bd) {
   const n = bd.o.length / 2, zs = bd.o.filter((_, i) => i % 2 === 1), zc = (Math.min(...zs) + Math.max(...zs)) / 2, xs = []
   for (let i = 0; i < n; i++) {
@@ -156,7 +157,8 @@ function build(data) {
     const tower = date?.src === 'wiki-tower-of-london' // ragstone under lead, not the drape: the 1890s map made white boxes
     // shortcut: a riverside warehouse is known by its OSM name (Butlers Wharf Buildings, Java Wharf); unnamed ones stay generic
     const wharf = bd.k !== 'g' && /wharf|warehouse|brewhouse/i.test(bd.n ?? '') && !/car park/i.test(bd.n)
-    const wall = tower ? 'k' : wharf ? 'w' : bd.k, lead = tower || wharf || bd.id === MINT // own roofs, not the photo
+    const pla = bd.id.startsWith(PLA) // sooted Portland stone reads as the plain coursed kit, not the office-window grid
+    const wall = tower || pla ? 'k' : wharf ? 'w' : bd.k, lead = tower || pla || wharf || bd.id === MINT // own roofs, not the photo
     const s = dated ?? bd.s
     // shortcut: a real OSM start_date of exactly 1950 reads as bake.py's guess; none is known here
     const guess = dated == null && (s == null || s === TALL_GUESS)

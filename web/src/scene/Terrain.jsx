@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { useStore } from '../store'
 import { GOOGLE_FROM } from './google/state'
-import { APPROACH, STREETS, dockCoping, levelStreets, rampFloor, sinkShelves, snapDocks } from './bareEarth.js'
+import { APPROACH, STREETS, VIADUCTS, dockCoping, levelStreets, rampFloor, sinkShelves, snapDocks } from './bareEarth.js'
 import { eraFor } from './bridge/stages.js'
 import { KERB_X, FOOTWAY_H } from './bridge/roadway.js'
 import { GAP } from './google/frame.js'
@@ -329,6 +329,14 @@ const SURFACES = `
       diffuseColor.rgb = mix(diffuseColor.rgb, ${v3(QUAY)} * (0.85 + 0.25 * tMottle) * (1.0 - 0.5 * wall), sQuay);
       // the basin, with a slow ripple of tone so it is not a flat dark sheet
       diffuseColor.rgb = mix(diffuseColor.rgb, ${v3(DOCK)} * (0.92 + 0.16 * tMottle), sDock);`
+// Before 1894 the old map draws the approaches' corridor as bare paper (the 1893-96 sheet shows the new road, its
+// neighbourhood faded), and with no houses on it that read as a scar. It takes the worn yard the same ground is beside
+// the street from 1894, so the eras agree, feathered over its last 10 m. The grass, the dock's basin and its quay
+// keep their own colours.
+const CORRIDOR = `
+      float cW = uPre * (1.0 - wall) * (1.0 - max(max(sDock, sQuay), smoothstep(0.3, 0.7, sM.g))) * (1.0 - smoothstep(${f1(VIADUCTS.half - 10)}, ${f1(VIADUCTS.half)}, abs(vRoadW.x)))
+        * smoothstep(${f1(STREETS.deckEnd)}, ${f1(STREETS.deckEnd + 10)}, abs(vRoadW.z)) * (1.0 - smoothstep(${f1(VIADUCTS.to - 10)}, ${f1(VIADUCTS.to)}, abs(vRoadW.z)));
+      diffuseColor.rgb = mix(diffuseColor.rgb, tYard, cW);`
 // The DTM keeps the approach viaducts (build.py keep_approaches), so under the bridge's own ramps and abutments the
 // ground lay in the plane of their stone and z-fought it: there it drops a real 0.5 m (the bridge frame: rotation only).
 const UNDER_BRIDGE = `float tUnder = (1.0 - smoothstep(9.5, 10.5, abs(vRoadW.x))) * (1.0 - smoothstep(182.5, 183.5, abs(vRoadW.z)));
@@ -365,11 +373,14 @@ ${UNDER_BRIDGE}`)
       `#include <map_fragment>
       diffuseColor.rgb = eraGrade(diffuseColor.rgb);
       // the steeper of the smoothed normal and the triangle's own: at a one-cell step (a river wall, a viaduct's side)
-      // the shared vertices average the flat top with the face, so vUp alone left those faces pale map paper
-      float wall = 1.0 - smoothstep(0.35, 0.7, min(vUp, abs(normalize(cross(dFdx(vRoadW), dFdy(vRoadW))).y)));
+      // the shared vertices average the flat top with the face, so vUp alone left those faces pale map paper. The
+      // triangle's own counts only when it is near plumb: on a bank or a lump, taken face by face, it painted every
+      // other triangle as wall, and the slope read as faceted rock
+      float fUp = abs(normalize(cross(dFdx(vRoadW), dFdy(vRoadW))).y);
+      float wall = 1.0 - smoothstep(0.35, 0.7, min(vUp, mix(fUp, 1.0, smoothstep(0.25, 0.4, fUp))));
       vec3 blur = eraGrade(texture2D(map, vMapUv, 5.0).rgb);
       vec3 facade = mix(blur * 0.5, vec3(0.13, 0.125, 0.115), 0.8); // dark: a face turned to the sun lights far brighter than the flat ground
-      diffuseColor.rgb = mix(diffuseColor.rgb, facade, wall);${ROAD_TINT}${SURFACES}`,
+      diffuseColor.rgb = mix(diffuseColor.rgb, facade, wall);${ROAD_TINT}${SURFACES}${CORRIDOR}`,
     )
     .replace('#include <fog_fragment>', `#include <fog_fragment>
       #ifdef USE_FOG
@@ -705,6 +716,7 @@ const COPING_HAZE = (shader) => {
 }
 function DockCoping({ t }) {
   const rings = use(loadRings()), mask = use(loadMask())
+  const docks = useStore((s) => s.year < DOCKS_UNTIL) // from the marina on, its photo shows its own quay edge
   const geometry = useMemo(() => {
     if (!mask || !rings.length) return null
     const g = new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(dockCoping(rings, t, mask), 3))
@@ -712,7 +724,7 @@ function DockCoping({ t }) {
     return g
   }, [rings, mask, t])
   useEffect(() => () => geometry?.dispose(), [geometry])
-  if (!geometry) return null
+  if (!geometry || !docks) return null
   return (
     <mesh name="dock-coping" geometry={geometry} raycast={noRaycast} receiveShadow>
       <meshStandardMaterial color={QUAY} roughness={0.9} metalness={0} onBeforeCompile={COPING_HAZE} customProgramCacheKey={() => 'dock-coping'} />

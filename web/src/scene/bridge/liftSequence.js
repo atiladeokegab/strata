@@ -14,6 +14,9 @@ const RESUME_S = 6 // how long the "Traffic resumes" caption stays up
 // so the whole sequence plays in about 45 s; 1 keeps the normal demo pace.
 export const FILM_SCALE = 3
 export const FAST_SCALE = 4
+// Fast lift, call to leaves moving: at most this many seconds (road users clear the leaves first). 4.4 s in 1894,
+// 4.6 s with 2026 traffic (lift-timeline.md); check.mjs holds the ceiling, and the story's opening shot counts on it.
+export const FAST_LEAVES_S = 5
 export const FAST_SHIP_X = 160 // shortcut: fast lift only; the ship jumps here under way as the leaves start up
 export let liftTimeScale = 1
 export const setLiftTimeScale = (k) => (liftTimeScale = k)

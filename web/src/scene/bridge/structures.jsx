@@ -21,6 +21,7 @@ export const L = {
   towerHalfX: 13,
   towerHalfZ: 10, // walkway: Barry 1894 (tb-engine, printed p.27 / PDF p.37) has its supports 15 ft back from the pier faces, 230 ft (70.1 m) clear; ours is 71.0 m (0.45 m per end long). Known and accepted rather than thinning the towers: don't 'fix' it blind
   archHalf: 9.5,
+  archTop: 12.2, // solid stone over the road arch and the frame's portal girders (inferred: Barry 1894 pp.37, 50)
   bodyTop: 42,
   walkX: 10.5,
   walkY: 35,
@@ -90,13 +91,13 @@ export function TowerFrame() {
     for (let y = 5; y <= L.bodyTop; y += 6) {
       for (let i = 0; i < 4; i++) {
         const [ax, az] = pts[i], [bx, bz] = pts[(i + 1) % 4]
-        if (i % 2 === 0 && y < 17) continue // keep the road arch clear on the river-facing faces
+        if (i % 2 === 0 && y < 17) continue // keep the road arch clear on the river-facing faces (the 5-11 m bay would cut the crown; 11-17 clears it by 2.1 m)
         gs.push(beam([ax, y, az], [bx, y, bz], 0.4, 4))
         // cross-bracing on each face of the bay below
         gs.push(beam([ax, y - 6, az], [bx, y, bz], 0.18, 4), beam([bx, y - 6, bz], [ax, y, az], 0.18, 4))
       }
     }
-    gs.push(box(2 * cx + 1.4, 1.4, 1.2, 0, 14, z0 - cz), box(2 * cx + 1.4, 1.4, 1.2, 0, 14, z0 + cz))
+    gs.push(box(2 * cx + 1.4, 1.4, 1.2, 0, L.archTop, z0 - cz), box(2 * cx + 1.4, 1.4, 1.2, 0, L.archTop, z0 + cz))
     return merge(gs)
   }, [])
   return <mesh geometry={geo} material={M.steel} castShadow />
@@ -114,13 +115,13 @@ function archShape() {
   const s = new THREE.Shape(), w = L.towerHalfX, a = L.archHalf
   s.moveTo(-w, L.pierTop)
   s.lineTo(-a, L.pierTop)
-  s.lineTo(-a, 8)
-  s.quadraticCurveTo(-a, 11.8, 0, 13.4)
-  s.quadraticCurveTo(a, 11.8, a, 8)
+  s.lineTo(-a, 7) // springing, crown and top inferred from Barry 1894 pp.37, 50 (was 8 / 13.4 / 14)
+  s.quadraticCurveTo(-a, 10.4, 0, 11.6)
+  s.quadraticCurveTo(a, 10.4, a, 7)
   s.lineTo(a, L.pierTop)
   s.lineTo(w, L.pierTop)
-  s.lineTo(w, 14)
-  s.lineTo(-w, 14)
+  s.lineTo(w, L.archTop)
+  s.lineTo(-w, L.archTop)
   return s
 }
 
@@ -145,15 +146,20 @@ export function TowerCladding({ topY }) {
 export function claddingKit(topY) {
   const z0 = L.pierZ, hx = L.towerHalfX, hz = L.towerHalfZ
   const arch = new THREE.ExtrudeGeometry(archShape(), { depth: 2 * hz, bevelEnabled: false }).translate(0, 0, z0 - hz)
-  const stone = [box(2 * hx, L.bodyTop - 14, 2 * hz, 0, (L.bodyTop + 14) / 2, z0)]
-  const granite = [14, 28, L.bodyTop].map((y) => box(2 * hx + 1, 0.7, 2 * hz + 1, 0, y, z0))
+  const stone = [box(2 * hx, L.bodyTop - L.archTop, 2 * hz, 0, (L.bodyTop + L.archTop) / 2, z0)]
+  const granite = [L.archTop, 28, L.bodyTop].map((y) => box(2 * hx + 1, 0.7, 2 * hz + 1, 0, y, z0))
   const slate = []
   const gold = []
   const glass = []
   // octagonal corner turrets with spired caps
   for (const [sx, sz] of corners) {
     const x = sx * 12, z = z0 + sz * 9
-    stone.push(new THREE.CylinderGeometry(3.2, 3.4, 46, 8).translate(x, 21.5, z))
+    // below the granite band at L.archTop the shaft's road-arch face is pulled back to the arch jamb (its octagon
+    // edge stood 0.8 m into the road passage); above it the shaft is buried in the tower body on that side
+    const hb = L.archTop + 1.5, rb = 3.4 - (0.2 * hb) / 46 // shaft radius at the band on the 3.4 -> 3.2 taper
+    const shaft = new THREE.CylinderGeometry(rb, 3.4, hb, 8), p = shaft.attributes.position
+    for (let i = 0; i < p.count; i++) if (-sx * p.getX(i) > 2.45) p.setX(i, -sx * 2.45)
+    stone.push(shaft.translate(x, hb / 2 - 1.5, z), new THREE.CylinderGeometry(3.2, rb, 46 - hb, 8).translate(x, 21.5 + hb / 2, z))
     granite.push(new THREE.CylinderGeometry(3.6, 3.6, 0.8, 8).translate(x, 44.4, z))
     // open arcaded stage above the parapet, then a tall lucarned spire with a gilded finial
     stone.push(new THREE.CylinderGeometry(2.9, 2.9, 2.4, 8).translate(x, 45.9, z))
@@ -205,9 +211,7 @@ export function claddingKit(topY) {
   }
   // the walkway doors on the river faces
   for (const sx of [-1, 1]) glass.push(box(2.6, 3.8, 0.3, sx * L.walkX, L.walkY + 2.1, z0 + hz + 0.06))
-  const kit = { stone: [arch, ...stone], granite, slate, gold, glass }
-  for (const gs of Object.values(kit)) for (const g of gs) g.userData.from = 'TowerCladding' // check.mjs: the arch guard's turret skip survives the join
-  return kit
+  return { stone: [arch, ...stone], granite, slate, gold, glass }
 }
 
 // ---- bascule leaf (rotates about the pivot) ----

@@ -163,8 +163,13 @@ export const DOCK_EDGE = { reach: 20, taper: 12, from: 3, look: 6, rise: 2, gap:
 
 /** Snaps the docks in a tile's bare earth ({ meta, heights, w, h }, m OD) to their outline (mask: { data, w, h }, R of
  * surfaces.png, 4 bytes a pixel, over the same bbox). Mutates and returns heights. */
-export function snapDocks({ meta, heights, w, h }, mask) {
-  const E = DOCK_EDGE, res = (meta.bbox_osgb[2] - meta.bbox_osgb[0]) / w, n = w * h
+// what the snap reads from the mask alone, once per mask and tile size (the pre-1894 ground and today's share it)
+const plans = new WeakMap()
+function dockPlan(mask, w, h, res) {
+  const E = DOCK_EDGE, n = w * h, key = `${w}x${h}`
+  if (!plans.has(mask)) plans.set(mask, new Map())
+  const cached = plans.get(mask).get(key)
+  if (cached) return cached
   const r = new Float32Array(n), dist = new Float32Array(n).fill(Infinity), queue = new Int32Array(n)
   let tail = 0
   for (let i = 0; i < h; i++) for (let j = 0; j < w; j++) { // R at the cell centre, nearest mask pixel
@@ -172,11 +177,7 @@ export function snapDocks({ meta, heights, w, h }, mask) {
     r[k] = mask.data[(mi * mask.w + mj) * 4] / 255
     if (r[k] >= 0.5) { dist[k] = 0; queue[tail++] = k }
   }
-  if (!tail) return heights
-  const inside = []
-  for (let q = 0; q < tail; q++) if (r[queue[q]] > 0.99) inside.push(heights[queue[q]])
-  inside.sort((a, b) => a - b)
-  const basin = inside.length ? inside[inside.length >> 1] : null
+  const docks = tail
   for (let head = 0; head < tail; head++) { // metres out from the outline, 4-neighbour, as far as `reach`
     const k = queue[head], d = dist[k] + res, i = Math.floor(k / w), j = k % w
     if (d > E.reach) continue
@@ -186,12 +187,6 @@ export function snapDocks({ meta, heights, w, h }, mask) {
     if (j > 0) visit(k - 1)
     if (j < w - 1) visit(k + 1)
   }
-  // the quay: separable max over `look` m of the ground `from`-`reach` m out, past the fringe (the river's carved bed
-  // never counts, nor is it raised: the lock opens onto it)
-  const bed = meta.water_h - 1, L = Math.max(1, Math.round(E.look / res)), src = new Float32Array(n).fill(-Infinity), row = new Float32Array(n).fill(-Infinity)
-  for (let q = 0; q < tail; q++) { const k = queue[q]; if (dist[k] >= E.from && heights[k] >= bed) src[k] = heights[k] }
-  for (let q = 0; q < tail; q++) { const k = queue[q], j = k % w; if (src[k] > -Infinity) for (let t = Math.max(0, j - L); t <= Math.min(w - 1, j + L); t++) row[k - j + t] = Math.max(row[k - j + t], src[k]) }
-  const quay = (k) => { const i = Math.floor(k / w); let v = -Infinity; for (let t = Math.max(0, i - L); t <= Math.min(h - 1, i + L); t++) v = Math.max(v, row[k + (t - i) * w]); return v }
   // cells between two basins: metres to the nearest dock cell each way along the row and the column
   const G = Math.round(E.gap / res), run = (start, step, count, back) => { // fills back[] with cells since the last dock, capped
     let c = G + 1
@@ -200,6 +195,27 @@ export function snapDocks({ meta, heights, w, h }, mask) {
   const a = new Uint8Array(n), b = new Uint8Array(n), c = new Uint8Array(n), e = new Uint8Array(n)
   for (let i = 0; i < h; i++) { run(i * w, 1, w, a); run(i * w + w - 1, -1, w, b) }
   for (let j = 0; j < w; j++) { run(j, w, h, c); run((h - 1) * w + j, -w, h, e) }
+  const plan = { r, dist, queue: queue.slice(0, tail), docks, G, a, b, c, e }
+  plans.get(mask).set(key, plan)
+  return plan
+}
+
+/** Snaps the docks in a tile's bare earth ({ meta, heights, w, h }, m OD) to their outline (mask: { data, w, h }, R of
+ * surfaces.png, 4 bytes a pixel, over the same bbox). Mutates and returns heights. */
+export function snapDocks({ meta, heights, w, h }, mask) {
+  const E = DOCK_EDGE, res = (meta.bbox_osgb[2] - meta.bbox_osgb[0]) / w, n = w * h
+  const { r, dist, queue, docks, G, a, b, c, e } = dockPlan(mask, w, h, res), tail = queue.length
+  if (!docks) return heights
+  const inside = []
+  for (let q = 0; q < docks; q++) if (r[queue[q]] > 0.99) inside.push(heights[queue[q]])
+  inside.sort((a, b) => a - b)
+  const basin = inside.length ? inside[inside.length >> 1] : null
+  // the quay: separable max over `look` m of the ground `from`-`reach` m out, past the fringe (the river's carved bed
+  // never counts, nor is it raised: the lock opens onto it)
+  const bed = meta.water_h - 1, L = Math.max(1, Math.round(E.look / res)), src = new Float32Array(n).fill(-Infinity), row = new Float32Array(n).fill(-Infinity)
+  for (let q = 0; q < tail; q++) { const k = queue[q]; if (dist[k] >= E.from && heights[k] >= bed) src[k] = heights[k] }
+  for (let q = 0; q < tail; q++) { const k = queue[q], j = k % w; if (src[k] > -Infinity) for (let t = Math.max(0, j - L); t <= Math.min(w - 1, j + L); t++) row[k - j + t] = Math.max(row[k - j + t], src[k]) }
+  const quay = (k) => { const i = Math.floor(k / w); let v = -Infinity; for (let t = Math.max(0, i - L); t <= Math.min(h - 1, i + L); t++) v = Math.max(v, row[k + (t - i) * w]); return v }
   const wet = new Uint8Array(n) // 1 a candidate, 2 kept: only a sheet of `pool` m² or more, never the fringe's odd low cell
   const T = Math.max(1, Math.round(E.sliver / res))
   for (let q = 0; q < tail; q++) {

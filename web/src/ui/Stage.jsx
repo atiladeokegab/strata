@@ -1,7 +1,7 @@
 // The full-screen 3D world: sky, light, camera views and the scene slots. Clicking a mesh selects the part it belongs to.
 import { useEffect } from 'react'
 import { Canvas, useThree } from '@react-three/fiber'
-import { Raycaster, Vector3 } from 'three'
+import { Box3, Raycaster, Vector3 } from 'three'
 import { Sky } from '@react-three/drei'
 import { useStore, TILES, EMBED } from '../store'
 import { CameraRig } from './CameraRig'
@@ -27,7 +27,7 @@ function partOf(object, ids) {
 }
 
 // Scene labels (drei <Html> buttons in .stage) are kept readable: nearest first, each one hides while it overlaps
-// the on-screen controls or a nearer label, or while its anchor is behind or inside a raised leaf; a label cut
+// the on-screen controls, the bridge or a nearer label, or while its anchor is behind or inside a raised leaf; a label cut
 // by the screen edge or the desktop side panel is slid back beside it (never cut). Embeds keep only the few nearest.
 const CLEAR_OF = '.controls, .credit, .dock, .embed-open, .panel, .callout' // .callout: the top view's part labels outrank place names
 const overlaps = (a, b, m = 6) => a.left < b.right + m && a.right > b.left - m && a.top < b.bottom + m && a.bottom > b.top - m
@@ -36,6 +36,30 @@ const EDGE = 8 // px kept clear of the screen edge
 const EMBED_LABELS = 4
 const ray = new Raycaster()
 const at = new Vector3()
+// The bridge itself in its own frame (x across the river, z along the deck, metres), as a few boxes so a long oblique
+// view does not blank the sky around it: each tower on its pier, the river span, the two side spans to the shore.
+// No label or tag sits on any of them (bridge first, labels second), wherever the camera is.
+const box3 = (x, y0, y1, z0, z1) => new Box3(new Vector3(-x, y0, z0), new Vector3(x, y1, z1))
+const BRIDGE = [box3(28, -9, 62, -60.5, -30.5), box3(28, -9, 62, 30.5, 60.5), box3(13, -9, 40, -30.5, 30.5),
+  box3(13, -9, 40, -138.5, -60.5), box3(13, -9, 40, 60.5, 138.5)]
+const corner = new Vector3()
+function bridgeRects(scene, camera, canvas) {
+  const g = scene.getObjectByName('tower-bridge')
+  if (!g) return []
+  const box = canvas.getBoundingClientRect(), out = []
+  for (const b of BRIDGE) {
+    const r = { left: Infinity, right: -Infinity, top: Infinity, bottom: -Infinity }
+    for (let i = 0; i < 8 && r; i++) {
+      corner.set(i & 1 ? b.max.x : b.min.x, i & 2 ? b.max.y : b.min.y, i & 4 ? b.max.z : b.min.z)
+      corner.applyMatrix4(g.matrixWorld).project(camera)
+      if (corner.z > 1) { r.left = NaN; break } // a corner behind the camera (walk, close-ups): that piece fills the view, nothing to keep clear
+      const x = box.left + ((corner.x + 1) / 2) * box.width, y = box.top + ((1 - corner.y) / 2) * box.height
+      r.left = Math.min(r.left, x); r.right = Math.max(r.right, x); r.top = Math.min(r.top, y); r.bottom = Math.max(r.bottom, y)
+    }
+    if (!Number.isNaN(r.left)) out.push(r)
+  }
+  return out
+}
 
 // every label anchor on screen: {x, y} in px, its distance d from the camera, and whether a leaf hides it.
 // The leaves are driven by the dock slider, the tour and the ship lift sequence, so no "raised" flag
@@ -70,6 +94,11 @@ export function labelAnchors(scene, camera, canvas) {
 // one pass over the labels; returns the names shown. ?capture=1 exposes it as window.__strataLabels for the label test
 export function guardLabels(scene, camera, canvas, max = Infinity) {
   const keep = [...document.querySelectorAll(CLEAR_OF)].map((el) => el.getBoundingClientRect()).filter((r) => r.width) // hidden callouts measure 0
+  const bridge = bridgeRects(scene, camera, canvas)
+  liftButton(bridge, keep)
+  // the bridge's own captions (build stage, lift phase) ride over the towers: hidden while under the controls or the dock
+  for (const el of document.querySelectorAll('.bridge-stage-label, .bridge-lift-caption')) el.style.visibility = keep.some((k) => overlaps(el.getBoundingClientRect(), k, 0)) ? 'hidden' : ''
+  keep.push(...bridge)
   const anchors = labelAnchors(scene, camera, canvas)
   const W = innerWidth, H = innerHeight
   const p = document.querySelector('.panel')?.getBoundingClientRect() // desktop: a column down the left; phone: a bottom sheet
@@ -94,6 +123,20 @@ export function guardLabels(scene, camera, canvas, max = Infinity) {
     l.b.style.transform = l.dx ? `translateX(${l.dx}px)` : ''
   }
   return shown.map((l) => l.b.textContent)
+}
+
+// "Lift for a ship" stands by the north tower; while that is on the bridge, it drops to just below it (hidden if that is off screen or under the UI)
+function liftButton(bridge, keep) {
+  const b = document.querySelector('.bridge-lift-button')
+  if (!b) return
+  const r = b.getBoundingClientRect(), was = +(b.dataset.dy || 0)
+  const at = { left: r.left, right: r.right, top: r.top - was, bottom: r.bottom - was }
+  const under = bridge.filter((k) => overlaps(at, k, 0))
+  const dy = under.length ? Math.max(...under.map((k) => k.bottom)) + EDGE - at.top : 0
+  const moved = { ...at, top: at.top + dy, bottom: at.bottom + dy }
+  b.style.visibility = dy && (moved.bottom > innerHeight - EDGE || [...keep, ...bridge].some((k) => overlaps(moved, k, 0))) ? 'hidden' : ''
+  b.dataset.dy = dy
+  b.style.transform = dy ? `translateY(${dy}px)` : ''
 }
 
 function LabelGuard() {

@@ -1,5 +1,7 @@
+import asyncio
 import json
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 from fastapi.testclient import TestClient
@@ -13,15 +15,87 @@ def client():
     return TestClient(app)
 
 
-def test_startup_warms_search_cache(monkeypatch):
+@pytest.mark.parametrize("warmup_fails", [False, True])
+def test_startup_warms_search_cache(monkeypatch, warmup_fails):
     from server import main
     warmed = []
-    async def warm(place):
-        warmed.append(place["id"])
+    owned = SimpleNamespace(closed=False, responses=SimpleNamespace(create=AsyncMock()))
+    if warmup_fails:
+        owned.responses.create.side_effect = main.OpenAIError("warmup unavailable")
+    async def close():
+        owned.closed = True
+    owned.close = close
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setattr(main, "AsyncOpenAI", lambda **kwargs: owned)
+    async def warm(place, client=None):
+        warmed.append((place["id"], client))
     monkeypatch.setattr(main, "warm_search", warm)
     with TestClient(app) as client:
         assert client.get("/api/health").json() == {"ok": True}
-    assert warmed == ["tower-bridge"]
+        assert app.state.openai is owned and not owned.closed
+    assert warmed == [("tower-bridge", owned)]
+    assert owned.closed and app.state.openai is None
+    assert owned.responses.create.call_args.kwargs["input"] == "Reply ready."
+    assert owned.responses.create.call_args.kwargs["max_output_tokens"] == 16
+
+
+@pytest.mark.parametrize("slow_phase", ["search", "inference"])
+def test_startup_warmup_has_elapsed_deadline_and_closes_client(monkeypatch, slow_phase):
+    from server import main
+    owned = SimpleNamespace(closed=False, responses=SimpleNamespace(create=AsyncMock()))
+    async def close():
+        owned.closed = True
+    owned.close = close
+    progress, cancelled = [], []
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setattr(main, "STARTUP_WARMUP_TIMEOUT", 0.05)
+    monkeypatch.setattr(main, "AsyncOpenAI", lambda **kwargs: owned)
+    async def slow_provider_call(*args, **kwargs):
+        try:
+            for index in range(24):
+                progress.append(index)
+                await asyncio.sleep(0.01)
+        finally:
+            cancelled.append(True)
+    async def warm_search(place, client=None):
+        if slow_phase == "search":
+            await slow_provider_call()
+    monkeypatch.setattr(main, "warm_search", warm_search)
+    if slow_phase == "inference":
+        owned.responses.create.side_effect = slow_provider_call
+    with TestClient(app) as client:
+        assert client.get("/api/health").json() == {"ok": True}
+        assert app.state.openai is owned and progress
+    assert owned.closed and app.state.openai is None
+    assert cancelled == [True]
+    assert 0 < len(progress) < 24
+    assert owned.responses.create.await_count == (slow_phase == "inference")
+
+
+def test_routes_reuse_lifespan_provider_client(monkeypatch):
+    from server import main
+    used = []
+    owned = SimpleNamespace(responses=SimpleNamespace(create=AsyncMock()))
+    async def close():
+        pass
+    owned.close = close
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setattr(main, "AsyncOpenAI", lambda **kwargs: owned)
+    async def warm(place, client=None):
+        used.append(("warm", client))
+    async def search(place, question, client=None):
+        used.append(("search", client))
+        return []
+    async def answer(place, question, part_id=None, client=None):
+        used.append(("ask", client))
+        return {"answer": "No source.", "citations": [], "refused": True}
+    monkeypatch.setattr(main, "warm_search", warm)
+    monkeypatch.setattr(main, "semantic_search", search)
+    monkeypatch.setattr(main.docent, "ask", answer)
+    with TestClient(app) as client:
+        assert client.get("/api/search?q=tower").status_code == 200
+        assert client.post("/api/ask", json={"question": "height?"}).json()["refused"]
+    assert used == [("warm", owned), ("search", owned), ("ask", owned)]
 
 
 def test_search_parts_events_sources(client):

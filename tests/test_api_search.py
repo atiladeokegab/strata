@@ -23,7 +23,7 @@ def test_semantic_search_uses_startup_cache(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "fake")
     monkeypatch.setattr(module, "_cache", {})
 
-    async def fake_embed(texts):
+    async def fake_embed(texts, client=None):
         return [[1.0, 0.0] if "tower" in text.lower() or "height" in text.lower() else [0.0, 1.0] for text in texts]
 
     monkeypatch.setattr(module, "_embed", fake_embed)
@@ -42,7 +42,7 @@ def test_warmup_without_key_and_failed_embedding_fall_back(monkeypatch):
 
     monkeypatch.setenv("OPENAI_API_KEY", "fake")
 
-    async def fail(_):
+    async def fail(_, client=None):
         raise ConnectionError("offline")
 
     monkeypatch.setattr(module, "_embed", fail)
@@ -54,7 +54,7 @@ def test_cached_embedding_failure_uses_keyword_fallback(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "fake")
     monkeypatch.setattr(module, "_cache", {})
 
-    async def embed(texts):
+    async def embed(texts, client=None):
         if len(texts) == 1:
             raise TimeoutError()
         return [[1.0, 0.0] for _ in texts]
@@ -64,3 +64,34 @@ def test_cached_embedding_failure_uses_keyword_fallback(monkeypatch):
     asyncio.run(module.warm_search(data))
     result = asyncio.run(module.semantic_search(data, "north tower"))
     assert result[0]["id"] == "tower"
+
+
+def test_supplied_client_is_reused_and_not_closed(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setattr(module, "_cache", {})
+    calls = []
+
+    class Client:
+        closed = False
+
+        class embeddings:
+            @staticmethod
+            async def create(*, model, input, timeout):
+                assert timeout == 8
+                calls.append((model, input))
+                return SimpleNamespace(data=[SimpleNamespace(index=i, embedding=[1.0, 0.0]) for i, _ in enumerate(input)])
+
+        async def close(self):
+            self.closed = True
+
+    async def run():
+        client = Client()
+        data = place()
+        await module.warm_search(data, client=client)
+        await module.semantic_search(data, "north tower", client=client)
+        assert not client.closed
+
+    asyncio.run(run())
+    assert len(calls) == 2
+    assert len(calls[0][1]) == 5
+    assert calls[1][1] == ["north tower"]

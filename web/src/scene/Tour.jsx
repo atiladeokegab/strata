@@ -7,6 +7,7 @@ import { Html } from '@react-three/drei'
 import { Box3, Sphere, Vector3 } from 'three'
 import { useStore, THIS_YEAR } from '../store.js'
 import { framed } from '../ui/CameraRig.jsx'
+import { bridgeHydraulics } from './bridge/TowerBridge.jsx'
 import { useTour, startTour, stopTour, DURATION, poseAt, runTracks, hydraulicsPart, CARD, cardOpacity, BEATS, DOCENT_Q, HANDOFF } from '../tour/tour.js'
 
 export default function Tour() {
@@ -15,6 +16,7 @@ export default function Tour() {
   const controls = useThree((st) => st.controls)
   const run = useRef(null) // {prev, ctx, centres}
   const card = useRef(null)
+  const angle = useRef(null) // the opening beat's live leaf angle, written each frame (no re-render)
   const app = useRef(document.querySelector('.app'))
   const [beat, setBeat] = useState(-1) // index into BEATS, 'handoff', or -1
   const [answer, setAnswer] = useState(null) // the docent's live reply {text, citations, refused}
@@ -70,6 +72,7 @@ export default function Tour() {
     if (!useStore.getState().sceneSettled) return void useTour.setState({ startedAt: performance.now() }) // Home's story button: hold at 0 s until the loading card lifts, or the opening card plays behind it
     const t = Math.min(DURATION, (performance.now() - useTour.getState().startedAt) / 1000)
     if (card.current) card.current.style.opacity = Math.max(0, cardOpacity(t))
+    if (angle.current) angle.current.textContent = Math.round((bridgeHydraulics.angle * 180) / Math.PI)
     runTracks(r.prev, t, r.ctx)
     r.prev = t
     const { pos, target } = poseAt(t, (k) => (k.part && fitPart(scene, camera, r, r.ctx.hydraulics, k)) || k)
@@ -85,7 +88,7 @@ export default function Tour() {
   if (!playing && !linger) return null
   const sources = useStore.getState().place?.sources ?? []
   return (<>
-    <Html fullscreen portal={app} calculatePosition={pinToScreen} zIndexRange={[20, 10]} style={{ pointerEvents: 'none' }}>
+    <Html fullscreen portal={app} calculatePosition={pinToScreen} onOcclude={keepShown} zIndexRange={[20, 10]} style={{ pointerEvents: 'none' }}>
       {BEATS.map((x, i) => (
         <div key={i} className={'story-caption' + (beat === i ? ' on' : '')} aria-hidden={beat !== i}>
           <div className="glass" style={captionBox}>
@@ -103,12 +106,21 @@ export default function Tour() {
                   </>
                 ) : <p style={{ margin: '8px 0 0', color: 'var(--muted)' }}>…</p>}
               </>
-            ) : <p style={{ margin: 0, color: 'var(--ink)' }}>{x.text}</p>}
+            ) : (
+              <>
+                {x.angle ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <p style={numStyle}><span ref={angle}>0</span>°<span style={numLabel}>leaf angle</span></p>
+                    <p style={{ margin: 0, color: 'var(--ink)' }}>{x.text}</p>
+                  </div>
+                ) : <p style={{ margin: 0, color: 'var(--ink)' }}>{x.text}</p>}
+              </>
+            )}
           </div>
         </div>
       ))}
     </Html>
-    <Html fullscreen portal={innerWidth > 900 ? undefined : app} calculatePosition={pinToScreen} zIndexRange={[20, 10]} style={{ pointerEvents: 'none' }}>
+    <Html fullscreen portal={innerWidth > 900 ? undefined : app} calculatePosition={pinToScreen} onOcclude={keepShown} zIndexRange={[20, 10]} style={{ pointerEvents: 'none' }}>
       <div className="story-card" style={{ ...cardStyle, opacity: beat === 'handoff' ? 1 : 0, transition: 'opacity .8s ease' }} aria-hidden={beat !== 'handoff'}>
         <div>
           <p style={{ margin: 0, font: '500 12px/1 var(--mono)', color: 'var(--gold)', letterSpacing: '.14em', textTransform: 'uppercase' }}>{HANDOFF.label}</p>
@@ -138,6 +150,10 @@ function phoneShift() {
 // The captions render into .app, not the stage's own stacking context, so on phones they can sit over the dock;
 // the opening and hand-off cards stay in the stage, under the panel and controls, except on phones, where they cover all.
 const pinToScreen = (_, __, size) => [size.width / 2, size.height / 2]
+// drei hides the layer (display: none) while its world-origin anchor is behind the camera, as in the pier close-up; the layer is the screen, so never
+const keepShown = () => {}
+const numStyle = { margin: 0, minWidth: '2.6em', font: '400 44px/1 var(--serif)', color: 'var(--ink)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }
+const numLabel = { display: 'block', marginTop: 6, font: '500 11px/1 var(--mono)', color: 'var(--muted)', letterSpacing: '.14em', textTransform: 'uppercase' }
 const captionBox = { maxWidth: 560, padding: '12px 18px 14px', borderRadius: 14, fontSize: 15, lineHeight: 1.45 }
 const cardStyle = {
   display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 24px',

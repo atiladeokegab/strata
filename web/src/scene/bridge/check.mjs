@@ -19,7 +19,7 @@ import { layout, clash, riverWet, samples } from '../moorings.js'
 import { decodeHeights, heightAt } from './terrainNode.js'
 import { createRiver, stepRiver, gap, CRAFT, CLEAR } from './riverSim.js'
 import { createTraffic, stepTraffic, onLeaves, roadY, streetProfile, RAMP_FOOT, TYPES, STOP_U, BASCULE_U, START_U, END_U, ABUT_Z, RAMP_LEN, POST_X, POST_Z, POST_W, GATE_U, nearCam, CAM_CLEAR, CAM_TOP } from './trafficSim.js'
-import { createLift, liftForShip, stepLift, liftSpeed, setLiftTimeScale, applyShipWarp, gatesClosed, heldLever, PASSED_X, FILM_SCALE, substep } from './liftSequence.js'
+import { createLift, liftForShip, stepLift, liftSpeed, setLiftTimeScale, applyShipWarp, gatesClosed, heldLever, PASSED_X, FILM_SCALE, FAST_LEAVES_S, substep } from './liftSequence.js'
 
 const MAX = (86 * Math.PI) / 180
 const run = (s, target, seconds) => {
@@ -412,7 +412,7 @@ console.log('callout checks ok')
 const liftCycle = (scale, fast = false, dt = 0.05) => {
   setLiftTimeScale(scale)
   const h = createHydraulics(), ship = createShip(), t = createTraffic(2026, 3), s = createLift()
-  let lever = 0, phases = ['idle'], still = 0
+  let lever = 0, phases = ['idle'], still = 0, leaves = null
   liftForShip({ fast }, s)
   assert.equal(s.caption, 'Signals to red')
   let i = 0
@@ -437,17 +437,19 @@ const liftCycle = (scale, fast = false, dt = 0.05) => {
     applyShipWarp(s, ship, CRUISE)
     substep(dt, (d) => stepShip(ship, h.angle / MAX, d * k))
     if (['raising', 'passing'].includes(s.phase) && ship.x > PASSED_X && ship.v < 0.5) still += dt
+    if (leaves === null && h.angle > 0.001) leaves = (i + 1) * dt
   }
   assert.deepEqual(phases, ['idle', 'red', 'raising', 'passing', 'lowering', 'resume', 'idle'], `lift phases ${phases}`)
   assert.equal(lever, 0)
   for (let j = 0; j < 200; j++) stepTraffic(t, dt, false)
   assert.ok(t.lanes.every((l) => l.list.some((v) => v.u > STOP_U + 5)), 'traffic moves again after the lift')
   setLiftTimeScale(1)
-  return { secs: i * dt, still }
+  return { secs: i * dt, still, leaves }
 }
 const slow = liftCycle(1), film = liftCycle(FILM_SCALE), fast = liftCycle(1, true)
 assert.ok(film.secs < 50, `film lift completes in under 50 s of sim time, took ${film.secs.toFixed(1)} s`)
 assert.ok(fast.secs <= 22, `fast lift completes within 22 s of sim time, took ${fast.secs.toFixed(1)} s`)
+assert.ok(fast.leaves <= FAST_LEAVES_S, `fast lift: leaves move within ${FAST_LEAVES_S} s of the call (the story's opening shot), took ${fast.leaves?.toFixed(2)} s`)
 assert.ok(fast.still <= 3, `in a fast lift the ship waits at most 3 s, waited ${fast.still.toFixed(1)} s`)
 // clock time, not frame count (next17: stalled at 'red' on a ~30 fps L4): the fast lift keeps its pace at any fps
 for (const fps of [30, 8, 3]) {
@@ -463,7 +465,7 @@ for (const fps of [30, 8, 3]) {
   for (const f of ['river.jsx', 'interiors.jsx'])
     assert.ok(/substep\(dt, \(h\) => step(River|Cars)\(/.test(readFileSync(new URL(f, import.meta.url), 'utf8')), `${f} steps on clock time via substep`)
 }
-console.log(`lift checks ok (cycle ${slow.secs.toFixed(0)} s at scale 1, ${film.secs.toFixed(0)} s at FILM_SCALE, ${fast.secs.toFixed(1)} s fast, ship still ${fast.still.toFixed(1)} s)`)
+console.log(`lift checks ok (cycle ${slow.secs.toFixed(0)} s at scale 1, ${film.secs.toFixed(0)} s at FILM_SCALE, ${fast.secs.toFixed(1)} s fast, leaves at ${fast.leaves.toFixed(2)} s, ship still ${fast.still.toFixed(1)} s)`)
 // top view and road read the same gate rule: no file draws gates from its own condition
 for (const f of ['traffic.jsx', 'topview.jsx'])
   assert.ok(readFileSync(new URL(f, import.meta.url), 'utf8').includes('gatesClosed(sim, '), `${f} gates follow gatesClosed`)
@@ -700,14 +702,17 @@ console.log('geom materials untextured, all kinded ok')
         const h = cast(root, [x, y, -180], [0, 0, 1], 360)[0]
         assert.ok(!h, `${year}: road blocked at x ${x}, y ${y}, z ${h?.point.z.toFixed(1)} by ${h?.object.userData.from}`)
       }
-    // nothing stands proud of the tower arch's jambs (next20 h3: the frame's inner columns showed as a grey pole)
-    if (year === 2026)
+    // nothing stands proud of the tower arch's jambs (next20 h3: the frame's inner columns showed as a grey pole;
+    // the corner turrets' octagon edges and their stairs stood 0.8 m into the passage)
+    if (year === 2026) {
       for (const x of [-9.47, 9.47])
-        for (const sz of [-1, 1]) {
-          // shortcut: the corner turrets (and the stairs inside them) still poke 0.8 m into the passage, so both are skipped; drop the filter if they move
-          const h = cast(root, [x, 6, sz * 35.6], [0, 0, sz], 19.8).find((h) => !/TowerCladding|Stairs/.test(h.object.userData.from))
-          assert.ok(!h, `${year}: ${h?.object.userData.from} stands in the tower arch at x ${x}, z ${h?.point.z.toFixed(1)}`)
-        }
+        for (const y of [1, 6])
+          for (const sz of [-1, 1]) {
+            const h = cast(root, [x, y, sz * 35.6], [0, 0, sz], 19.8)[0]
+            assert.ok(!h, `${year}: ${h?.object.userData.from} stands in the tower arch at x ${x}, y ${y}, z ${h?.point.z.toFixed(1)}`)
+          }
+      console.log('arch guard ok: both jambs (x ±9.47) clear at y 1 and 6 through both towers, z ±35.6..±55.4 (all four portals), no skips')
+    }
     // and there is road (paint counts as road) under every 2 m of it, so walk mode never falls through
     if (year >= 1894)
       for (const x of [-7, 0, 7])
@@ -882,6 +887,7 @@ console.log('geom materials untextured, all kinded ok')
   }
   // far camera (desktop): the stair and lift interiors (useNear) start hidden when the camera is past 60 m
   {
+    setLite(false) // desktop: the budget loop above ends on the lite tier, where nothing is near-gated
     const { nearNow } = await import('./useNear.js')
     assert.ok(nearNow(54, false, 60, 5) && !nearNow(56, false, 60, 5) && nearNow(64, true, 60, 5) && !nearNow(66, true, 60, 5), 'useNear: on inside 55 m, off past 65 m')
     assert.ok(!nearNow(1, true, 0, 5), 'useNear: r = 0 never near')
@@ -891,7 +897,18 @@ console.log('geom materials untextured, all kinded ok')
     delete globalThis.__cam
     const gated = ['stairs-north', 'stairs-south', 'lift-north', 'lift-south']
     for (const id of gated) assert.ok(!far[id]?.[0], `far camera: ${id} still draws ${far[id]?.[0]} calls`)
-    console.log(`render budget full, far camera 2026: ${sum(0, far)} calls, ${Math.round(sum(1, far))} tris (interiors hidden: ${gated.join(', ')})`)
+    const near = {}
+    tally({ type: TowerBridge, props: {} }, null, near) // no camera position: interiors drawn, as within 60 m
+    assert.ok(far['engine-room'][0] < near['engine-room'][0], `far camera: engine-room machinery still draws (${far['engine-room'][0]} calls, ${near['engine-room'][0]} near)`)
+    for (const id of gated) assert.ok(near[id]?.[0], `near camera: ${id} draws nothing`)
+    globalThis.__cam = { position: new T.Vector3(0, 30, 400) }
+    useStore.getState().setView('walk')
+    const walk = {}
+    tally({ type: TowerBridge, props: {} }, null, walk)
+    useStore.getState().setView('orbit')
+    delete globalThis.__cam
+    for (const id of [...gated, 'engine-room']) assert.equal(walk[id]?.[0], near[id]?.[0], `walk mode, far camera: ${id} draws ${walk[id]?.[0]} calls, ${near[id]?.[0]} near`)
+    console.log(`render budget full, far camera 2026: ${sum(0, far)} calls, ${Math.round(sum(1, far))} tris (interiors hidden: ${gated.join(', ')}, engine-room machinery ${near['engine-room'][0]} -> ${far['engine-room'][0]} calls)`)
   }
   // 1890 (centring under the leaves, derricks on the frames): phones render the build years too, so the
   // construction works (works-*) may not draw more calls than budget.json's baseline1890 records

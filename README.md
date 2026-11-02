@@ -172,6 +172,18 @@ flowchart LR
 
 - More places. The Home stage already lists Stonehenge, Hadrian's Wall and the Tower of London.
 
+## Status and known limitations
+
+Finished on 2 November 2026, the day after DevDay London. No further work is planned. Known limits:
+
+- **Bascule counterweight:** at the full 86° lift, the counterweight tail swings about 9.8 m past the pier face, further than the real one. A fix exists on a branch but was not merged.
+- **Guided tour layout:** a tour-layout check run before the final tour changes (commits `2eacfa6` and `bf32b2d`) found:
+  - on phones, the guide card covers the controls and labels on most steps, and the time step's card takes over a third of the screen;
+  - on desktop, the card covers the bridge on the orbit step, and the credits cover it on the time and exploded steps.
+  The check was not run again after those changes.
+- **The landing page** still has more than one call to action and smaller type than our later design rubric asks for. A full redesign was not done.
+- **Phone performance** was checked for layout on a cloud GPU at phone size, not on real phones.
+
 ## Setup
 
 You need [uv](https://docs.astral.sh/uv/) and Node 20 or later.

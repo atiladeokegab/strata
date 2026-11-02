@@ -92,13 +92,14 @@ function Callouts({ stage, select }) {
   )
 }
 
-// 50 m bar in 10 m black and white blocks, a north arrow (north is -z in the bridge frame); on the water, clear of the Shad Thames label
+// 50 m bar in 10 m black and white blocks, a north arrow (north is -z in the bridge frame) just past its east end, the N at its tip; on the water,
+// clear of the Shad Thames label, and low enough that a phone's story top-down shot keeps the N clear of the controls
 function MapMarks() {
   const g = useMemo(() => {
     const black = [], white = []
     for (let i = 0; i < 5; i++) (i % 2 ? white : black).push(box(10, 0.2, 2, 55 + i * 10, WATER, 50))
     const arrow = new THREE.Shape([new THREE.Vector2(0, -12), new THREE.Vector2(4, 0), new THREE.Vector2(0, -3), new THREE.Vector2(-4, 0)])
-    const tip = new THREE.ShapeGeometry(arrow).rotateX(Math.PI / 2).translate(105, WATER + 0.1, 20)
+    const tip = new THREE.ShapeGeometry(arrow).rotateX(Math.PI / 2).translate(106, WATER + 0.1, 66)
     return { black: merge([...black, tip]), white: merge(white) }
   }, [])
   return (
@@ -108,7 +109,7 @@ function MapMarks() {
       <Html position={[80, WATER, 55]} center style={{ pointerEvents: 'none' }}>
         <div ref={fix} style={TAG}>50 m</div>
       </Html>
-      <Html position={[105, WATER, 4]} center style={{ pointerEvents: 'none' }}>
+      <Html position={[106, WATER, 48]} center style={{ pointerEvents: 'none' }}>
         <div ref={fix} style={{ ...TAG, fontWeight: 700 }}>N</div>
       </Html>
     </>

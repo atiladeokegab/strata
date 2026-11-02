@@ -1,16 +1,15 @@
 // <Ship />: the year's vessel (vessels.js); the 1894 one is a three-masted barque that needs the bascules up. Masts reach ~40 m above high water,
 // well over the closed deck (9 m) but under the high walkways (44 m). Driven by the hydraulic sim,
 // not keyframes: it waits downstream, sails west once the leaves pass 80% of max, and loops.
-// Frame: metres, bridge centre origin, x east (downstream), y up, water at L.hw. Bow points west (-x).
+// Frame: metres, bridge centre origin, x east (downstream), y up, water at WATER_Y (vessels.js). Bow points west (-x).
 import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { Part } from './Part.jsx'
 import { beam, box, merge } from './geom.js'
-import { L } from './structures.jsx'
 import { createShip, stepShip, CRUISE } from './shipSim.js'
 import { lift, liftSpeed, applyShipWarp, substep } from './liftSequence.js'
-import { vesselForYear, leafInput } from './vessels.js'
+import { vesselForYear, leafInput, WATER_Y } from './vessels.js'
 import { RiverCraft } from './river.jsx'
 import { LITE } from '../look/tier.js'
 import { useHomeDisc, offDisc } from './homeDisc.js'
@@ -388,7 +387,7 @@ export function Ship({ rt, year, maxAngle }) {
     applyShipWarp(lift, s, CRUISE)
     substep(dt, (h) => stepShip(s, leafInput(vessel, rt.sim.angle / maxAngle), h * liftSpeed()))
     const t = clock.elapsedTime
-    move.current.position.set(s.x, L.hw, 0)
+    move.current.position.set(s.x, WATER_Y, 0)
     // Home plinth: no hull hanging off the disc; the wake (70 m astern) hides on its own first
     const stern = s.x + (vessel.hullStern ?? vessel.stern)
     move.current.visible = !offDisc(disc, s.x + vessel.bow, 0) && !offDisc(disc, s.x + vessel.stern, 0)

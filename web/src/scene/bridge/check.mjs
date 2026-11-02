@@ -14,7 +14,8 @@ import { KERB_X, FOOTWAY_OUT, roadSurface } from './roadway.js'
 import { steelColour } from './geom.js'
 import { createShip, stepShip, WAIT_X, HOLD_X, CRUISE } from './shipSim.js'
 import { leverAfter, leverForKey, leverLabel, KEY_STEP } from './drive.js'
-import { vesselForYear, needsLift, leafInput, CLEARANCE } from './vessels.js'
+import { vesselForYear, needsLift, leafInput, CLEARANCE, WATER_Y } from './vessels.js'
+import { layout, clash } from '../moorings.js'
 import { createRiver, stepRiver, gap, CRAFT, CLEAR } from './riverSim.js'
 import { createTraffic, stepTraffic, onLeaves, roadY, streetProfile, RAMP_FOOT, TYPES, STOP_U, BASCULE_U, START_U, END_U, ABUT_Z, RAMP_LEN, POST_X, POST_Z, POST_W, GATE_U, nearCam, CAM_CLEAR } from './trafficSim.js'
 import { createLift, liftForShip, stepLift, liftSpeed, setLiftTimeScale, applyShipWarp, gatesClosed, heldLever, PASSED_X, FILM_SCALE, substep } from './liftSequence.js'
@@ -108,6 +109,17 @@ assert.equal(resolveYears([{ year: 1900, title: 'river foundations begin', sourc
   assert.ok(home > 0 && home === ours, `homeDisc.js HOME_DISC_R ${ours} != Home.jsx PLINTH_R ${home}`)
   assert.ok(END_U + 20 > home, 'street runs past the disc, so the clip is needed')
   console.log(`home disc ok (r ${home} m, street to ${END_U} m)`)
+}
+// Craft float on the river the scene draws (Water.jsx), and PeriodRiver's moored tiers never overlap (next20 #6).
+{
+  const meta = JSON.parse(readFileSync(new URL('../../../public/terrain/tower-bridge/meta.json', import.meta.url)))
+  assert.ok(Math.abs(WATER_Y - (meta.water_h - meta.origin_h)) < 1e-6, `WATER_Y ${WATER_Y} != terrain water`)
+  const L_HW = Number(readFileSync(new URL('structures.jsx', import.meta.url), 'utf8').match(/hw: (-?[\d.]+)/)[1])
+  assert.ok(WATER_Y <= L_HW, 'craft water at or below high water, so clearance checks stay conservative')
+  const tiers = layout(() => true) // every slot wet: the densest case
+  for (let i = 0; i < tiers.length; i++) for (let j = 0; j < i; j++) assert.ok(!clash(tiers[i], tiers[j]), `moored hulls ${j} and ${i} overlap`)
+  assert.ok(tiers.some((m) => m.barge) && tiers.length > 100)
+  console.log(`river water ok (craft at ${WATER_Y.toFixed(2)} m); moorings ok (${tiers.length} hulls, no overlap)`)
 }
 // Walk mode clears vehicles around the camera (next17: the eye ended up inside two buses at the south end).
 {

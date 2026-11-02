@@ -1,6 +1,9 @@
 // Which vessel the river shows for a year, and whether it needs the bascules lifted.
 // Air draft: metres from the waterline to the highest point. status: inferred, period-typical figures.
 export const CLEARANCE = 8.6 // m, closed deck soffit above high water
+// The river surface the scene draws (Water.jsx: terrain meta water_h - origin_h, the LiDAR survey tide);
+// craft float on it. L.hw (high water, ~2 m higher) stays the clearance reference, so this only adds headroom.
+export const WATER_Y = 2.3 - 13.47
 
 export const VESSELS = [
   // bow/stern: x offsets of the waterline footprint (bow points west, -x); the tug's includes its lighter

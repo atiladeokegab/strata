@@ -4,8 +4,8 @@ import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { beam, box, merge } from './geom.js'
-import { L } from './structures.jsx'
 import { createRiver, stepRiver, eraForYear, CRAFT } from './riverSim.js'
+import { WATER_Y } from './vessels.js'
 import { LITE } from '../look/tier.js'
 import { useHomeDisc, offDisc } from './homeDisc.js'
 
@@ -96,7 +96,7 @@ function Fleet({ craft, type }) {
   useFrame(({ clock }) => {
     const t = clock.elapsedTime
     mine.forEach((c, i) => {
-      dummy.position.set(c.x, L.hw + Math.sin(t * 1.3 + i * 2) * 0.12, c.z)
+      dummy.position.set(c.x, WATER_Y + Math.sin(t * 1.3 + i * 2) * 0.12, c.z)
       dummy.rotation.set(Math.sin(t * 0.9 + i) * 0.03, c.dir > 0 ? Math.PI : 0, 0)
       dummy.scale.setScalar(offDisc(disc, c.x, c.z, CRAFT[type].len / 2) ? 0 : 1) // off the Home plinth
       dummy.updateMatrix()
@@ -120,7 +120,7 @@ function Wakes({ craft, foam }) {
       const { len, beam } = CRAFT[c.type]
       let long = c.speed ? 5 + c.speed * 7 : 0
       if (offDisc(disc, c.x, c.z, len / 2) || offDisc(disc, c.x - c.dir * (len / 2 + long), c.z)) long = 0
-      wd.position.set(c.x - c.dir * (len / 2 + long / 2 - 0.5), L.hw + 0.05, c.z)
+      wd.position.set(c.x - c.dir * (len / 2 + long / 2 - 0.5), WATER_Y + 0.05, c.z)
       wd.rotation.set(0, c.dir > 0 ? Math.PI : 0, 0) // texture is densest at u=0: keep that end at the stern
       wd.scale.set(long || 1e-3, 1, beam * 1.5)
       wd.updateMatrix()

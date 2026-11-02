@@ -5,31 +5,18 @@
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import { heightAt } from './Terrain.jsx'
+import { layout, rng } from './moorings.js'
 
 const AXIS = (20.95 * Math.PI) / 180 // meta bridge_axis_deg; the river runs across it
 const ALONG = [Math.cos(AXIS), Math.sin(AXIS)] // downstream, (x, z)
 const ACROSS = [Math.sin(AXIS), -Math.cos(AXIS)] // towards the north bank
 
-function rng(seed) { return () => ((seed = (seed * 16807) % 2147483647) / 2147483647) }
-
-// moorings: tiers a few hulls deep off each bank, kept clear of the bridge and of the open channel
+// moorings: tiers a few hulls deep off each bank, kept clear of the bridge, the open channel and each other
 function moorings(t) {
   const water = t.meta.water_h - t.meta.origin_h
-  const wet = (x, z) => { const h = heightAt(t, x, z); return h != null && h < water + 0.8 }
-  const r = rng(7), out = []
-  for (let a = -560; a <= 620; a += 15) {
-    if (Math.abs(a) < 120) continue
-    for (const side of [-1, 1]) {
-      for (let c = 62; c <= 112; c += 8) {
-        if (r() < 0.35) continue
-        const x = ALONG[0] * a + ACROSS[0] * c * side, z = ALONG[1] * a + ACROSS[1] * c * side
-        // all four hull corners in the water
-        if (![[-7, -3], [7, -3], [-7, 3], [7, 3]].every(([u, v]) => wet(x + ALONG[0] * u + ACROSS[0] * v, z + ALONG[1] * u + ACROSS[1] * v))) continue
-        out.push({ x, y: water, z, yaw: -AXIS + (r() - 0.5) * 0.12, barge: r() < 0.18 })
-      }
-    }
-  }
-  return out
+  const at = (a, c) => [ALONG[0] * a + ACROSS[0] * c, ALONG[1] * a + ACROSS[1] * c]
+  const wet = (a, c) => { const h = heightAt(t, ...at(a, c)); return h != null && h < water + 0.8 }
+  return layout(wet).map((m) => { const [x, z] = at(m.a, m.c); return { x, y: water, z, yaw: -AXIS + m.jitter, barge: m.barge } })
 }
 
 // steam tugs in the open channel, heading up or down river
@@ -96,7 +83,7 @@ const GEO = {
   craneJib: new THREE.BoxGeometry(11, 0.35, 0.35).translate(5.5, 0, 0).rotateZ(0.65).translate(0, 4, 0),
 }
 const AT = {
-  lighter: [0, 0.5, 0], cargo: [0, 1.25, 0], barge: [0, 0.7, 0], mast: [-4, 12.5, 0], sail: [-0.8, 10, 0],
+  lighter: [0, 0.5, 0], cargo: [0, 1.25, 0], barge: [0, 0.7, 0], mast: [-4, 12.5, 0], sail: [-0.8, 9.4, 0],
   tugHull: [0, 0.6, 0], tugHouse: [1, 2.8, 0], funnel: [-0.8, 5, 0], cranePost: [0, 6.5, 0], craneJib: [0, 6.5, 0],
 }
 

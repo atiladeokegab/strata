@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 import * as THREE from 'three'
 import { beam, box, merge, M } from './geom.js'
 import { L } from './structures.jsx'
-import { KERB_X, KERB_W, FOOTWAY_H, FOOTWAY_OUT } from './roadway.js'
+import { KERB_W, FOOTWAY_H, NARROW, WIDE } from './roadway.js'
 import { balustrade, BAL_X, BAL_Y } from './balustrade.js'
 import { LITE } from '../look/tier.js'
 import { worldUVs } from '../look/uvs.js'
@@ -185,15 +185,15 @@ function lampHead(out, x, y, z, gas) {
 }
 
 // blackout: lines in matt off-white (the portland stone mesh), not the over-bright band paint, so they don't glow
-const dashes = (out, z0, z1, era) => {
+const dashes = (out, z0, z1, era, sec = WIDE) => {
   const paint = era?.blackout ? out.stone : out.white
   for (let z = z0; z + 3 <= z1; z += 6) paint.push(box(0.18, 0.03, 3, 0, 0.02, z + 1.5))
-  for (const x of [-KERB_X + 0.5, KERB_X - 0.5]) paint.push(box(0.15, 0.03, z1 - z0, x, 0.02, (z0 + z1) / 2))
+  for (const x of [-sec.kerbX + 0.5, sec.kerbX - 0.5]) paint.push(box(0.15, 0.03, z1 - z0, x, 0.02, (z0 + z1) / 2))
 }
 
-// granite kerb and paved footway on both sides, flat, from z0 to z1 (z0 < z1)
-export const footways = (out, z0, z1, era) => {
-  const len = z1 - z0, zc = (z0 + z1) / 2, w = FOOTWAY_OUT - KERB_X - KERB_W
+// granite kerb and paved footway on both sides, flat, from z0 to z1 (z0 < z1); sec: WIDE side spans, NARROW tower and leaf
+export const footways = (out, z0, z1, era, sec = WIDE) => {
+  const KERB_X = sec.kerbX, len = z1 - z0, zc = (z0 + z1) / 2, w = sec.out - KERB_X - KERB_W
   for (const sx of [-1, 1]) {
     out.granite.push(box(KERB_W, FOOTWAY_H, len, sx * (KERB_X + KERB_W / 2), FOOTWAY_H / 2, zc))
     out.stone.push(box(w, FOOTWAY_H, len, sx * (KERB_X + KERB_W + w / 2), FOOTWAY_H / 2, zc))
@@ -220,6 +220,13 @@ function sandbags(out, x, z, w, d, courses) {
   }
 }
 
+// side-span lamp standards (z, north-local), every 12 m, the last 3 m short of the tower's shore face
+export function approachLamps() {
+  const lamps = []
+  for (let z = L.spanEnd + 6; z < L.pierZ - L.towerHalfZ - 3; z += 12) lamps.push(z)
+  return lamps
+}
+
 export function ApproachDetails({ era }) {
   return (
     <Meshes
@@ -227,9 +234,8 @@ export function ApproachDetails({ era }) {
       materials={lanternFor(era)}
       build={() => {
         const o = kit()
-        const lamps = []
-        for (let z = L.spanEnd + 6; z < L.pierZ - L.towerHalfZ - 3; z += 12) lamps.push(z)
-        balustrade(o, L.spanEnd, L.pierZ - L.towerHalfZ, lamps, LITE)
+        const lamps = approachLamps()
+        balustrade(o, L.spanEnd, L.pierZ - L.towerHalfZ - SPLAY, lamps, LITE) // the splayed parapet (deckMarkingsKit) carries on to the tower
         for (const z of lamps) for (const x of [-BAL_X, BAL_X]) lamp(o, x, BAL_Y, z, era) // its 1 m base stands in the balustrade as a pedestal
         if (!era?.woodBlocks) dashes(o, L.spanEnd + 1, L.pierZ - L.towerHalfZ - 1, era) // no painted lines on the wood blocks
         footways(o, L.spanEnd, L.pierZ - L.towerHalfZ, era)
@@ -250,14 +256,27 @@ export function DeckMarkings({ era }) {
   )
 }
 
+export const SPLAY = 1.5 // m along the bridge over which the parapet steps in from 60 ft to 50 ft
+
 export function deckMarkingsKit(era) {
   const o = kit()
-  if (!era?.woodBlocks) dashes(o, L.pierZ - 9.5, L.pierZ + 9.5, era)
-  footways(o, L.pierZ - L.towerHalfZ, L.pierZ + L.towerHalfZ, era)
+  if (!era?.woodBlocks) dashes(o, L.pierZ - 9.5, L.pierZ + 9.5, era, NARROW)
+  footways(o, L.pierZ - L.towerHalfZ, L.pierZ + L.towerHalfZ, era, NARROW)
+  // the 50 ft passage: a granite parapet from the footway's edge out to the arch jambs
+  const pw = L.archHalf - NARROW.out
+  for (const sx of [-1, 1]) o.granite.push(box(pw, 1.1, 2 * L.towerHalfZ, sx * (NARROW.out + pw / 2), 0.55, L.pierZ))
+  // the 60 -> 50 ft step at the shore face: a kerb return where the road narrows, and a parapet that splays
+  // from the balustrade's line in to the passage parapet (status: inferred; Barry gives the widths, not the joint)
+  const z0 = L.pierZ - L.towerHalfZ, rw = WIDE.kerbX - NARROW.kerbX
+  const [ax, az, bx] = [NARROW.out + pw / 2, z0, BAL_X], bz = z0 - SPLAY
+  for (const sx of [-1, 1]) {
+    o.granite.push(box(rw, FOOTWAY_H, KERB_W, sx * (NARROW.kerbX + rw / 2), FOOTWAY_H / 2, z0 - KERB_W / 2))
+    o.granite.push(box(pw, 1.1, Math.hypot(bx - ax, bz - az), 0, 0, 0).rotateY(Math.atan2(sx * (bx - ax), bz - az)).translate((sx * (ax + bx)) / 2, 0.55, (az + bz) / 2))
+  }
   if (era?.blackout) sandbagWalls(o, L)
   if (era?.blackout && !LITE) {
-    for (const sx of [-1, 1]) sandbags(o, sx * 8.65, L.pierZ - L.towerHalfZ + 0.7, 0.9, 1.2, 5) // against the tower's shore-side jambs
-    sandbags(o, POST_X - 0.15, POST_Z, 0.9, 1.0, 3) // round the foot of the gate post
+    for (const sx of [-1, 1]) sandbags(o, sx * 8.65, L.pierZ - L.towerHalfZ - SPLAY - 0.7, 0.9, 1.2, 5) // on the 60 ft footway, against the splayed parapet
+    sandbags(o, POST_X + 0.04, POST_Z, 0.55, 1.0, 3) // round the foot of the gate post, outboard of the walkers
   }
   return o
 }
@@ -272,8 +291,8 @@ export function BasculeDetails({ era }) {
       build={() => {
         const o = kit()
         // no lamps on the leaf: raised to 86 deg, a 6 m post on the deck points into its own tower's face
-        if (!era?.woodBlocks) dashes(o, L.pivotZ + 0.5, -0.5, era)
-        footways(o, L.pierZ + L.towerHalfZ, 0, era)
+        if (!era?.woodBlocks) dashes(o, L.pivotZ + 0.5, -0.5, era, NARROW)
+        footways(o, L.pierZ + L.towerHalfZ, 0, era, NARROW)
         for (const gs of Object.values(o)) gs.forEach((g) => g.translate(0, -L.pivotY, -L.pivotZ))
         if (LITE) return join(o, leafKit()) // lite: in 1940 the leaf's white rides the near-white band paint
         const { white, ...leaf } = leafKit()

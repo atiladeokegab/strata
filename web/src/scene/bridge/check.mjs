@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url'
 import { containersOf, clickThrough } from './xray.js'
 import * as THREE from 'three'
 import { PART_IDS } from './parts.js'
-import { KERB_X, FOOTWAY_OUT, roadSurface } from './roadway.js'
+import { NARROW, WIDE, LEAF_EDGE, roadSurface } from './roadway.js'
 import { steelColour } from './geom.js'
 import { createShip, stepShip, WAIT_X, HOLD_X, CRUISE } from './shipSim.js'
 import { leverAfter, leverForKey, leverLabel, KEY_STEP } from './drive.js'
@@ -181,8 +181,9 @@ assert.deepEqual(resolveYears(null).eras.glassFloor, { year: ERAS.glassFloor, st
 // kerbs: road lanes (with a 2.5 m vehicle) stay inside the kerbs, pedestrians walk the footways
 for (const l of createTraffic(1900, 7).lanes) {
   const x = Math.abs(l.x)
-  if (l.kinds.includes('ped')) assert.ok(x > KERB_X + 0.5 && x < FOOTWAY_OUT - 0.3, `ped lane ${l.x} on the footway`)
-  else assert.ok(x + 1.25 < KERB_X, `road lane ${l.x} inside the kerbs`)
+  for (const s of [WIDE, NARROW]) // one lane x runs the whole bridge: it must sit right in both deck sections
+    if (l.kinds.includes('ped')) assert.ok(x > s.kerbX + 0.5 && x < s.out - 0.3, `ped lane ${l.x} on the footway (kerb ${s.kerbX})`)
+    else assert.ok(x + 1.25 < s.kerbX, `road lane ${l.x} inside the kerbs (kerb ${s.kerbX})`)
 }
 // traffic: gates hold the queue, spacing holds, the bascules clear, the queue moves on green
 for (const year of [1900, 1940, 2026]) {
@@ -560,11 +561,26 @@ console.log('geom materials untextured, all kinded ok')
   const out = join(tmpdir(), `bridge-corridor-${process.pid}.mjs`)
   const resolveDir = fileURLToPath(new URL('.', import.meta.url))
   // three is bundled too, so the scene and the components share one copy
-  await bundle({ stdin: { contents: `export { TowerBridge } from './TowerBridge.jsx'; export { L, leafParts } from './structures.jsx'; export { BODIES, BODY, bodyGeo, GLASS } from './traffic.jsx'; export { centringGeo } from './construction.jsx'; export { useStore } from '../../store.js'; export { Fragment } from 'react/jsx-runtime'; export { setLite } from '../look/tier.js'; export * as T from 'three'`, resolveDir, loader: 'js' }, bundle: true, format: 'esm', platform: 'node', jsx: 'automatic', plugins: [stubs], outfile: out, logLevel: 'error' })
+  await bundle({ stdin: { contents: `export { TowerBridge } from './TowerBridge.jsx'; export { approachLamps, SPLAY } from './details.jsx'; export { TEETH_X } from './basculeDetail.jsx'; export { L, leafParts } from './structures.jsx'; export { BODIES, BODY, bodyGeo, GLASS } from './traffic.jsx'; export { centringGeo } from './construction.jsx'; export { useStore } from '../../store.js'; export { Fragment } from 'react/jsx-runtime'; export { setLite } from '../look/tier.js'; export * as T from 'three'`, resolveDir, loader: 'js' }, bundle: true, format: 'esm', platform: 'node', jsx: 'automatic', plugins: [stubs], outfile: out, logLevel: 'error' })
   const noop = new Proxy(() => noop, { get: () => noop }) // canvas textures draw into a no-op 2D context
   globalThis.document ??= { createElement: () => ({ getContext: () => noop }) }
   globalThis.location ??= { search: '' } // store.js reads ?embed= at import
-  const { TowerBridge, L, leafParts, BODIES, BODY, bodyGeo, GLASS, useStore, Fragment, T, setLite, centringGeo } = await import(out)
+  const { TowerBridge, L, leafParts, BODIES, BODY, bodyGeo, GLASS, useStore, Fragment, T, setLite, centringGeo, approachLamps, SPLAY, TEETH_X } = await import(out)
+  // 50 ft section vs the road arch's jambs (option A): footway, parapet, walkers and lamps clear of the stone,
+  // and the leaves' nose teeth interleave when they close
+  {
+    const face = L.pierZ - L.towerHalfZ, edge = LEAF_EDGE + 0.175 // tower shore face; leaf deck half-width
+    assert.ok(NARROW.out + 0.3 <= L.archHalf, `footway edge ${NARROW.out} leaves a 0.3 m parapet inside the ${L.archHalf} m jamb`)
+    for (const l of createTraffic(2026).lanes.filter((l) => l.kinds.includes('ped')))
+      assert.ok(Math.abs(l.x) + 0.25 < NARROW.out && Math.abs(l.x) + 0.25 + 1 < L.archHalf, `walkers at ${l.x} clear of the passage parapet and 1 m off the jamb`)
+    for (const z of approachLamps()) assert.ok(z + 0.5 < face - SPLAY, `lamp at z ${z} stands on the 60 ft span, clear of the splay and the tower (${face - SPLAY})`)
+    assert.ok(edge >= NARROW.out && edge - NARROW.out < 0.5, `leaf deck (half ${edge}) carries the 50 ft footway to its edge`)
+    const opp = TEETH_X.map((x) => -x) // the other leaf, turned 180 deg
+    const gap = Math.min(...TEETH_X.flatMap((a) => opp.map((b) => Math.abs(a - b) - 0.9)))
+    assert.ok(gap >= 0.05, `nose teeth interleave when the leaves close (${gap.toFixed(2)} m between teeth)`)
+    assert.ok(TEETH_X.every((x) => Math.abs(x) + 0.45 <= edge), 'nose teeth stay within the leaf deck')
+    console.log(`50 ft section ok (parapet ${(L.archHalf - NARROW.out).toFixed(2)} m, teeth ${gap.toFixed(2)} m apart closed)`)
+  }
   // no-float: in-river construction timber reaches below the drawn river (WATER_Y), not just high water
   const cg = centringGeo(); cg.computeBoundingBox()
   assert.ok(cg.boundingBox.min.y < WATER_Y, `centring trestle feet at ${cg.boundingBox.min.y.toFixed(2)} float over the river at ${WATER_Y.toFixed(2)}`)
@@ -702,10 +718,9 @@ console.log('geom materials untextured, all kinded ok')
       }
     // nothing stands proud of the tower arch's jambs (next20 h3: the frame's inner columns showed as a grey pole)
     if (year === 2026)
-      for (const x of [-9.47, 9.47])
+      for (const x of [-L.archHalf + 0.03, L.archHalf - 0.03])
         for (const sz of [-1, 1]) {
-          // shortcut: the corner turrets (and the stairs inside them) still poke 0.8 m into the passage, so both are skipped; drop the filter if they move
-          const h = cast(root, [x, 6, sz * 35.6], [0, 0, sz], 19.8).find((h) => !/TowerCladding|Stairs/.test(h.object.userData.from))
+          const h = cast(root, [x, 6, sz * 35.6], [0, 0, sz], 19.8)[0]
           assert.ok(!h, `${year}: ${h?.object.userData.from} stands in the tower arch at x ${x}, z ${h?.point.z.toFixed(1)}`)
         }
     // and there is road (paint counts as road) under every 2 m of it, so walk mode never falls through
@@ -715,6 +730,21 @@ console.log('geom materials untextured, all kinded ok')
           const hs = cast(root, [x, 4, z], [0, -1, 0], 20)
           assert.ok(hs.some((r) => r.object.userData.road && r.point.y >= hs[0].point.y - 0.2), `${year}: no road under x ${x}, z ${z} (${hs[0]?.object.userData.from ?? 'nothing'})`)
         }
+    // deck width between parapets (Barry 1894): 50 ft = 15.24 through the towers and on the leaves, 60 ft = 18.29 on the side spans
+    if (year === 2026)
+      for (const [z, want] of [[-45.5, 15.24], [45.5, 15.24]]) {
+        const w = [-1, 1].map((sx) => cast(root, [0, 0.4, z], [sx, 0, 0], 12)[0]?.distance ?? 99) // passage parapet or balustrade plinth
+        assert.ok(Math.abs(w[0] + w[1] - want) < 0.1, `${year}: deck at z ${z} is ${(w[0] + w[1]).toFixed(2)} m between parapets, want ${want}`)
+      }
+    // the leaves have no parapet (b140578) and the side spans' balustrade stands on its girder 0.13 m beyond the
+    // footway, so there the width is the footway's outer edge: 50 ft (15.24) on the leaves, 60 ft (18.2) on the side spans
+    if (year === 2026)
+      for (const [z, sec] of [[-20, NARROW], [20, NARROW], [-100, WIDE], [100, WIDE]])
+        for (const sx of [-1, 1]) {
+          const top = (x) => cast(root, [sx * x, 3, z], [0, -1, 0], 6)[0]?.point.y ?? -9
+          assert.ok(Math.abs(top(sec.out - 0.05) - 0.15) < 0.02 && Math.abs(top(sec.out + 0.05) - 0.15) > 0.05, `${year}: footway at z ${z} does not end at x ${sx * sec.out} (${top(sec.out - 0.05).toFixed(2)}, ${top(sec.out + 0.05).toFixed(2)})`)
+        }
+    assert.ok(Math.abs(2 * WIDE.out - 18.29) < 0.1 && Math.abs(2 * NARROW.out - 15.24) < 0.1, 'footway edges 60 ft and 50 ft apart')
   }
   console.log('road corridor ok (clear at 0.5/1.7/3 m, road underfoot every 2 m, 1886-2026)')
 
@@ -938,11 +968,41 @@ console.log('geom materials untextured, all kinded ok')
   }
   useStore.getState().setYear(2026)
 
+  const maxDeg = Math.max(...tb.parts.filter((p) => p.dims?.max_angle).map((p) => p.dims.max_angle.value)) // both bascules' max_angle
+  assert.ok(maxDeg > 0, 'max_angle in data/places/tower-bridge.json')
+  // Leaf vs the road arch's jambs, swept 0..max_angle: whatever of the leaf assembly stands above the road
+  // behind the tower face stays inside |x| < archHalf (below the road the tail and counterweight sit in the pier)
+  {
+    const root = new T.Group()
+    build({ type: TowerBridge, props: {} }, root)
+    const pivots = []
+    const pf = (o) => o?.isGroup && /PivotFrame$/.test(o.userData.from)
+    root.traverse((o) => pf(o) && pf(o.parent) && !pf(o.parent.parent) && pivots.push(o)) // PivotFrame's inner, turning group
+    assert.ok(pivots.length >= 2 && pivots.length % 2 === 0, `pivot frames on both leaves (${pivots.length})`) // each leaf mounts more than one PivotFrame
+    const face = -L.pierZ - L.towerHalfZ, v = new T.Vector3()
+    let wide = { x: 0 }
+    for (const deg of [...Array.from({ length: Math.ceil(maxDeg / 2) }, (_, k) => 2 * k), maxDeg]) { // every 2 deg, ending exactly at max_angle
+      for (const p of pivots) p.rotation.x = (-deg * Math.PI) / 180
+      root.updateMatrixWorld(true)
+      for (const p of pivots)
+        p.traverse((o) => {
+          if (!o.isMesh) return
+          const pos = o.geometry.attributes.position
+          for (let i = 0; i < pos.count; i++) {
+            v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld)
+            if (Math.abs(v.z) > face && v.y > 0 && Math.abs(v.x) > wide.x) wide = { x: Math.abs(v.x), deg, at: v.clone(), from: o.userData.from }
+          }
+        })
+    }
+    assert.ok(wide.x < L.archHalf, `leaf ${wide.x.toFixed(2)} m off the axis inside the tower face at ${wide.deg} deg, into the ${L.archHalf} m jamb, at (${wide.at?.toArray().map((n) => n.toFixed(1))}): ${wide.from}`)
+    console.log(`leaf vs jambs ok, 0..${maxDeg} deg: widest ${wide.x.toFixed(2)} m inside the tower face at ${wide.deg} deg (jamb ${L.archHalf})`)
+  }
+
   // Leaves at max_angle (nose bolts drawn): every part of the raised leaf assembly (detail, footways,
   // lamps) that sits under a walkway stays >= 1 m below it. Measured straight up from each leaf vertex
   // and straight down from each walkway vertex, so things beside the walkway do not count.
   {
-    leafAngle = (86 * Math.PI) / 180 // max_angle in data/places/tower-bridge.json, TowerBridge's default
+    leafAngle = (maxDeg * Math.PI) / 180
     const root = new T.Group()
     build({ type: TowerBridge, props: {} }, root)
     leafAngle = 0
@@ -1029,7 +1089,7 @@ console.log('geom materials untextured, all kinded ok')
 {
   const src = readFileSync(new URL('structures.jsx', import.meta.url), 'utf8')
   const arch = Number(src.match(/archHalf: ([\d.]+)/)[1]), pierZ = Number(src.match(/pierZ: (-?[\d.]+)/)[1])
-  const colZ = pierZ + 9 // inner arch column nearest the river, 1 m square just inside the jamb at x = ±archHalf
+  const colZ = pierZ + 9 // inner arch column nearest the river, 1 m square on the chain centres behind the jamb
   const sig = { x0: POST_X - 0.6, x1: POST_X + 0.125 } // signal head (0.6 wide at POST_X - 0.3) and its 0.25 post
   assert.ok(POST_X + POST_W / 2 < arch && sig.x1 < arch, `gate post and signal inside the road arch (${POST_X + POST_W / 2}, ${sig.x1} < ${arch})`)
   assert.ok(createTraffic(2026).lanes.every((l) => Math.abs(l.x) + 0.25 < POST_X - POST_W / 2), 'gate post clear of the walkers')

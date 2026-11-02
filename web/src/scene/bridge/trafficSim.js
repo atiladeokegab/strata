@@ -5,9 +5,9 @@
 
 export const GATE_U = 37 // barrier line on the fixed deck, just outside each bascule pivot
 export const STOP_U = -GATE_U - 1 // vehicles stop 1 m short of the gate
-// Barrier post (north-local x, z centre and width): on the footway edge, inside the tower's road arch
-// (|x| < L.archHalf 9.5) and clear of the arch's inner column at z -37..-36 (check.mjs asserts both).
-export const POST_X = 9.25
+// Barrier post (north-local x, z centre and width): at the outer edge of the tower passage's 50 ft footway
+// (roadway.js NARROW.out 7.62), inside the road arch and clear of its inner column at z -37..-36 (check.mjs asserts both).
+export const POST_X = 7.3
 export const POST_Z = -GATE_U - 0.4
 export const POST_W = 0.4
 export const BASCULE_U = 35 // |z| < 35 is on a bascule leaf
@@ -103,8 +103,8 @@ export function createTraffic(year, seed = 1) {
     lanes: [
       lane(1, 2.5, road, 6),
       lane(-1, -2.5, road, 6),
-      lane(1, 8.3, peds, 6),
-      lane(-1, -8.3, peds, 6),
+      lane(1, 6.25, peds, 6), // on the footway in both sections: 9 ft (4.88..7.62) and 12 ft (5.5..9.1)
+      lane(-1, -6.25, peds, 6),
     ],
   }
   for (let i = 0; i < 1800; i++) stepTraffic(t, 0.25, false) // pre-fill the road

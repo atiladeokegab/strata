@@ -10,6 +10,7 @@ import { walkwayTruss, walkwayInfill, walkwayJunctions } from './walkway.js'
 import { LITE } from '../look/tier.js'
 import { abutmentTower, abutmentArch, abutmentFrame } from './abutment.js'
 import { useHomeDisc } from './homeDisc.js'
+import { LEAF_GIRDERS, LEAF_EDGE } from './roadway.js'
 
 export const L = {
   hw: -9, // Thames high water below the roadway
@@ -20,7 +21,7 @@ export const L = {
   pivotY: -1.5,
   towerHalfX: 13,
   towerHalfZ: 10, // walkway: Barry 1894 (tb-engine, printed p.27 / PDF p.37) has its supports 15 ft back from the pier faces, 230 ft (70.1 m) clear; ours is 71.0 m (0.45 m per end long). Known and accepted rather than thinning the towers: don't 'fix' it blind
-  archHalf: 9.5,
+  archHalf: 8, // 16 m road arch (inferred: between the 50 ft opening and the 60 ft 6 in chain centres, Barry 1894 p.50)
   bodyTop: 42,
   walkX: 10.5,
   walkY: 35,
@@ -84,9 +85,9 @@ export function TowerFrame() {
     const cx = 12, cz = 9, z0 = L.pierZ
     const pts = corners.map(([sx, sz]) => [sx * cx, sz * cz + z0])
     for (const [x, z] of pts) gs.push(box(1.4, L.bodyTop + 1, 1.4, x, (L.bodyTop - 1) / 2, z))
-    // inner columns either side of the road arch, inside its stone jambs (centred on the jamb face, half
-    // of each stood in the road as a grey pole: next20 h3)
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) gs.push(box(1, L.bodyTop + 1, 1, sx * (L.archHalf + 0.55), (L.bodyTop - 1) / 2, sz * cz + z0))
+    // inner columns either side of the road arch, behind its stone jambs: on the chain centres, 60 ft 6 in
+    // apart (Barry 1894 p.50), 0.72 m clear of the 8 m jamb (next20 h3: half of one stood in the road as a grey pole)
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) gs.push(box(1, L.bodyTop + 1, 1, sx * 9.22, (L.bodyTop - 1) / 2, sz * cz + z0))
     for (let y = 5; y <= L.bodyTop; y += 6) {
       for (let i = 0; i < 4; i++) {
         const [ax, az] = pts[i], [bx, bz] = pts[(i + 1) % 4]
@@ -232,11 +233,11 @@ export function leafParts() {
     ;[[-14, -1.2], [0, -1.2], [0, 0], [len, 0], [len, -1], [0, -4.4], [-14, -4.4]].forEach(([z, y], i) =>
       i ? s.lineTo(z, y) : s.moveTo(z, y),
     )
-    const girders = [-7.5, -3, 3, 7.5].map((x) =>
+    const girders = LEAF_GIRDERS.map((x) =>
       new THREE.ExtrudeGeometry(s, { depth: 0.7, bevelEnabled: false }).rotateY(-Math.PI / 2).translate(x + 0.35, -L.pivotY - 0.06, 0) // just under the deck: no z-fight,
     )
-    const deck = box(18, 0.45, len, 0, -L.pivotY - 0.225, len / 2)
-    girders.push(box(0.35, 1.3, len, -9, -L.pivotY - 0.7, len / 2), box(0.35, 1.3, len, 9, -L.pivotY - 0.7, len / 2))
+    const deck = box(2 * LEAF_EDGE + 0.35, 0.45, len, 0, -L.pivotY - 0.225, len / 2)
+    girders.push(box(0.35, 1.3, len, -LEAF_EDGE, -L.pivotY - 0.7, len / 2), box(0.35, 1.3, len, LEAF_EDGE, -L.pivotY - 0.7, len / 2))
     // no rails on the leaf: raised to 86 deg they stand 1.5 m into the tower stone (pivot ~0.7 m off the face, Barry 1894)
     // quadrant racks the pinions drive; centred on the pivot axis, spanning the lift arc
     const racks = [-5, 5].map((x) =>

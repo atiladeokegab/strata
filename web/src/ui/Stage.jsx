@@ -79,11 +79,12 @@ export function guardLabels(scene, camera, canvas, max = Infinity) {
     const a = anchors.find((p) => Math.abs(p.x - cx) < 4 && Math.abs(p.y - cy) < 4)
     const dx = Math.max(EDGE - left, Math.min(0, W - EDGE - right)) // slide a label cut by the edge back on screen
     return { b, dx, a, cx, cy, r: { left: left + dx, right: right + dx, top: r.top, bottom: r.bottom } }
-  }).sort((p, q) => (p.a?.d ?? Infinity) - (q.a?.d ?? Infinity)) // nearest first
+  }).filter((l) => l.a) // landmark labels only: the leaf lever's screen-reader button and "Lift for a ship" stay as they are
+    .sort((p, q) => p.a.d - q.a.d) // nearest first
   const shown = []
   for (const l of labels) {
     const off = l.cx < 0 || l.cx > W || l.cy < EDGE || l.cy > H - EDGE // anchor off screen: no clamping to a wrong place
-      || l.a?.hidden || shown.length >= max
+      || l.a.hidden || shown.length >= max
       || keep.some((k) => overlaps(l.r, k)) || shown.some((s) => overlaps(l.r, s.r, 4))
     if (!off) shown.push(l)
     l.b.style.visibility = off ? 'hidden' : ''

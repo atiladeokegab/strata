@@ -124,8 +124,8 @@ function Shell({ steam }) {
     for (const [y, s] of [[C.h - 1.4, 2.9], [C.h - 0.9, 3.2], [C.h - 0.3, 3.5]]) brick.push(box(s, 0.5, s, C.x, y, C.z))
     stone.push(box(3.6, 0.3, 3.6, C.x, C.h + 0.1, C.z))
 
-    // 1976: the electric pump house against the east gable (brick, slate cap, iron starter cabinet)
-    if (!steam) brick.push(box(3, 3.2, 5, H.x1 + 1.8, 1.6, 153)), slate.push(box(3.6, 0.4, 5.6, H.x1 + 1.8, 3.4, 153), box(0.4, 1.6, 1, H.x1 + 3.4, 1.6, 153))
+    // 1976: the electric pump house against the east gable, brick with a slate cap, kept under the gable's window sills (2.4 m)
+    if (!steam) brick.push(box(3, 2, 5, H.x1 + 1.8, 1, 153)), slate.push(box(3.6, 0.3, 5.6, H.x1 + 1.8, 2.15, 153))
     // made ground under the house, down to the river level
     stone.push(box(30, 9, 26, 32, -4.5, 156), box(30.6, 0.4, 26.6, 32, 0, 156), box(30.3, 0.3, 26.3, 32, -2.4, 156)) // retaining plinth: coping, band
     return {

@@ -4,8 +4,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
-import { Box3, Sphere } from 'three'
+import { Box3, Sphere, Vector3 } from 'three'
 import { useStore, THIS_YEAR } from '../store.js'
+import { framed } from '../ui/CameraRig.jsx'
 import { useTour, startTour, stopTour, DURATION, poseAt, runTracks, hydraulicsPart, CARD, cardOpacity, BEATS, DOCENT_Q, HANDOFF } from '../tour/tour.js'
 
 export default function Tour() {
@@ -14,6 +15,7 @@ export default function Tour() {
   const controls = useThree((st) => st.controls)
   const run = useRef(null) // {prev, ctx, centres}
   const card = useRef(null)
+  const app = useRef(document.querySelector('.app'))
   const [beat, setBeat] = useState(-1) // index into BEATS, 'handoff', or -1
   const [answer, setAnswer] = useState(null) // the docent's live reply {text, citations, refused}
   const [linger, setLinger] = useState(false) // the hand-back card stays a few seconds after the end
@@ -71,9 +73,10 @@ export default function Tour() {
     runTracks(r.prev, t, r.ctx)
     r.prev = t
     const { pos, target } = poseAt(t, (k) => (k.part && fitPart(scene, camera, r, r.ctx.hydraulics, k)) || k)
-    camera.position.set(...pos)
-    camera.lookAt(...target)
-    if (state.controls?.target) state.controls.target.set(...target) // hand over without a jump
+    const f = framed({ to: new Vector3(...pos), toTarget: new Vector3(...target) }, camera, phoneShift())
+    camera.position.copy(f.to)
+    camera.lookAt(f.toTarget)
+    if (state.controls?.target) state.controls.target.copy(f.toTarget) // hand over without a jump
     const b = t >= HANDOFF.from ? 'handoff' : BEATS.findIndex((x) => t >= x.from && t < x.to)
     if (b !== r.beat) { r.beat = b; setBeat(b) }
     if (t >= DURATION) { stopTour(); setLinger(true); setTimeout(() => setLinger(false), 4000) }
@@ -81,10 +84,10 @@ export default function Tour() {
 
   if (!playing && !linger) return null
   const sources = useStore.getState().place?.sources ?? []
-  return (
-    <Html fullscreen zIndexRange={[20, 10]} style={{ pointerEvents: 'none' }}>
+  return (<>
+    <Html fullscreen portal={app} calculatePosition={pinToScreen} zIndexRange={[20, 10]} style={{ pointerEvents: 'none' }}>
       {BEATS.map((x, i) => (
-        <div key={i} style={{ ...captionWrap, opacity: beat === i ? 1 : 0 }} aria-hidden={beat !== i}>
+        <div key={i} className={'story-caption' + (beat === i ? ' on' : '')} aria-hidden={beat !== i}>
           <div className="glass" style={captionBox}>
             <p className="eyebrow">{x.label}</p>
             {x.docent ? (
@@ -104,13 +107,15 @@ export default function Tour() {
           </div>
         </div>
       ))}
-      <div style={{ ...cardStyle, opacity: beat === 'handoff' ? 1 : 0, transition: 'opacity .8s ease' }} aria-hidden={beat !== 'handoff'}>
+    </Html>
+    <Html fullscreen portal={innerWidth > 900 ? undefined : app} calculatePosition={pinToScreen} zIndexRange={[20, 10]} style={{ pointerEvents: 'none' }}>
+      <div className="story-card" style={{ ...cardStyle, opacity: beat === 'handoff' ? 1 : 0, transition: 'opacity .8s ease' }} aria-hidden={beat !== 'handoff'}>
         <div>
           <p style={{ margin: 0, font: '500 12px/1 var(--mono)', color: 'var(--gold)', letterSpacing: '.14em', textTransform: 'uppercase' }}>{HANDOFF.label}</p>
           <p style={{ margin: '14px 0 0', font: '400 clamp(30px, 4vw, 52px)/1.1 var(--serif)', color: 'var(--ink)' }}>{HANDOFF.text}</p>
         </div>
       </div>
-      <div ref={card} style={cardStyle} aria-live="polite">
+      <div ref={card} className="story-card" style={cardStyle} aria-live="polite">
         <div style={{ maxWidth: 780 }}>
           <p style={{ margin: 0, font: '400 clamp(26px, 3.4vw, 44px)/1.18 var(--serif)', color: 'var(--ink)', letterSpacing: '-.01em' }}>{CARD.problem}</p>
           <p style={{ margin: '18px 0 0', font: '400 clamp(15px, 1.5vw, 19px)/1.5 var(--sans)', color: 'var(--muted)' }}>{CARD.pitch}</p>
@@ -118,16 +123,24 @@ export default function Tour() {
         </div>
       </div>
     </Html>
-  )
+  </>)
 }
 
-const captionWrap = {
-  position: 'absolute', left: 'calc(var(--panel-w, 0px) + var(--gap, 16px) * 2)', right: 'var(--gap, 16px)', bottom: 104,
-  display: 'flex', justifyContent: 'center', transition: 'opacity .6s ease',
+// Phones: the story's shots are composed for a wide stage, so centre (and fit) each one in the band between the
+// controls and the dock or open sheet; the caption sits over the dock or the sheet's top, outside that band.
+function phoneShift() {
+  if (innerWidth > 900) return null
+  const q = (s) => document.querySelector(s)?.getBoundingClientRect(), dock = q('.dock')
+  const t = q('.controls')?.bottom ?? 0, b = Math.max(t + 80, Math.min(dock?.height ? dock.top : innerHeight, q('.panel')?.top ?? innerHeight))
+  return [0, Math.round((t + b - innerHeight) / 2), Math.min(1.8, Math.max(1, (0.55 * innerHeight) / (b - t)))]
 }
+// fullscreen Html still follows the world origin's screen point, so the captions drifted with the camera (under the dock at 12 s); pin the layer to the screen.
+// The captions render into .app, not the stage's own stacking context, so on phones they can sit over the dock;
+// the opening and hand-off cards stay in the stage, under the panel and controls, except on phones, where they cover all.
+const pinToScreen = (_, __, size) => [size.width / 2, size.height / 2]
 const captionBox = { maxWidth: 560, padding: '12px 18px 14px', borderRadius: 14, fontSize: 15, lineHeight: 1.45 }
 const cardStyle = {
-  position: 'absolute', inset: 0, left: 'calc(var(--panel-w, 0px) + var(--gap, 0px) * 2)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 24px',
+  display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 24px',
   textAlign: 'center', opacity: 0, background: 'rgba(245,245,247,.72)', backdropFilter: 'var(--blur)', WebkitBackdropFilter: 'var(--blur)',
 }
 

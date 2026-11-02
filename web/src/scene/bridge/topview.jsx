@@ -24,7 +24,7 @@ const v = new THREE.Vector3()
 // Tags that hold their place (scale, north, leaf angles, chip, caption) register here; callouts
 // treat their on-screen boxes as obstacles, so no label lands on one at any zoom.
 const FIXED = new Set()
-const SHELL = '.controls, .credit, .dock, .panel, .guide-card' // the app's own boxes: callouts keep off them too
+const SHELL = '.controls, .credit, .dock, .panel, .guide-card, .story-caption.on' // the app's own boxes: callouts keep off them too
 const fix = (el) => {
   if (!el) return
   FIXED.add(el)

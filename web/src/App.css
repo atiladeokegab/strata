@@ -197,6 +197,11 @@ input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 
   .close { width: 44px; height: 44px; }
 }
 
+/* the 60 s story's beat captions: over the stage, clear of the dock and its ring */
+.story-caption { position: absolute; left: calc(var(--panel-w) + var(--gap) * 2); right: var(--gap); bottom: calc(var(--gap) + 120px); display: flex; justify-content: center; opacity: 0; transition: opacity .6s ease; }
+.story-caption.on { opacity: 1; }
+.story-card { position: absolute; inset: 0; left: calc(var(--panel-w) + var(--gap) * 2); right: calc(232px + var(--gap) * 2); } /* the opening and hand-off cards cover the stage between the panel and the controls */
+
 /* phone and tablet: the panel is a bottom sheet, collapsed to search + name on first load so the bridge is clear */
 @media (max-width: 900px) {
   :root { --gap: 8px; --pad: 16px; }
@@ -223,6 +228,9 @@ input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 
   .credit { top: 8px; left: 8px; right: 8px; max-width: none; }
   .help { left: 8px; right: 8px; top: auto; bottom: calc(var(--sheet) + 180px); transform: none; width: auto; padding: var(--s4); }
   .help ol { gap: var(--s3); margin-bottom: var(--s4); }
+  .story-card { left: 0; right: 0; } /* phones: over everything (Tour renders them into .app), the stage band is too short for the opening text */
+  .story-caption { left: 8px; right: 8px; bottom: calc(var(--sheet) + 8px); } /* over the dock (the story drives it), so the shot keeps the band above */
+  .app.sheet-open .story-caption { top: calc(100% - var(--sheet) + 8px); bottom: auto; align-items: flex-start; } /* over the open sheet's top */
   .move-pad { right: 8px; bottom: calc(var(--sheet) + 200px); } /* above the dock (its top sits about --sheet + 191px up), not over the timeline */
   .no-webgl { left: 8px; right: 8px; top: 120px; transform: none; width: auto; }
   .walk-hint { display: none; }

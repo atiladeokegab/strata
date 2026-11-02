@@ -39,7 +39,8 @@
   .guide-card { left: 8px; right: 8px; width: auto; transform: none; bottom: calc(var(--sheet) + 112px); padding: var(--s4); animation-name: guide-in-m; }
   .guide-card.guide-low { bottom: calc(8px + env(safe-area-inset-bottom, 0px)); } /* over the dock unless the step is about it: more stage clear */
   .guide-card:not(.guide-low) { top: calc(8px + env(safe-area-inset-top, 0px)); bottom: auto; } /* a step about the dock: the card goes over the controls, clearing the stage above the dock */
-  .app.sheet-open .guide-card { bottom: calc(var(--sheet) + 8px); }
+  .app.sheet-open .guide-card { top: calc(8px + env(safe-area-inset-top, 0px)); bottom: auto; } /* a step in the sheet: the card goes over the controls, the bridge keeps the band above the sheet */
+  .app.sheet-open:has(.guide-card) { --sheet: 52svh; }
   .guide-card h2 { font-size: var(--t3); margin-bottom: var(--s1); }
   .guide-skip { top: var(--s4); right: var(--s4); }
   .guide-note { min-height: 0; }

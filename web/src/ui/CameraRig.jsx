@@ -16,17 +16,17 @@ const PRESETS = {
 // Aim a flight's end away from its subject (the camera stays put, so it never sinks into the roofs) until the subject
 // lands about frameShift px off centre, where the guided tour's card and the panel leave the stage clear.
 const UP = new Vector3(0, 1, 0)
-function framed(f, camera) {
-  const shift = useStore.getState().frameShift
+export function framed(f, camera, shift = useStore.getState().frameShift) {
   if (!shift) return f
+  const top = useStore.getState().view === 'top'
   // a short clear band: back off along the view so the subject fits it (not in top view: past 900 m its part callouts hide)
-  if (shift[2] > 1 && useStore.getState().view !== 'top') f.to = f.toTarget.clone().lerp(f.to, shift[2])
+  if (shift[2] > 1 && !top) f.to = f.toTarget.clone().lerp(f.to, shift[2])
   const fwd = f.toTarget.clone().sub(f.to), d = fwd.length()
   const right = fwd.clone().cross(UP).normalize(), up = right.clone().cross(fwd).normalize()
   const k = (2 * d * Math.tan(MathUtils.degToRad(camera.fov) / 2)) / innerHeight // metres per pixel at the target (the app's canvas fills the window)
   const v = right.multiplyScalar(-shift[0] * k).add(up.multiplyScalar(shift[1] * k))
   f.toTarget.add(v)
-  if (useStore.getState().view === 'top') f.to.add(v) // straight down, orbit's polar limit drags the camera over the target: pan, or the map spins
+  if (top) f.to.add(v) // straight down, orbit's polar limit drags the camera over the target: pan, or the map spins
   return f
 }
 const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2)

@@ -60,4 +60,6 @@ test('the camera aims at the stage the card and panels leave clear', () => {
   assert.deepEqual(frameShift(390, 844, at({ '.panel': { right: 390 }, '.controls': { bottom: 200 }, '.guide-card': { top: 500 } })), [0, -72, 1.55])
   assert.deepEqual(frameShift(390, 844, at({ '.controls': { bottom: 200 }, '.dock': { top: 540, height: 120 }, '.guide-card': { top: 640 } })), [0, -52, 1.37])
   assert.deepEqual(frameShift(390, 844, at({ '.controls': { bottom: 200 }, '.dock': { top: 585, height: 259 }, '.guide-card': { top: 8, bottom: 300 } })), [0, 21, 1.63])
+  // a step in the open sheet: the card over the controls, the band ends at the sheet (the dock hides)
+  assert.deepEqual(frameShift(390, 844, at({ '.controls': { bottom: 200 }, '.dock': { top: 0, height: 0 }, '.panel': { top: 405 }, '.guide-card': { top: 8, bottom: 190 } })), [0, -119, 1.8])
 })

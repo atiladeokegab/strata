@@ -96,7 +96,7 @@ export function frameShift(W = innerWidth, H = innerHeight, doc = document) {
   const n = narrow() // phones: the controls run across the top and the dock along the bottom; desktop: the panel on the left, the toggles on the right
   const dock = n ? rect('.dock') : null, card = rect('.guide-card')
   const high = n && card && card.top < H / 2 // phones: a step about the dock puts its card at the top, over the controls
-  const top = Math.min(high ? H : card?.top ?? H - (n ? 330 : 360), dock?.height ? dock.top : H)
+  const top = Math.min(high ? H : card?.top ?? H - (n ? 330 : 360), dock?.height ? dock.top : H, n ? rect('.panel')?.top ?? H : H) // phones: the open sheet bounds it too
   const l = n ? 0 : rect('.panel')?.right ?? 0, r = n ? W : rect('.toggles')?.left ?? W
   const t = n ? Math.max(rect('.controls')?.bottom ?? 0, high ? card.bottom : 0) : 0
   const bottom = Math.max(top, t + H * 0.2)

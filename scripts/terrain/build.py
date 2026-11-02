@@ -6,8 +6,9 @@
 
     uv run scripts/terrain/build.py
 
-Writes web/public/terrain/tower-bridge/{height.png, color.jpg, meta.json} and
-web/public/terrain/waternormals.jpg.
+Writes web/public/terrain/tower-bridge/{height.png, bare.png, color.jpg, meta.json} and
+web/public/terrain/waternormals.jpg. height.png is the DSM (surface: roofs, trees), drawn only as the LiDAR point view;
+bare.png is the DTM (ground), the terrain mesh. Both get the same river, bridge-cut, abutment and engine-house edits.
 
 height.png is RGB-encoded 16-bit: v = R*256 + G, h = min_h + v/65535 * (max_h - min_h), metres OD.
 Row 0 is the north edge, column 0 the west edge, one pixel per metre (pixel centres).
@@ -29,6 +30,8 @@ CACHE = Path(__file__).resolve().parent / ".cache"
 
 WCS = "https://environment.data.gov.uk/spatialdata/lidar-composite-digital-surface-model-last-return-dsm-1m/wcs"
 COVERAGE = "9ba4d5ac-d596-445a-9056-dae3ddec0178__Lidar_Composite_Elevation_LZ_DSM_1m"
+DTM_WCS = "https://environment.data.gov.uk/spatialdata/lidar-composite-digital-terrain-model-dtm-1m/wcs"
+DTM_COVERAGE = "13787b9a-26a4-4775-8523-806d13af58fc__Lidar_Composite_Elevation_DTM_1m"
 IMAGERY = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export"
 
 HINT = (533782, 180242)  # brief's guess; refined from the towers below
@@ -65,6 +68,45 @@ def fill_abutments(a, along, across, axis):
     a[ys, xs] = np.minimum.reduce(street)
 
 
+# The approach roads stand on viaducts and embankments (1894 onwards), which the DTM drops with the buildings, leaving
+# the bridge's ramp ends in mid-air. Keep the DSM along both approaches, no higher than the road itself (the lowest point
+# within `road` of the centre line, bin by bin), so the roofs and trees lining the corridor do not stand as cliffs.
+APPROACH = {"from": 133.0, "to": 320.0, "half": 20.0, "road": 6.0}  # m along / either side of the axis / road half-width; bareEarth.js has the same
+
+
+def keep_approaches(bare, surface, along, across):
+    """Raise bare earth to the approach roads' surface, binned along the axis (2 m bins). Mutates and returns bare."""
+    a, c = np.abs(along), np.abs(across)
+    corridor = (a >= APPROACH["from"]) & (a < APPROACH["to"]) & (c < APPROACH["half"])
+    bins = np.floor((along + APPROACH["to"]) / 2.0).astype(int)
+    road = np.full(int(np.ceil(2 * APPROACH["to"] / 2.0)), np.inf)
+    on = corridor & (c < APPROACH["road"])
+    np.minimum.at(road, bins[on], surface[on])
+    # the ramps only descend away from the bridge: where the straight axis runs under a building past the road's
+    # bend, its roof is not the road, so no bin may stand above the one nearer the bridge
+    mid = int(APPROACH["to"] // 2.0)
+    road[mid:] = np.minimum.accumulate(road[mid:])
+    road[:mid + 1] = np.minimum.accumulate(road[:mid + 1][::-1])[::-1]
+    bare[corridor] = np.maximum(bare[corridor], np.minimum(surface[corridor], road[bins[corridor]]))
+    return bare
+
+
+def check_keep_approaches():
+    """Self-check on a synthetic tile: a viaduct kept, a roadside roof capped at road level, the rest left alone."""
+    along, across = np.meshgrid(np.arange(-400, 400) + 0.5, np.arange(-60, 60) + 0.5)
+    ramp = np.clip(13 - (np.abs(along) - 133) * 0.03, 6, 13)  # the deck at 13 m, descending away from the bridge
+    surface = np.where(np.abs(across) < 8, ramp, 3.0)
+    surface[(np.abs(across - 12) < 3) & (np.abs(along - 200) < 5)] = 30.0  # a roadside building in the corridor
+    surface[(np.abs(across) < 8) & (np.abs(along + 250) < 3)] = 25.0  # a building over the axis past the bend
+    surface[(np.abs(across - 40) < 3) & (np.abs(along - 200) < 5)] = 30.0  # a building outside the corridor
+    kept = keep_approaches(np.full(surface.shape, 3.0), surface, along, across)
+    at = lambda al, ac: kept[int(ac + 60), int(al + 400)]
+    assert abs(at(200, 0) - ramp[0, 600]) < 0.1, "the viaduct is kept (to its 2 m bin's low end)"
+    assert at(200, 12) <= ramp[0, 600] + 0.01, "the roadside roof is capped at the road"
+    assert at(-250, 0) <= ramp[0, 150] + 0.31, "the roof over the axis is capped at the bin nearer the bridge"
+    assert at(200, 40) == 3.0 and at(50, 0) == 3.0, "outside the corridor and inside the bridge cut, untouched"
+
+
 def get(url, params, name):
     CACHE.mkdir(exist_ok=True)
     path = CACHE / name
@@ -75,12 +117,12 @@ def get(url, params, name):
     return path.read_bytes()
 
 
-def dsm(minE, minN, maxE, maxN):
+def dsm(minE, minN, maxE, maxN, wcs=WCS, coverage=COVERAGE, kind="dsm"):
     params = {
-        "service": "WCS", "version": "2.0.1", "request": "GetCoverage", "CoverageId": COVERAGE,
+        "service": "WCS", "version": "2.0.1", "request": "GetCoverage", "CoverageId": coverage,
         "format": "image/tiff", "subset": [f"E({minE},{maxE})", f"N({minN},{maxN})"],
     }
-    raw = get(WCS, params, f"dsm_{minE}_{minN}_{maxE}_{maxN}.tif")
+    raw = get(wcs, params, f"{kind}_{minE}_{minN}_{maxE}_{maxN}.tif")
     a = tifffile.imread(io.BytesIO(raw)).astype(np.float64)
     assert a.shape == (maxN - minN, maxE - minE), a.shape
     return a
@@ -147,36 +189,48 @@ def main():
     water_h = round(float(np.median(a[river])), 2)
     bed = water_h - 2.0
 
-    # carve: the river and the noisy pixels below it go to a bed under the water plane
-    a = np.where(a < bed, ndimage.median_filter(a, 7), a)
-    a[river] = bed
-    a = np.maximum(a, bed)
-    # banks: moored boats, piers and wall-top noise make spikes; a 5 m median over a 12 m strip calms them
     bank = ndimage.binary_dilation(river, iterations=12) & ~river
-    a[bank] = ndimage.median_filter(a, 5)[bank]
-
-    # cut the bridge out: fill its footprint from the ground either side of it
     w, L = BRIDGE_CUT["width"] / 2, BRIDGE_CUT["length"] / 2
     cut = (np.abs(along) < L) & (np.abs(across) < w)
-    ys, xs = np.nonzero(cut)
-    sides = []
-    for sign in (1, -1):  # step out across the axis to just beyond the footprint
-        d = sign * (w + 3) - across[ys, xs]
-        sy = np.clip(np.round(ys + d * axis[0]).astype(int), 0, a.shape[0] - 1)  # +across is (axis_n, -axis_e) in (E, N); rows run south
-        sx = np.clip(np.round(xs + d * axis[1]).astype(int), 0, a.shape[1] - 1)
-        sides.append(a[sy, sx])
-    a[ys, xs] = np.minimum(*sides)
-    fill_abutments(a, along, across, axis)
-    carve_engine_house(a, along, across, origin_h)
 
-    min_h, max_h = float(np.floor(a.min())), float(np.ceil(a.max()))
-    v = np.round((a - min_h) / (max_h - min_h) * 65535).astype(np.uint16)
-    rgb = np.dstack([v >> 8, v & 255, np.zeros_like(v)]).astype(np.uint8)
-    decoded = min_h + ((rgb[..., 0].astype(int) << 8) + rgb[..., 1]) / 65535 * (max_h - min_h)
-    assert np.abs(decoded - a).max() < 0.01  # self-check of the encoding
+    def edit(a):
+        """The river, bank, bridge-cut, abutment and engine-house edits (the masks come from the DSM)."""
+        # carve: the river and the noisy pixels below it go to a bed under the water plane
+        a = np.where(a < bed, ndimage.median_filter(a, 7), a)
+        a[river] = bed
+        a = np.maximum(a, bed)
+        # banks: moored boats, piers and wall-top noise make spikes; a 5 m median over a 12 m strip calms them
+        a[bank] = ndimage.median_filter(a, 5)[bank]
+        # cut the bridge out: fill its footprint from the ground either side of it
+        ys, xs = np.nonzero(cut)
+        sides = []
+        for sign in (1, -1):  # step out across the axis to just beyond the footprint
+            d = sign * (w + 3) - across[ys, xs]
+            sy = np.clip(np.round(ys + d * axis[0]).astype(int), 0, a.shape[0] - 1)  # +across is (axis_n, -axis_e) in (E, N); rows run south
+            sx = np.clip(np.round(xs + d * axis[1]).astype(int), 0, a.shape[1] - 1)
+            sides.append(a[sy, sx])
+        a[ys, xs] = np.minimum(*sides)
+        fill_abutments(a, along, across, axis)
+        carve_engine_house(a, along, across, origin_h)
+        return a
+
+    a = edit(a)
+    # the ground: the EA DTM has buildings, trees and the bridge removed, and the approach viaducts with them
+    check_keep_approaches()
+    b = keep_approaches(edit(dsm(minE, minN, maxE, maxN, DTM_WCS, DTM_COVERAGE, "dtm")), a, along, across)
+
+    min_h, max_h = float(np.floor(min(a.min(), b.min()))), float(np.ceil(max(a.max(), b.max())))
+
+    def encode(a):
+        v = np.round((a - min_h) / (max_h - min_h) * 65535).astype(np.uint16)
+        rgb = np.dstack([v >> 8, v & 255, np.zeros_like(v)]).astype(np.uint8)
+        decoded = min_h + ((rgb[..., 0].astype(int) << 8) + rgb[..., 1]) / 65535 * (max_h - min_h)
+        assert np.abs(decoded - a).max() < 0.01  # self-check of the encoding
+        return rgb
 
     OUT.mkdir(parents=True, exist_ok=True)
-    Image.fromarray(rgb).save(OUT / "height.png", optimize=True)
+    Image.fromarray(encode(a)).save(OUT / "height.png", optimize=True)
+    Image.fromarray(encode(b)).save(OUT / "bare.png", optimize=True)
     imagery(minE, minN, maxE, maxN).save(OUT / "color.jpg", quality=84, optimize=True, progressive=True)
     water_normals(OUT.parent / "waternormals.jpg")
 
@@ -194,6 +248,7 @@ def main():
         "encoding": "RGB 16-bit: v = R*256+G; h = min_h + v/65535*(max_h-min_h) metres OD; row 0 north, 1 px = 1 m",
         "source": {
             "height": f"Environment Agency National LIDAR Programme, LIDAR Composite DSM 1 m (last return), WCS {WCS} coverage {COVERAGE}",
+            "bare": f"Environment Agency National LIDAR Programme, LIDAR Composite DTM 1 m, WCS {DTM_WCS} coverage {DTM_COVERAGE}; the approach viaducts kept from the DSM",
             "color": f"Esri World Imagery, MapServer export {IMAGERY}",
         },
         "licence": {

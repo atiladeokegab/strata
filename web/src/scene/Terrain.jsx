@@ -3,7 +3,6 @@ import { useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../store'
 import { GOOGLE_FROM } from './google/state'
-import { bareEarth, keepApproaches } from './bareEarth.js'
 import { LITE } from './look/tier'
 import { GroundStandIn } from '../ui/StandIns'
 
@@ -14,7 +13,7 @@ export const useGoogleShown = google?.useGoogleShown ?? (() => false)
 const BASE = '/terrain/tower-bridge/'
 const MAPS = ['color.jpg', 'color-1890s.jpg'] // today's aerial, the OS 1893-96 sheet
 const texture = (url) => new THREE.TextureLoader().loadAsync(url)
-let metaCache, lowCache, cache, fullCache, nearCache, mirrorCache
+let metaCache, lowCache, cache, fullCache, nearCache, mirrorCache, surfaceCache, nearSurfaceCache
 const loadMeta = () => (metaCache ??= fetch(BASE + 'meta.json').then((r) => r.json()))
 
 // Decodes a height.png (RGB 16-bit, see scripts/terrain/build.py) to metres OD.
@@ -36,9 +35,9 @@ async function decodeHeights(url, meta) {
 // 3. desktop only: the 600 m near field at 0.5 m. Each stage resolves with its drapes in, so it never shows grey.
 // Each stage's mesh is built off the main thread (rtin below) and capped at BUDGET triangles: the lead's cap is
 // ~500k on desktop (250k outer + 250k near) and ~150k on phones and for the first-load tile.
-// Before 1950 the ground is bare earth (see bareEarth.js), opened with a 30 m window at any pixel size.
-const withOld = (meta, { heights, w, h }) =>
-  ({ meta, heights, w, h, old: keepApproaches(bareEarth(heights, w, h, Math.round((30 * w) / (meta.bbox_osgb[2] - meta.bbox_osgb[0]))), heights, w, meta) })
+// The ground is bare.png in every era: the EA LiDAR DTM with the approach viaducts kept (scripts/terrain/build.py).
+// `old` (the shader's aOld) is the same ground; height.png, the DSM with roofs and trees, is only the LiDAR point view.
+const tile = (meta, { heights, w, h }) => ({ meta, heights, old: heights, w, h })
 
 const BUDGET = { low: 150_000, full: LITE ? 150_000 : 250_000, near: 250_000, mirror: 30_000 }
 
@@ -46,17 +45,30 @@ export function loadLow() {
   lowCache ??= (async () => {
     const meta = await loadMeta()
     const base = meta.lite ? BASE + 'lo/' : BASE
-    const [px, ...maps] = await Promise.all([decodeHeights(base + 'height.png', meta), ...MAPS.map((f) => texture(base + f))])
-    const t = withOld(meta, px)
+    const [px, ...maps] = await Promise.all([decodeHeights(base + 'bare.png', meta), ...MAPS.map((f) => texture(base + f))])
+    const t = tile(meta, px)
     return { ...t, maps, mesh: await meshOf(t, BUDGET.low) }
   })()
   return lowCache
 }
 
-/** The full 1 m outer tile's heights (no drapes), once per page; queued behind the first-load tile. */
+/** The full 1 m outer tile's ground heights (no drapes), once per page; queued behind the first-load tile. */
 export function loadTerrain() {
-  cache ??= loadLow().then(async ({ meta }) => withOld(meta, await decodeHeights(BASE + 'height.png', meta)))
+  cache ??= loadLow().then(async ({ meta }) => tile(meta, await decodeHeights(BASE + 'bare.png', meta)))
   return cache
+}
+
+// The DSM as flown, outer and near, for the LiDAR point view only (fetched when it is first switched on).
+function loadSurface() {
+  surfaceCache ??= loadLow().then(async ({ meta }) => tile(meta, await decodeHeights(BASE + 'height.png', meta)))
+  return surfaceCache
+}
+function loadNearSurface() {
+  nearSurfaceCache ??= loadLow().then(async ({ meta: m }) => {
+    const meta = { ...m, bbox_osgb: m.near.bbox_osgb }
+    return tile(meta, await decodeHeights(BASE + 'near/height.png', meta))
+  })
+  return nearSurfaceCache
 }
 
 function loadFull() {
@@ -77,17 +89,16 @@ function loadNear() {
   nearCache ??= (async () => {
     const t = await loadTerrain()
     const meta = { ...t.meta, bbox_osgb: t.meta.near.bbox_osgb }
-    const [{ heights, w, h }, ...maps] = await Promise.all([
-      decodeHeights(BASE + 'near/height.png', meta),
-      ...MAPS.map((f) => texture(BASE + 'near/' + f)),
-    ])
-    // bare earth sampled from the outer tile's, so both meshes sink to the same 1890s ground
-    const res = (meta.bbox_osgb[2] - meta.bbox_osgb[0]) / w, [minE, , , maxN] = meta.bbox_osgb, [oE, oN] = meta.origin_osgb
-    const outerOld = { ...t, heights: t.old }, old = new Float32Array(w * h)
+    const maps = await Promise.all(MAPS.map((f) => texture(BASE + 'near/' + f)))
+    // the ground resampled from the outer 1 m DTM onto the 0.5 m grid (the DTM stops at 1 m), so both meshes meet;
+    // the near tier's gain is its 0.15 m drapes
+    const [w, h] = t.meta.near.size_px, res = (meta.bbox_osgb[2] - meta.bbox_osgb[0]) / w
+    const [minE, , , maxN] = meta.bbox_osgb, [oE, oN] = meta.origin_osgb, heights = new Float32Array(w * h)
     for (let i = 0; i < h; i++) for (let j = 0; j < w; j++) {
-      old[i * w + j] = Math.min(heights[i * w + j], heightAt(outerOld, minE + (j + 0.5) * res - oE, oN - (maxN - (i + 0.5) * res)) + meta.origin_h)
+      heights[i * w + j] = heightAt(t, minE + (j + 0.5) * res - oE, oN - (maxN - (i + 0.5) * res)) + meta.origin_h
     }
-    return { meta, heights, old, w, h, maps, mesh: await meshOf({ meta, heights, old, w, h }, BUDGET.near) }
+    const g = tile(meta, { heights, w, h })
+    return { ...g, maps, mesh: await meshOf(g, BUDGET.near) }
   })()
   return nearCache
 }
@@ -175,9 +186,8 @@ function heightfieldRaycast(t) {
 
 // Invisible stand-in that answers raycasts for both looks (a Points cloud is not a mesh to walk on).
 function Ground() {
-  const t = useLoaded(loadTerrain) ?? use(loadLow())
-  const bare = useStore((s) => s.year < GOOGLE_FROM || !s.lidar) // stand on the ground the mesh shows, not on tree crowns
-  const raycast = useMemo(() => heightfieldRaycast(bare ? { ...t, heights: t.old } : t), [t, bare])
+  const t = useLoaded(loadTerrain) ?? use(loadLow()) // the ground, not tree crowns, in every look
+  const raycast = useMemo(() => heightfieldRaycast(t), [t])
   return <mesh name="terrain-ground" raycast={raycast} frustumCulled={false}><bufferGeometry /></mesh>
 }
 
@@ -188,7 +198,7 @@ function Ground() {
 // little of the sheet's own hue kept (blue water, tinted blocks). The tone runs on gamma-encoded colour
 // because the map sample is linear here; ERA_GAIN sets how bright the paper sits under the scene light.
 // ERA is 1 while the old map is draped. BARE is 1 before Google's tiles (GOOGLE_FROM): the ground is bare earth
-// (aOld), flat-lit, and the dated buildings (Buildings.jsx) stand on it instead of today's LiDAR roofs.
+// (aOld), flat-lit. aOld now equals the position (the mesh is the DTM in every era), so BARE moves nothing.
 const ERA = { value: 0 }, BARE = { value: 0 }
 const ERA_GAIN = '1.0'
 const ERA_GRADE = `
@@ -489,10 +499,12 @@ function Tiles({ lidar, step }) {
   const full = useLoaded(loadFull)
   const near = useLoaded(loadNear, !LITE && !!full)
   const mirror = useLoaded(loadMirror, !LITE)
+  const surface = useLoaded(loadSurface, lidar)
+  const nearSurface = useLoaded(loadNearSurface, lidar && !LITE && !!surface)
   if (lidar) return (
     <>
-      <LidarPoints t={full ?? low} step={full ? step : 1} hole={near?.meta.bbox_osgb} />
-      {near && <LidarPoints t={near} step={1} name="terrain-lidar-near" />}
+      <LidarPoints t={surface ?? low} step={surface ? step : 1} hole={nearSurface?.meta.bbox_osgb} />
+      {nearSurface && <LidarPoints t={nearSurface} step={1} name="terrain-lidar-near" />}
     </>
   )
   return (
@@ -505,7 +517,7 @@ function Tiles({ lidar, step }) {
   )
 }
 
-/** Bare earth from the EA LiDAR DSM with aerial imagery draped. `lidar` swaps to the DSM as a height-coloured point cloud. */
+/** Bare earth from the EA LiDAR DTM with aerial imagery draped. `lidar` swaps to the DSM as a height-coloured point cloud. */
 export default function Terrain({ lidar = false, step = LITE ? 2 : 1 }) {
   const google = useGoogleShown(lidar)
   return (

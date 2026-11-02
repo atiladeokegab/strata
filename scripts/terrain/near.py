@@ -8,7 +8,7 @@
     uv run scripts/terrain/near.py
 
 Writes web/public/terrain/tower-bridge/near/{height.png, color.jpg, color-1890s.jpg}, the first-load tile
-lo/{height.png, color.jpg, color-1890s.jpg} (under 500 KB, shown first on every device), and adds `near`, `lite` and a per-file `files` map (source + licence) to meta.json. Same encoding and min_h/max_h as
+lo/{bare.png, color.jpg, color-1890s.jpg} (under 500 KB, shown first on every device), and adds `near`, `lite` and a per-file `files` map (source + licence) to meta.json. Same encoding and min_h/max_h as
 height.png, 0.5 m pixels. Phones and ?lite=1 never load these.
 
 Height: EA's finest data here is the 2012 0.5 m time-stamped DSM (the composites stop at 1 m). It is
@@ -132,22 +132,22 @@ def encode(h, meta):
 
 
 def lite(meta):
-    """The first-load tile every device shows while the full one streams: 4 m height, 768 px colour, 512 px 1890s.
+    """The first-load tile every device shows while the full one streams: 4 m ground, 768 px colour, 512 px 1890s.
     Made from the committed full-res files, so it carries build.py's carving, bridge cut and abutment fill."""
     out = OUT / "lo"
     out.mkdir(exist_ok=True)
-    h = decode(OUT / "height.png", meta)
+    h = decode(OUT / "bare.png", meta)  # the ground only: the LiDAR view waits for the full DSM
     n = h.shape[0] // LO
     small = h[:n * LO, :n * LO].reshape(n, LO, n, LO).mean(axis=(1, 3))
     small = np.round(small / 0.05) * 0.05  # 5 cm steps: invisible at 4 m, and the PNG halves
-    Image.fromarray(encode(small, meta)).save(out / "height.png", optimize=True)
+    Image.fromarray(encode(small, meta)).save(out / "bare.png", optimize=True)
     for name, px, q in (("color.jpg", 768, 65), ("color-1890s.jpg", 512, 70)):
         Image.open(OUT / name).convert("RGB").resize((px, px), Image.LANCZOS).save(out / name, quality=q, optimize=True, progressive=True)
     meta["lite"] = {"size_px": [n, n], "res_m": LO, "note": "Shown first on every device, then replaced by the full tile."}
     total = sum(f.stat().st_size for f in out.iterdir())
     assert total < 500_000, f"first-load tile is {total} bytes"
-    return {f"lo/{f}": {"source": f"Downsampled from {f} ({'block mean' if f == 'height.png' else 'Lanczos'})", "licence": meta["files"][f]["licence"]}
-            for f in ("height.png", "color.jpg", "color-1890s.jpg")}
+    return {f"lo/{f}": {"source": f"Downsampled from {f} ({'block mean' if f.endswith('.png') else 'Lanczos'})", "licence": meta["files"][f]["licence"]}
+            for f in ("bare.png", "color.jpg", "color-1890s.jpg")}
 
 
 def save_jpg(im, path, quality):
@@ -215,6 +215,7 @@ def main():
     }
     meta.setdefault("files", {}).update({
         "height.png": {"source": meta["source"]["height"], "licence": ea22},
+        "bare.png": {"source": meta["source"]["bare"], "licence": ea22},
         "color.jpg": {"source": meta["source"]["color"], "licence": meta["licence"]["color"]},
         "color-1890s.jpg": {
             "source": "National Library of Scotland, OS London Five-foot Town Plan 1893-96, tiles https://mapseries-tilesets.s3.amazonaws.com/london_1890s/ z18 (scripts/history/fetch_1890s.py)",

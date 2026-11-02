@@ -542,6 +542,7 @@ function TerrainMesh({ t, hole, name = 'terrain', visible = true }) {
 // with distance (the fog colour is lighter than the sky at the horizon, so fogging it drew a bright rim).
 // Without it, low views with tiles off end in a cliff against the sky ~750 m out.
 const SKIRT = 20000 // m
+const SKIRT_HAZE = [800, 2000] // m from the camera
 function fadeOut(shader) {
   Object.assign(shader.uniforms, { uEra: ERA, uBare: BARE })
   shader.vertexShader = shader.vertexShader
@@ -551,7 +552,9 @@ function fadeOut(shader) {
     .replace('#include <common>', '#include <common>\nvarying float vSkirt;\nuniform float uEra;\nuniform float uBare;')
     .replace('#include <dithering_fragment>', `#include <dithering_fragment>
 #ifdef USE_FOG
-gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor * mix(${f2(HAZE_PHOTO)}, 1.0, uEra), uBare);
+// before the tiles it is all haze; today (the tiles' fallback) its flat photo-edge colour stood as a dark band 1-3 km
+// out, so from SKIRT_HAZE m it goes to the haze as well
+gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor * mix(${f2(HAZE_PHOTO)}, 1.0, uEra), max(uBare, smoothstep(${f1(SKIRT_HAZE[0])}, ${f1(SKIRT_HAZE[1])}, vSkirt)));
 #endif
 gl_FragColor.a *= 1.0 - smoothstep(1500.0, 9000.0, vSkirt);`)
 }

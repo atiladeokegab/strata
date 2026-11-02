@@ -126,6 +126,9 @@ export default function HomeStage() {
       frameloop={!visible ? 'never' : still ? 'demand' : 'always'}
       camera={{ fov: 30, near: 5, far: 5000 }}
       gl={{ antialias: true, powerPreference: 'high-performance', toneMapping: ACESFilmicToneMapping, toneMappingExposure: 1.05 }}
+      // R3F's unmount forces a context loss 500 ms after Enter, a synchronous GPU teardown that blocked the scene's first frame
+      // (3.2 s of a 5 s stall under swiftshader); left alone, the browser frees the context with the canvas
+      onCreated={({ gl }) => { gl.forceContextLoss = () => {} }}
     >
       <color attach="background" args={['#f5f5f7']} />
       <fog attach="fog" args={['#f5f5f7', 1000, 1800]} />

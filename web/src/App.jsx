@@ -127,6 +127,7 @@ export default function App() {
   if (EMBED) {
     const full = new URL(location.href)
     full.searchParams.delete('embed')
+    full.pathname = full.pathname.replace(/\/{2,}/g, '/') // a parent's src with a trailing slash gave …run.app//?capture=1
     return (
       <div className="app embed">
         {noGL ? <NoWebGL /> : <Guard name="Stage" fallback={<NoWebGL />}><Suspense fallback={null}><Stage /></Suspense></Guard>}

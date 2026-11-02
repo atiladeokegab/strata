@@ -15,7 +15,7 @@ const NEXT = [
 
 export default function Home({ onEnter }) {
   useEffect(() => { // once Home has painted, fetch the museum's scene in the background so Enter is quick
-    const go = () => import('../Stage')
+    const go = () => { import('../Stage'); import('../../scene/Terrain.jsx').then((m) => m.loadTerrain()) } // the LiDAR ground was the card's slowest step after Enter
     const id = window.requestIdleCallback ? requestIdleCallback(go, { timeout: 3000 }) : setTimeout(go, 1500)
     return () => (window.cancelIdleCallback ? cancelIdleCallback(id) : clearTimeout(id))
   }, [])

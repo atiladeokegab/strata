@@ -40,14 +40,14 @@ export function ReadyProbe() {
   const last = useRef('')
   const bridge = useRef(false)
   const river = useRef(false)
-  const start = useRef(0)
+  const start = useRef(null)
   useEffect(() => { terrainChunk?.().then((m) => m.loadTerrain()).finally(() => { terrainIn = true }) }, [])
   useFrame((_, dt) => {
     const st = useStore.getState()
     if (st.sceneSettled) return
     bridge.current ||= !!scene.getObjectByName('tower-bridge')
     const wanted = TILES && !!google && st.year >= google.GOOGLE_FROM && !st.lidar
-    start.current ||= performance.now()
+    start.current ??= EMBED ? 0 : performance.now() // the embed's waits run from page open (its card must lift inside 5 s); the app's from its first frame, after Home
     const city = !wanted || google.useGoogle.getState().status !== 'loading' || performance.now() - start.current > CITY_WAIT
     river.current ||= !waterSlot || !!scene.getObjectByName('thames') || performance.now() - start.current > RIVER_WAIT
     const place = !!st.place, active = tex.pending > 0, total = tex.pending + tex.done

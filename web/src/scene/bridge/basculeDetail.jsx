@@ -169,11 +169,11 @@ function build() {
 
 // lite: every static piece of the leaf (this file's and BasculeLeaf's) as kit lists; BasculeDetails
 // (details.jsx) draws them with its own lamps and footways, one mesh per material.
-// shortcut: the soffit joins the shared white here, so phones get no plate relief (rivets are sub-pixel
-// at phone size anyway); give it its own key if a phone shot shows the underside flat.
+// The soffit plate rides the dark iron mesh here, so phones match the desktop's near-black plate.
+// shortcut: no plate relief maps on lite (rivets are sub-pixel at phone size); give it its own key if needed.
 export function leafKit() {
   const { soffit, fascia, iron } = build(), p = leafParts()
-  return { white: [...soffit, ...p.white], steel: [...fascia, ...p.steel], iron: [...iron, ...p.iron], road: p.road }
+  return { white: p.white, steel: [...fascia, ...p.steel], iron: [...iron, ...soffit, ...p.iron], road: p.road }
 }
 
 const BOLT_DRAW = 0.6 // m the nose bolts withdraw

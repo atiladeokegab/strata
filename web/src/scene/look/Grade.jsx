@@ -3,23 +3,34 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Bloom, EffectComposer, N8AO, SMAA, ToneMapping } from '@react-three/postprocessing'
-import { BlendFunction, BrightnessContrastEffect, Effect, HueSaturationEffect, SepiaEffect, ToneMappingMode, VignetteEffect } from 'postprocessing'
+import { BlendFunction, BrightnessContrastEffect, Effect, ToneMappingMode, VignetteEffect } from 'postprocessing'
 import * as THREE from 'three'
 import { useStore } from '../../store'
 import { periodGrade } from './sun'
 import { LITE } from './tier'
 
 const AO = 1.6
-const CLAMP_GLSL = 'void mainImage(const in vec4 c,const in vec2 uv,out vec4 o){o=vec4(max(c.rgb,0.0),c.a);}'
+// The period grade, luma-weighted: full desaturation and sepia on mid and dark tones, eased on bright ones
+// (sepia lifts pale portland stone to cream), which instead take a brown soot tint. hi uses sqrt(luma), ~sRGB lightness.
+// The max(0) matters: saturation > 0 pushes a 0 channel below 0, and the sRGB pow() ahead of
+// brightness/contrast turns it into NaN on real GPUs (the exact-black bus rears).
+const SAT_GLSL = `uniform float sat;uniform float soot;
+void mainImage(const in vec4 c,const in vec2 uv,out vec4 o){
+  float l=dot(c.rgb,vec3(0.2126,0.7152,0.0722));float hi=smoothstep(0.4,0.8,sqrt(max(l,0.0)));
+  vec3 x=mix(vec3(l),c.rgb,1.0+sat*(sat<0.0?1.0-0.5*hi:1.0));
+  o=vec4(max(x,0.0)*mix(vec3(1.0),vec3(0.76,0.72,0.66),soot*hi),c.a);}`
+const SEPIA_GLSL = `uniform float amount;
+void mainImage(const in vec4 c,const in vec2 uv,out vec4 o){
+  vec3 s=vec3(dot(c.rgb,vec3(0.393,0.769,0.189)),dot(c.rgb,vec3(0.349,0.686,0.168)),dot(c.rgb,vec3(0.272,0.534,0.131)));
+  float hi=smoothstep(0.4,0.8,sqrt(max(dot(c.rgb,vec3(0.2126,0.7152,0.0722)),0.0)));
+  o=vec4(mix(c.rgb,s,amount*(1.0-0.75*hi)),c.a);}`
+const uniforms = (o) => ({ blendFunction: BlendFunction.SRC, uniforms: new Map(Object.entries(o).map(([k, v]) => [k, new THREE.Uniform(v)])) })
 // Lite (phones) keeps only the grade: no AO, bloom or SMAA, so the post stack is 2 passes, not ~20.
 export default function Grade({ low }) {
   const fx = useMemo(() => ({
-    sat: new HueSaturationEffect(),
-    // Saturation > 0 pushes a 0 channel below 0, and the sRGB pow() ahead of brightness/contrast turns it into
-    // NaN on real GPUs; sepia then spreads it to exact black (the black bus rears). Merged into the same pass.
-    clamp: new Effect('ClampZero', CLAMP_GLSL, { blendFunction: BlendFunction.SRC }),
+    sat: new Effect('PeriodSaturation', SAT_GLSL, uniforms({ sat: 0, soot: 0 })),
     bc: new BrightnessContrastEffect(),
-    sepia: new SepiaEffect({ intensity: 0 }),
+    sepia: new Effect('PeriodSepia', SEPIA_GLSL, uniforms({ amount: 0 })),
     vig: new VignetteEffect({ offset: 0.3, darkness: 0.38 }),
   }), [])
   useEffect(() => () => Object.values(fx).forEach((e) => e.dispose()), [fx])
@@ -35,8 +46,9 @@ export default function Grade({ low }) {
     }
     if (ao.current) ao.current.configuration.intensity = AO * (1 - 0.75 * THREE.MathUtils.smoothstep(camera.position.y, 150, 900))
     const p = (k.current = THREE.MathUtils.damp(k.current, periodGrade(useStore.getState().year), 4, dt))
-    fx.sat.saturation = 0.04 - 0.4 * p
-    fx.sepia.intensity = 0.42 * p
+    fx.sat.uniforms.get('sat').value = 0.04 - 0.4 * p
+    fx.sat.uniforms.get('soot').value = p
+    fx.sepia.uniforms.get('amount').value = 0.42 * p
     fx.bc.contrast = 0.08 - 0.05 * p
     fx.bc.brightness = 0.01 * p
     fx.vig.darkness = 0.38 + 0.2 * p
@@ -47,7 +59,6 @@ export default function Grade({ low }) {
       {!LITE && <Bloom mipmapBlur levels={5} intensity={0.3} luminanceThreshold={1} luminanceSmoothing={0.2} />}
       <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
       <primitive object={fx.sat} dispose={null} />
-      <primitive object={fx.clamp} dispose={null} />
       <primitive object={fx.bc} dispose={null} />
       <primitive object={fx.sepia} dispose={null} />
       <primitive object={fx.vig} dispose={null} />

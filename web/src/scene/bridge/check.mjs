@@ -882,6 +882,7 @@ console.log('geom materials untextured, all kinded ok')
   }
   // far camera (desktop): the stair and lift interiors (useNear) start hidden when the camera is past 60 m
   {
+    setLite(false) // desktop: the budget loop above ends on the lite tier, where nothing is near-gated
     const { nearNow } = await import('./useNear.js')
     assert.ok(nearNow(54, false, 60, 5) && !nearNow(56, false, 60, 5) && nearNow(64, true, 60, 5) && !nearNow(66, true, 60, 5), 'useNear: on inside 55 m, off past 65 m')
     assert.ok(!nearNow(1, true, 0, 5), 'useNear: r = 0 never near')

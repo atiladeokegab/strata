@@ -27,8 +27,8 @@ import sys
 import numpy as np
 from PIL import Image, ImageDraw
 from scipy import ndimage as ndi
-from shapely.geometry import Point, Polygon
-from shapely.ops import substring
+from shapely.geometry import LineString, Point, Polygon
+from shapely.ops import substring, unary_union
 from skimage import measure
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -46,6 +46,11 @@ BUILT_BY = 1894
 EAST_BASIN = (534060, 180470)  # a point inside St Katharine's east dock (OSGB)
 BLITZ, MODERN = 1940, 1950
 ROOFED = 650  # m from the bridge centre: pitched roofs where the camera usually is
+# Tower Bridge Road (south) and Tower Bridge Approach (north), cut through the old streets for the bridge and opened
+# with it in 1894: OSM carriageway centrelines (OSGB, ODbL) and a 20 m street. A traced plot mostly on it stands until then.
+ROAD_1894 = [[(533616, 180118), (533565, 179985), (533515, 179854), (533423, 179515)],
+             [(533733, 180417), (533743, 180458), (533760, 180619), (533768, 180689), (533774, 180705)]]
+ROAD_HALF = 10.0
 
 
 def bare_earth(meta):
@@ -61,6 +66,7 @@ def main():
     oH, water = meta["origin_h"], meta["water_h"]
     theta = math.radians(meta["bridge_axis_deg"])
     ground = bare_earth(meta)  # 1500 x 1500, row 0 north
+    road = unary_union([LineString([(e - oE, oN - n) for e, n in line]).buffer(ROAD_HALF) for line in ROAD_1894])
     up = lambda a: np.kron(a, np.ones((2, 2)))[: int((maxN - minN) / PX), : int((maxE - minE) / PX)]  # 1 m -> 0.5 m
 
     rgb, _ = osgb_mosaic(PX)
@@ -173,6 +179,8 @@ def main():
                             "e": MODERN, "o": [round(float(v), 1) for q in zip(list(wx)[:-1], list(wz)[:-1]) for v in q]})
         else:
             b = {"b": round(base, 1), "t": round(top, 1), "k": kind, "o": o}
+            if poly.intersection(road).area > 0.25 * poly.area:
+                b["e"] = BUILT_BY  # cleared for the new road
             rect = poly.minimum_rotated_rectangle
             if poly.centroid.distance(ORIGIN) < ROOFED and poly.area > 0.85 * rect.area:
                 b["p"] = [round(float(v), 1) for q in list(rect.exterior.coords)[:4] for v in q]

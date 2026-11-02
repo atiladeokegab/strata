@@ -3,14 +3,14 @@
 // swinging barrier and red/green signal at each entry gate.
 // The gates close when the lever is pulled or a leaf is off its seat; vehicles never enter a
 // bascule while it is raised, so nothing here follows the leaf rotation.
-import { useEffect, useMemo, useRef } from 'react'
+import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useHomeDisc, offDisc } from './homeDisc.js'
 import * as THREE from 'three'
 import { useStore } from '../../store.js'
 import { Part } from './Part.jsx'
 import { box, merge, M } from './geom.js'
-import { createTraffic, stepTraffic, onLeaves, roadY, streetProfile, eraOf, nearCam, RAMP_FOOT, TYPES, GATE_U, POST_X, POST_Z, POST_W } from './trafficSim.js'
+import { createTraffic, stepTraffic, onLeaves, roadY, eraOf, nearCam, RAMP_FOOT, TYPES, GATE_U, POST_X, POST_Z, POST_W } from './trafficSim.js'
 import { LITE } from '../look/tier.js'
 import { STREET_DROP } from './structures.jsx'
 import { FOOTWAY_H } from './roadway.js'
@@ -107,6 +107,13 @@ BODY.onBeforeCompile = (s) => {
 
 const o = new THREE.Object3D()
 
+// One body, merged and centred on its origin along z: the sim places the centre at u - len/2.
+export function bodyGeo(k, era) {
+  const g = merge(BODIES[k](era))
+  g.computeBoundingBox()
+  return g.translate(0, 0, -(g.boundingBox.min.z + g.boundingBox.max.z) / 2)
+}
+
 export function Traffic({ rt, year, sim, maxAngle }) {
   const era = eraOf(year)
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -114,31 +121,11 @@ export function Traffic({ rt, year, sim, maxAngle }) {
   // only the bodies this street era uses are mounted: one draw call each
   const geos = useMemo(() => {
     const kinds = new Set(t.lanes.flatMap((L) => L.kinds))
-    return Object.fromEntries([...kinds].map((k) => [k, merge(BODIES[k](era))]))
+    return Object.fromEntries([...kinds].map((k) => [k, bodyGeo(k, era)]))
   }, [t, era])
   const meshes = useRef({})
   const gate = useRef({ closed: false, swing: 0 })
   const n = useMemo(() => Object.fromEntries(Object.keys(TYPES).map((k) => [k, 0])), []) // per-type instance counts, reused each frame
-  // LIDAR street surface past the ramp feet, one profile per lane; null (flat street) until the terrain loads.
-  // Dynamic import: Terrain.jsx uses import.meta.glob, which the node corridor check cannot evaluate.
-  const street = useRef(null)
-  useEffect(() => {
-    let live = true
-    import('../Terrain.jsx')
-      .then(async ({ loadTerrain, heightAt }) => {
-        const T = await loadTerrain()
-        if (!live) return
-        // bridge frame -> the terrain's grid frame (Stage turns the terrain by the bridge axis)
-        const a = (T.meta.bridge_axis_deg * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a)
-        const ground = (x, z) => heightAt(T, x * c - z * s, x * s + z * c)
-        street.current = t.lanes.map((L) => streetProfile(ground, L.x, L.kinds.includes('ped') ? 0.5 : 1, STREET_DROP))
-      })
-      .catch(() => {}) // no terrain: keep the flat street
-    return () => {
-      live = false
-      street.current = null
-    }
-  }, [t])
 
   const disc = useHomeDisc()
   const camL = useMemo(() => new THREE.Vector3(), [])
@@ -157,16 +144,17 @@ export function Traffic({ rt, year, sim, maxAngle }) {
     lift.clear = g.closed && onLeaves(t) === 0 // measured after a step taken with the gates shut
     for (const k in n) n[k] = 0
     t.lanes.forEach((L, li) => {
-      const sp = street.current?.[li]
       for (const v of L.list) {
         const m = meshes.current[v.type]
         if (!m || n[v.type] >= CAP[v.type] || (LITE && PEOPLE.has(v.type) && v.id % 5 > 1)) continue
         const z = L.dir * (v.u - TYPES[v.type].len / 2)
         if (offDisc(disc, L.x, z, TYPES[v.type].len / 2) || nearCam(cam, L.x, z, TYPES[v.type].len / 2)) continue
-        const y = roadY(z, STREET_DROP, sp)
+        // next20 #3: only the bridge and its ramps carry traffic; past the ramp foot the terrain takes over
+        if (Math.abs(z) + TYPES[v.type].len / 2 > RAMP_FOOT) continue
+        const y = roadY(z, STREET_DROP)
         // pitch with the road: nose down (+x in the body frame) when it falls ahead
-        o.position.set(L.x, y + (PEOPLE.has(v.type) && Math.abs(z) <= RAMP_FOOT ? FOOTWAY_H : 0), z)
-        o.rotation.set(Math.atan(y - roadY(z + L.dir, STREET_DROP, sp)), L.dir > 0 ? 0 : Math.PI, 0, 'YXZ')
+        o.position.set(L.x, y + (PEOPLE.has(v.type) ? FOOTWAY_H : 0), z)
+        o.rotation.set(Math.atan(y - roadY(z + L.dir, STREET_DROP)), L.dir > 0 ? 0 : Math.PI, 0, 'YXZ')
         o.updateMatrix()
         m.setMatrixAt(n[v.type]++, o.matrix)
       }

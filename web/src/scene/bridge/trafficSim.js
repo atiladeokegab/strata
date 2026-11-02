@@ -65,13 +65,13 @@ const CLEAR_V = 5 // m/s; shortcut: everyone on a leaf hurries off at least this
 
 // len (m), vmax (m/s), gap = minimum bumper-to-bumper spacing (m)
 export const TYPES = {
-  cart: { len: 6.5, vmax: 3, gap: 1.5 },
-  hansom: { len: 5.5, vmax: 4.5, gap: 1.5 },
-  car: { len: 4.2, vmax: 11, gap: 2 },
-  bus: { len: 8.4, vmax: 8, gap: 2 },
-  taxi: { len: 4.5, vmax: 10, gap: 2 },
-  ped: { len: 0.6, vmax: 1.4, gap: 0.5 },
-  lady: { len: 0.6, vmax: 1.3, gap: 0.5 },
+  cart: { len: 6.8, vmax: 3, gap: 2.5 },
+  hansom: { len: 5.6, vmax: 4.5, gap: 2.5 },
+  car: { len: 4.2, vmax: 11, gap: 2.5 },
+  bus: { len: 8.5, vmax: 8, gap: 3 },
+  taxi: { len: 4.5, vmax: 10, gap: 2.5 },
+  ped: { len: 0.6, vmax: 1.4, gap: 0.9 },
+  lady: { len: 1, vmax: 1.3, gap: 0.9 }, // 1894 crinoline is ~1 m across
 }
 
 // Street eras. Before 1920 the bridge carried horse traffic; between the wars motor traffic shared

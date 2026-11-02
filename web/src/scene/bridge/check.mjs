@@ -121,6 +121,26 @@ assert.equal(resolveYears([{ year: 1900, title: 'river foundations begin', sourc
   assert.ok(tiers.some((m) => m.barge) && tiers.length > 100)
   console.log(`river water ok (craft at ${WATER_Y.toFixed(2)} m); moorings ok (${tiers.length} hulls, no overlap)`)
 }
+// Minimum gap (next20 #5): through gates shutting and opening, at real and film speed, no road user gets
+// closer than its type's gap to the one ahead, and the gaps read as gaps (2.5 m vehicles, 0.9 m people).
+{
+  for (const [k, ty] of Object.entries(TYPES)) assert.ok(ty.gap >= (ty.len < 2 ? 0.9 : 2.5), `${k}: gap ${ty.gap} m is too tight to read`)
+  for (const year of [1894, 1940, 2026])
+    for (const hurry of [1, 6]) {
+      const t = createTraffic(year)
+      let worst = Infinity
+      for (let i = 0; i < 6000; i++) {
+        stepTraffic(t, 0.05, i % 2400 > 1200, hurry)
+        for (const L of t.lanes)
+          for (let j = 1; j < L.list.length; j++) {
+            const a = L.list[j - 1], b = L.list[j]
+            worst = Math.min(worst, a.u - TYPES[a.type].len - b.u - TYPES[b.type].gap)
+          }
+      }
+      assert.ok(worst >= -1e-9, `${year} hurry ${hurry}: a road user closed to ${worst.toFixed(2)} m inside its gap`)
+    }
+  console.log('traffic gaps ok (1894/1940/2026, gates cycling, hurry 1 and 6)')
+}
 // Walk mode clears vehicles around the camera (next17: the eye ended up inside two buses at the south end).
 {
   const bus = TYPES.bus.len / 2, cam = { x: -3.5, z: 160 }
@@ -511,11 +531,11 @@ console.log('geom materials untextured, all kinded ok')
   const out = join(tmpdir(), `bridge-corridor-${process.pid}.mjs`)
   const resolveDir = fileURLToPath(new URL('.', import.meta.url))
   // three is bundled too, so the scene and the components share one copy
-  await bundle({ stdin: { contents: `export { TowerBridge } from './TowerBridge.jsx'; export { BODIES, BODY } from './traffic.jsx'; export { useStore } from '../../store.js'; export { Fragment } from 'react/jsx-runtime'; export { setLite } from '../look/tier.js'; export * as T from 'three'`, resolveDir, loader: 'js' }, bundle: true, format: 'esm', platform: 'node', jsx: 'automatic', plugins: [stubs], outfile: out, logLevel: 'error' })
+  await bundle({ stdin: { contents: `export { TowerBridge } from './TowerBridge.jsx'; export { BODIES, BODY, bodyGeo } from './traffic.jsx'; export { useStore } from '../../store.js'; export { Fragment } from 'react/jsx-runtime'; export { setLite } from '../look/tier.js'; export * as T from 'three'`, resolveDir, loader: 'js' }, bundle: true, format: 'esm', platform: 'node', jsx: 'automatic', plugins: [stubs], outfile: out, logLevel: 'error' })
   const noop = new Proxy(() => noop, { get: () => noop }) // canvas textures draw into a no-op 2D context
   globalThis.document ??= { createElement: () => ({ getContext: () => noop }) }
   globalThis.location ??= { search: '' } // store.js reads ?embed= at import
-  const { TowerBridge, BODIES, BODY, useStore, Fragment, T, setLite } = await import(out)
+  const { TowerBridge, BODIES, BODY, bodyGeo, useStore, Fragment, T, setLite } = await import(out)
   unlinkSync(out)
   // bus rears went black in shade: the paint carries its own bounce term into the standard shader
   const sh = { fragmentShader: T.ShaderLib.standard.fragmentShader }
@@ -545,6 +565,18 @@ console.log('geom materials untextured, all kinded ok')
           }
         })
     console.log(`vehicle normals ok (${faces} faces point outward)`)
+  }
+  // Spacing (next20 #5: horses into carriages, bus and cars nose to tail, people merging): each drawn body,
+  // centred as traffic.jsx draws it, fits inside its TYPES.len, so the sim's bumper gap is a real gap.
+  {
+    let bodies = 0
+    for (const era of ['horse', 'interwar', 'modern'])
+      for (const k of Object.keys(TYPES)) {
+        const b = bodyGeo(k, era).boundingBox
+        assert.ok(b.max.z - b.min.z <= TYPES[k].len + 1e-6 && Math.abs(b.max.z + b.min.z) < 1e-6, `${era} ${k}: body spans ${b.min.z.toFixed(2)}..${b.max.z.toFixed(2)} m, TYPES.len ${TYPES[k].len}`)
+        bodies++
+      }
+    console.log(`body lengths ok (${bodies} bodies within TYPES.len)`)
   }
   const SKIP = new Set(['Traffic', 'Ship']) // moving road and river users, not structure
   const from = []

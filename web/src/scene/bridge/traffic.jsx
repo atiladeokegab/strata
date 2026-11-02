@@ -132,9 +132,9 @@ export function Traffic({ rt, year, sim, maxAngle }) {
   useFrame(({ camera }, dt) => {
     const g = gate.current
     const store = useStore.getState()
-    // walk mode: the camera in the bridge frame the instances are placed in, to clear vehicles around it
+    // the camera in the bridge frame the instances are placed in, to clear vehicles around a low eye
     const host = Object.values(meshes.current).find(Boolean)?.parent
-    const cam = store.view === 'walk' && host ? host.worldToLocal(camera.getWorldPosition(camL)) : null
+    const cam = host ? host.worldToLocal(camera.getWorldPosition(camL)) : null
     const io = { dt, onLeaves: onLeaves(t), angle: sim.angle, maxAngle, locked: sim.locked, shipX: shipState.x, shipSailing: shipState.sailing }
     const lever = stepLift(lift, io)
     if (lever !== null && lever !== store.bascule) store.setBascule(lever)
@@ -148,10 +148,10 @@ export function Traffic({ rt, year, sim, maxAngle }) {
         const m = meshes.current[v.type]
         if (!m || n[v.type] >= CAP[v.type] || (LITE && PEOPLE.has(v.type) && v.id % 5 > 1)) continue
         const z = L.dir * (v.u - TYPES[v.type].len / 2)
-        if (offDisc(disc, L.x, z, TYPES[v.type].len / 2) || nearCam(cam, L.x, z, TYPES[v.type].len / 2)) continue
         // next20 #3: only the bridge and its ramps carry traffic; past the ramp foot the terrain takes over
-        if (Math.abs(z) + TYPES[v.type].len / 2 > RAMP_FOOT) continue
+        if (offDisc(disc, L.x, z, TYPES[v.type].len / 2) || Math.abs(z) + TYPES[v.type].len / 2 > RAMP_FOOT) continue
         const y = roadY(z, STREET_DROP)
+        if (nearCam(cam, L.x, z, TYPES[v.type].len / 2, y)) continue
         // pitch with the road: nose down (+x in the body frame) when it falls ahead
         o.position.set(L.x, y + (PEOPLE.has(v.type) ? FOOTWAY_H : 0), z)
         o.rotation.set(Math.atan(y - roadY(z + L.dir, STREET_DROP)), L.dir > 0 ? 0 : Math.PI, 0, 'YXZ')

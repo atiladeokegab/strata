@@ -148,7 +148,10 @@ export function stepTraffic(t, dt, closed, hurry = 1) {
 export const onLeaves = (t) =>
   t.lanes.reduce((n, L) => n + L.list.filter((v) => v.u > STOP_U && v.u - TYPES[v.type].len < BASCULE_U).length, 0)
 
-// Walk mode: a vehicle whose body comes within CAM_CLEAR m (ground plan) of the camera is hidden,
-// so the walker's eye never ends up inside a bus. cam is {x, z} in the bridge frame, or null.
+// Any view: a vehicle whose body comes within CAM_CLEAR m (ground plan) of a camera less than CAM_TOP m
+// above its road is hidden, so a low eye (walk, tour, orbit near deck) never sits inside or against a body
+// (next20 rears-north: a LITE body 2 m off filled the frame). cam is {x, y, z} in the bridge frame, or null.
 export const CAM_CLEAR = 4
-export const nearCam = (cam, x, z, halfLen = 0) => !!cam && Math.max(0, Math.hypot(x - cam.x, z - cam.z) - halfLen) < CAM_CLEAR
+export const CAM_TOP = 6 // above a 4.4 m double-decker roof with margin
+export const nearCam = (cam, x, z, halfLen = 0, y = 0) =>
+  !!cam && cam.y - y < CAM_TOP && Math.max(0, Math.hypot(x - cam.x, z - cam.z) - halfLen) < CAM_CLEAR

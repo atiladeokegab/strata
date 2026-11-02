@@ -17,7 +17,7 @@ import { leverAfter, leverForKey, leverLabel, KEY_STEP } from './drive.js'
 import { vesselForYear, needsLift, leafInput, CLEARANCE, WATER_Y } from './vessels.js'
 import { layout, clash } from '../moorings.js'
 import { createRiver, stepRiver, gap, CRAFT, CLEAR } from './riverSim.js'
-import { createTraffic, stepTraffic, onLeaves, roadY, streetProfile, RAMP_FOOT, TYPES, STOP_U, BASCULE_U, START_U, END_U, ABUT_Z, RAMP_LEN, POST_X, POST_Z, POST_W, GATE_U, nearCam, CAM_CLEAR } from './trafficSim.js'
+import { createTraffic, stepTraffic, onLeaves, roadY, streetProfile, RAMP_FOOT, TYPES, STOP_U, BASCULE_U, START_U, END_U, ABUT_Z, RAMP_LEN, POST_X, POST_Z, POST_W, GATE_U, nearCam, CAM_CLEAR, CAM_TOP } from './trafficSim.js'
 import { createLift, liftForShip, stepLift, liftSpeed, setLiftTimeScale, applyShipWarp, gatesClosed, heldLever, PASSED_X, FILM_SCALE, substep } from './liftSequence.js'
 
 const MAX = (86 * Math.PI) / 180
@@ -143,11 +143,13 @@ assert.equal(resolveYears([{ year: 1900, title: 'river foundations begin', sourc
 }
 // Walk mode clears vehicles around the camera (next17: the eye ended up inside two buses at the south end).
 {
-  const bus = TYPES.bus.len / 2, cam = { x: -3.5, z: 160 }
+  const bus = TYPES.bus.len / 2, cam = { x: -3.5, y: 1.7, z: 160 }
   assert.ok(nearCam(cam, -3.5, 160 + bus + CAM_CLEAR - 0.5, bus), 'a bus whose tail is 3.5 m from the eye is hidden')
   assert.ok(nearCam(cam, -3.5, 160, bus), 'the eye inside a bus hides it')
   assert.ok(!nearCam(cam, -3.5, 160 + bus + CAM_CLEAR + 0.5, bus), 'a bus 4.5 m off stays')
-  assert.ok(!nearCam(null, -3.5, 160, bus), 'outside walk mode nothing is hidden')
+  assert.ok(!nearCam(null, -3.5, 160, bus), 'no camera, nothing hidden')
+  assert.ok(nearCam({ ...cam, y: 4 }, -3.5, 160 + bus + 2, bus), 'a low orbit/tour eye 2 m off a bus hides it')
+  assert.ok(!nearCam({ ...cam, y: 4 + CAM_TOP }, -3.5, 160, bus), 'an eye well above the roofs hides nothing')
   console.log(`walk clearance ok (${CAM_CLEAR} m)`)
 }
 const tb = JSON.parse(readFileSync(new URL('../../../../data/places/tower-bridge.json', import.meta.url)))

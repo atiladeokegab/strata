@@ -56,5 +56,6 @@
 /* the part step is about the inspector, the docent step about the docent: give each the panel's room */
 .app:has(.guide-card.guide-part) .docent { display: none; }
 .app:has(.guide-card.guide-docent) .docent { max-height: 75%; }
+.app:has(.guide-card.guide-docent) .scroll { min-height: 0; } /* the docent step: the answer gets the room */
 @keyframes guide-in-m { from { opacity: 0; transform: translateY(12px); } }
 @media (prefers-reduced-motion: reduce) { .guide-card, .guide-body, .guide-note, .guide-spot { animation: none; transition: none; } }

@@ -178,6 +178,7 @@ input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 
 .help .d { color: var(--muted); font-size: var(--t2); line-height: 1.4; }
 .help .actions { display: flex; flex-wrap: wrap; gap: var(--s2); }
 .help .primary { flex: 1; justify-content: center; }
+.help .actions button { white-space: nowrap; } /* a long label moves its button to the next row rather than wrapping inside it */
 .no-webgl { position: absolute; z-index: 1; left: calc(50% + var(--panel-w) / 2 + var(--gap) / 2); top: 40%; transform: translate(-50%, -50%); width: min(420px, calc(100% - 32px)); padding: var(--s5); display: grid; gap: var(--s4); justify-items: start; }
 .no-webgl p { margin: 0; font-size: var(--t3); }
 .sheet-handle { display: none; }
@@ -196,6 +197,9 @@ input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 
   .parts button, .chip.source { min-height: 44px; }
   .close { width: 44px; height: 44px; }
 }
+
+/* desktop: a long docent thread shrinks (its log scrolls) before it pushes the place card and the parts list out of the panel */
+@media (min-width: 901px) { .docent { flex: 0 1 auto; min-height: 0; } .scroll { min-height: 240px; } }
 
 /* the 60 s story's beat captions: over the stage, clear of the dock and its ring */
 .story-caption { position: absolute; left: calc(var(--panel-w) + var(--gap) * 2); right: var(--gap); bottom: calc(var(--gap) + 120px); display: flex; justify-content: center; opacity: 0; transition: opacity .6s ease; }

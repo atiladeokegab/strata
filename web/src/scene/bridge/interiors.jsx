@@ -7,6 +7,7 @@ import * as THREE from 'three'
 import { beam, box, merge, M } from './geom.js'
 import { L } from './structures.jsx'
 import { createCars, stepCars, carHeight } from './hydraulics.js'
+import { substep } from './liftSequence.js'
 
 const STAIR_TURRETS = [[-12, L.pierZ - 9], [12, L.pierZ + 9]]
 const LIFTS = [-11, 11] // shaft x, between the arch columns and the outer wall, at the tower's mid z
@@ -53,7 +54,7 @@ export function Lifts({ sim }) {
     return { iron: merge(iron), car, weight, glass: box(1.62, 1.1, 1.6, 0, 1.7, 0) }
   }, [])
   useFrame((_, dt) => {
-    stepCars(lift.current, sim, Math.min(dt, 0.1))
+    substep(dt, (h) => stepCars(lift.current, sim, h))
     cars.current.children.forEach((c, i) => {
       const y = TOP * carHeight(lift.current, i)
       c.position.y = y

@@ -5,6 +5,7 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { beam, box, merge } from './geom.js'
 import { createRiver, stepRiver, eraForYear, CRAFT } from './riverSim.js'
+import { substep } from './liftSequence.js'
 import { WATER_Y } from './vessels.js'
 import { LITE } from '../look/tier.js'
 import { useHomeDisc, offDisc } from './homeDisc.js'
@@ -138,7 +139,7 @@ export function RiverCraft({ year, ship, vessel, foam }) {
   const foot = useRef({ x: 0, bow: 0, stern: 0 })
   useFrame((_, dt) => {
     Object.assign(foot.current, { x: ship.x, bow: vessel.bow, stern: vessel.stern })
-    stepRiver(craft, foot.current, Math.min(dt, 0.1))
+    substep(dt, (h) => stepRiver(craft, foot.current, h)) // clock time like the ship, so craft never lag into its hull
   })
   const types = [...new Set(craft.map((c) => c.type))]
   return (

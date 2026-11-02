@@ -454,6 +454,15 @@ for (const fps of [30, 8, 3]) {
   const low = liftCycle(1, true, 1 / fps)
   assert.ok(Math.abs(low.secs - fast.secs) < 2, `fast lift at ${fps} fps takes ${low.secs.toFixed(1)} s, ${fast.secs.toFixed(1)} s at 20 fps`)
 }
+// one 30 s frame (tab hidden, GC pause): traffic.jsx caps stepLift's dt at 1 s, so the fast 1.5 s 'resume' caption is not skipped
+{
+  assert.ok(readFileSync(new URL('traffic.jsx', import.meta.url), 'utf8').includes('dt: Math.min(dt, 1)'), 'traffic.jsx caps the lift dt at 1 s')
+  const s = Object.assign(createLift(), { phase: 'resume', fast: true })
+  stepLift(s, { dt: Math.min(30, 1), onLeaves: 0, angle: 0, maxAngle: MAX, locked: true, shipX: 0, shipSailing: false })
+  assert.ok(s.phase === 'resume' && s.t <= 1, `a 30 s frame advances the lift ${s.t} s and leaves ${s.phase}, not resume`)
+  for (const f of ['river.jsx', 'interiors.jsx'])
+    assert.ok(/substep\(dt, \(h\) => step(River|Cars)\(/.test(readFileSync(new URL(f, import.meta.url), 'utf8')), `${f} steps on clock time via substep`)
+}
 console.log(`lift checks ok (cycle ${slow.secs.toFixed(0)} s at scale 1, ${film.secs.toFixed(0)} s at FILM_SCALE, ${fast.secs.toFixed(1)} s fast, ship still ${fast.still.toFixed(1)} s)`)
 // top view and road read the same gate rule: no file draws gates from its own condition
 for (const f of ['traffic.jsx', 'topview.jsx'])

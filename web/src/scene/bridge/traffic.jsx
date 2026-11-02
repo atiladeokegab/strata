@@ -143,7 +143,7 @@ export function Traffic({ rt, year, sim, maxAngle }) {
     // the camera in the bridge frame the instances are placed in, to clear vehicles around a low eye
     const host = Object.values(meshes.current).find(Boolean)?.parent
     const cam = host ? host.worldToLocal(camera.getWorldPosition(camL)) : null
-    const io = { dt, onLeaves: onLeaves(t), angle: sim.angle, maxAngle, locked: sim.locked, shipX: shipState.x, shipSailing: shipState.sailing }
+    const io = { dt: Math.min(dt, 1), onLeaves: onLeaves(t), angle: sim.angle, maxAngle, locked: sim.locked, shipX: shipState.x, shipSailing: shipState.sailing }
     const lever = stepLift(lift, io)
     if (lever !== null && lever !== store.bascule) store.setBascule(lever)
     g.closed = gatesClosed(sim, store.bascule)

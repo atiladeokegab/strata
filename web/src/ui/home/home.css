@@ -9,7 +9,9 @@
 .home-title { margin: 0; font-weight: 400; }
 .home-word { display: block; font: 600 clamp(48px, 6vw, 72px)/1 var(--sans); letter-spacing: -.035em; }
 .home-sub { display: block; margin-top: var(--s4); font: 400 var(--t3)/1.55 var(--sans); color: var(--muted); max-width: 26rem; }
-.home-actions { margin-top: var(--s5); display: flex; flex-wrap: nowrap; gap: var(--s2); align-items: center; }
+.home-actions { margin-top: var(--s5); display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; }
+/* one line each: at 1280 the three squeezed into two-line labels and the link ran under the disc; now it wraps to its own row */
+.home-story, .home-enter, .home-link { white-space: nowrap; }
 .home-story, .home-enter { display: inline-flex; align-items: center; gap: var(--s2); height: 44px; padding: 0 var(--s5); border-radius: var(--pill);
   font: 500 var(--t2)/1 var(--sans); transition: background .15s, border-color .15s; }
 .home-story { border: 0; background: var(--ink); color: var(--on-ink); }
@@ -35,6 +37,6 @@
   .home-card { padding: var(--s1) var(--s3); border-radius: var(--pill); }
   .home-card > span { display: none; }
   .home-next-label { margin-bottom: var(--s2); }
-  .home-actions { flex-wrap: wrap; }
+  .home-actions { display: grid; justify-items: start; } /* one per row, so the link stays left of the bridge */
   .home-next-label { display: inline-block; padding: var(--s1) var(--s3); border-radius: var(--pill); background: var(--surface); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); }
 }
